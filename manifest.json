@@ -1,0 +1,32 @@
+{
+  "manifest_version": 2,
+
+  "name":         "MoodleJS2",
+  "author":       "James C",
+  "version":      "2",
+  "description":  "A script for automating some Moodle tasks at Otago Polytechnic (New Zealand).",
+  
+  "icons":        {"32": "icons/moodlejs-32.png", "48": "icons/moodlejs-48.png", "128": "icons/moodlejs-128.png"},
+  "permissions":  ["tabs", "activeTab", "https://moodle.op.ac.nz/", "http://localhost/", "downloads"],
+
+  "background": {
+    "scripts": ["browser-polyfill.js", "shared.js", "macros.js", "background.js"]
+  },
+  
+  "browser_action": {
+    "default_popup": "popup.htm",
+    "default_icon": {
+      "32": "icons/moodlejs-32.png",
+      "48": "icons/moodlejs-48.png",
+      "128": "icons/moodlejs-128.png"
+    },  
+    "default_title": "MoodleJS2--Automates some Moodle tasks"
+  },
+
+  "content_scripts": [ {
+    "matches": ["*://*/*"],
+    "include_globs": ["http*://moodle.*/*","http*://*.moodle.*/*", "http*://*-moodle.*/*"],
+    "js": ["browser-polyfill.js", "shared.js", "page.js"]
+  } ]
+
+}

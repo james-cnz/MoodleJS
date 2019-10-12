@@ -1,0 +1,64 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" >
+
+<head >
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Moodle JS 2</title>
+</head>
+
+<body>
+
+<form id="panel_form" action="" style="min-width: 24em;" >
+
+    <fieldset id="new_course" style="display: none;">
+        <b>New Course</b><br />
+        <table style="width: 100%;">
+            <tr> <th>Name: </th> <td><input id="new_course_name"                                     style="width: 100%;" /></td> </tr>
+            <tr> <th>Short:</th> <td><input id="new_course_shortname"                                style="width: 100%;" /></td> </tr>
+            <tr> <th>Start:</th> <td><input id="new_course_start"     type="date" value="2018-12-31" style="width: 100%;" /></td> </tr> 
+        </table>
+        <button id="new_course_button" type="button" style="width: 100%;" disabled="disabled" >Create new course</button>
+    </fieldset>
+    
+    <fieldset id="index_rebuild" style="display: none;">
+        <b>Modules Index Page</b><br />
+        <button id="index_rebuild_button" type="button" style="width: 100%;">Rebuild modules index page</button>
+    </fieldset>
+
+
+    <fieldset id="new_section" style="display: none;">
+        <b>New Module</b><br />
+        <table style="width: 100%;">
+            <tr> <th>Name: </th> <td><input id="new_section_name"      style="width: 100%;" /></td> </tr>
+            <tr> <th>Short:</th> <td><input id="new_section_shortname" style="width: 100%;" /></td> </tr>
+        </table>
+        <button id="new_section_button" type="button" style="width: 100%;" disabled="disabled" >Create new module</button>
+    </fieldset>
+
+    <fieldset id="new_topic" style="display: none;">
+        <b>New Topic</b><br />
+        <table style="width: 100%;">
+            <tr> <th>Name:</th> <td><input id="new_topic_name" style="width: 100%;" /></td> </tr>
+        </table>
+        <button id="new_topic_button" type="button" style="width: 100%;" disabled="disabled" >Create new topic</button>
+    </fieldset>
+
+    <fieldset id="test" style="display: none;">
+        <button id="test_button" type="button" style="width: 100%; display: none;">Test</button>
+    </fieldset>
+
+    <fieldset id="progress" style="display: none;">
+        <b>Progress</b><br />
+        <progress id="progress_bar" value="1" style="width: 100%;"></progress>
+    </fieldset>
+
+</form>
+
+<script src="browser-polyfill.js" type="text/javascript"></script>
+<script src="shared.js"             type="text/javascript"></script>
+<script src="popup.js"         type="text/javascript"></script>
+
+</body>
+
+</html>
