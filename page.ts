@@ -48,10 +48,7 @@ namespace MJS {
 
 
 
-    export type Page_Error = {
-        name:               "Error";
-        message:            string;
-    }
+
 
 
     export type page_course_index_data = Page_Data_Generic & {
@@ -67,7 +64,7 @@ namespace MJS {
         async function category(category_dom?: HTMLDivElement): Promise<DeepPartial<MDL_Course_Categories> & {
             id:         number;
             name:       string;
-             }> {
+        }> {
 
 
             async function course(course_dom: HTMLDivElement): Promise<DeepPartial<MDL_Course>> {
@@ -79,7 +76,7 @@ namespace MJS {
             let category_out: DeepPartial<MDL_Course_Categories> & {
                 id:         number;
                 name:       string;
-                 };
+            };
 
             if (!category_dom) {
                 // Category ID

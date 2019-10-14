@@ -48,9 +48,16 @@
         <button id="test_button" type="button" style="width: 100%; display: none;">Test</button>
     </fieldset>
 
-    <fieldset id="progress" style="display: none;">
+    <fieldset id="status" style="display: none;">
         <b>Progress</b><br />
         <progress id="progress_bar" value="1" style="width: 100%;"></progress>
+        <div id="status_running">
+            <button id="cancel_button" type="button" style="width: 100%;" >Cancel</button>
+        </div>
+        <div id="status_error">
+            <textarea id="error_message" style="width: 100%;"></textarea>
+            <button id="reset_button" type="button" style="width: 100%;" >Reset</button>
+        </div>
     </fieldset>
 
 </form>

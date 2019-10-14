@@ -15,8 +15,13 @@ namespace MJS {
 
         macro_uis:          Macro_UI[];
 
-        progress_dom:       HTMLFieldSetElement;
+        status_dom:         HTMLFieldSetElement;
         progress_bar_dom:   HTMLProgressElement;
+        status_running_dom: HTMLDivElement;
+        cancel_button_dom:  HTMLButtonElement;
+        status_error_dom:   HTMLDivElement;
+        error_message_dom:  HTMLTextAreaElement;
+        reset_button_dom:   HTMLButtonElement;
 
 
         constructor() {
@@ -29,8 +34,13 @@ namespace MJS {
                 new Test_UI(this)
             ];
 
-            this.progress_dom       = document.querySelector("fieldset#progress")       as HTMLFieldSetElement;
+            this.status_dom         = document.querySelector("fieldset#status")         as HTMLFieldSetElement;
             this.progress_bar_dom   = document.querySelector("progress#progress_bar")   as HTMLProgressElement;
+            this.status_running_dom = document.querySelector("div#status_running")      as HTMLDivElement;
+            this.cancel_button_dom  = document.querySelector("button#cancel_button")    as HTMLButtonElement;
+            this.status_error_dom   = document.querySelector("div#status_error")        as HTMLDivElement;
+            this.error_message_dom  = document.querySelector("textarea#error_message")  as HTMLTextAreaElement;
+            this.reset_button_dom   = document.querySelector("button#reset_button")     as HTMLButtonElement;
 
             this.init();
 
@@ -42,6 +52,9 @@ namespace MJS {
             const bg_page   = await browser.runtime.getBackgroundPage() as unknown as BackgroundWindow;
             this.tabData    = bg_page.mjs_background.getTabData(tab.id as number);
             this.tabData.popup = this;
+            const this_popup: Popup = this;
+            this.cancel_button_dom.addEventListener("click", function () {this_popup.onCancel()});
+            this.reset_button_dom.addEventListener("click", function () {this_popup.onReset()});
             this.update();
         }
 
@@ -52,12 +65,27 @@ namespace MJS {
                 macro_ui.update();
             }
 
-            this.progress_dom.setAttribute("style", "display: " + (this.tabData.macro_state == 0 ? "none" : "block") + ";");
+            this.status_dom.setAttribute("style", "display: " + (this.tabData.macro_state == 0 ? "none" : "block") + ";");
             if (this.tabData.macro_state != 0) {
                 this.progress_bar_dom.value = this.tabData.macro_progress;
                 this.progress_bar_dom.max   = this.tabData.macro_progress_max;
+                this.status_running_dom.setAttribute("style", "display: " + (this.tabData.macro_state > 0 ? "block" : "none") + ";");
+                if (this.tabData.macro_state < 0) {
+                    this.error_message_dom.value = this.tabData.macro_error.message;
+                }
+                this.status_error_dom.setAttribute("style", "display: " + (this.tabData.macro_state < 0 ? "block" : "none") + ";");
             }
 
+        }
+
+
+        onCancel() {
+            this.tabData.macro_cancel = true;
+        }
+
+        onReset() {
+            this.tabData.macro_state = 0;
+            this.close();
         }
 
 

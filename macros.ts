@@ -11,6 +11,7 @@ namespace MJS {
 
         page_tab_id:        number;
 
+        page_details_or_error: Page_Data_Out|Errorlike;
         page_details:       Page_Data_Out;
         page_wwwroot:       string;
         page_sesskey:       string;
@@ -19,6 +20,7 @@ namespace MJS {
         page_load_wait:     number = 0;
 
         macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 awaiting load / 3 loaded
+        macro_error:        Errorlike;
         macro_progress:     number = 100;
         macro_progress_max: number = 100;
         macro_cancel:       boolean = false;
@@ -68,8 +70,8 @@ namespace MJS {
             if (message.dom_submit) {
                 this.macro_state = 2;
             }
-            const result = await browser.tabs.sendMessage(this.page_tab_id, message) as Page_Data_Out|Page_Error;
-            (!is_Page_Error(result))                                            || throwf(new Error(result.message));
+            const result = await browser.tabs.sendMessage(this.page_tab_id, message) as Page_Data_Out|Errorlike;
+            (!is_Errorlike(result))                                            || throwf(new Error(result.message));
 
             return result as Page_Data_Out;
         }
@@ -95,7 +97,7 @@ namespace MJS {
 
             this.page_load_wait  = 0;
             do {
-                (this.page_load_wait < 600)                                     || throwf(new Error("MJS page loaded: Timed out."));
+                //(this.page_load_wait < 600)                                     || throwf(new Error("MJS page loaded: Timed out."));
                 await sleep(100);
                 if (this.macro_cancel)                                          { throw new Error("Cancelled"); }
                 this.page_load_wait += 1;
@@ -103,6 +105,8 @@ namespace MJS {
                     this.page_load_count(1 / 30);
                 }
             } while (this.macro_state != 3);
+            (!is_Errorlike(this.page_details_or_error))                        || throwf(new Error(this.page_details_or_error.message));
+            this.page_details = this.page_details_or_error as Page_Data_Out;
             if (this.page_load_wait <= count * 30) {
                 this.page_load_count(count - this.page_load_wait / 30);
             }
@@ -129,11 +133,17 @@ namespace MJS {
         }
 
 
-        public async onMessage(message: Page_Data_Out, _sender: browser.runtime.MessageSender) {
-            this.page_details = message;
-            console.log("updated page details");
-            this.page_wwwroot = this.page_details.page_window.location_origin;
-            this.page_sesskey = this.page_details.page_window.sesskey;
+        public async onMessage(message: Page_Data_Out|Errorlike, _sender: browser.runtime.MessageSender) {
+            this.page_details_or_error = message;
+            if (is_Errorlike(message)) {
+                this.page_wwwroot = null;
+                this.page_sesskey = null;
+            } else {
+                this.page_details = message;
+                console.log("updated page details");
+                this.page_wwwroot = this.page_details.page_window.location_origin;
+                this.page_sesskey = this.page_details.page_window.sesskey;
+            }
 
             if (this.page_load_state == 0) {
                 this.page_load_state = 1;
@@ -220,7 +230,6 @@ namespace MJS {
 
         protected tabdata: TabData;
 
-        prereq: boolean = false;
 
         constructor(new_tabdata: TabData) {
             this.tabdata = new_tabdata;
@@ -249,28 +258,55 @@ namespace MJS {
             await this.tabdata.page_loaded(body_id_start, body_class, count);
         }
 
+
+        prereq: boolean = false;
+
         abstract init(): void;
 
-        abstract async run(): Promise<void>;
+        progress_max: number;
 
-        protected macro_start(progress_max: number) {
+        async run(): Promise<void> {
+
+            if (this.tabdata.macro_state != 0) {
+                return;
+            }
+
+            this.init();
+
+            this.tabdata.macro_cancel = false;
             this.tabdata.macro_state = 1;
             this.tabdata.macro_progress = 0;
-            this.tabdata.macro_progress_max =  progress_max;
-        }
+            this.tabdata.macro_progress_max =  this.progress_max;
 
+            try {
+                await this.content();
+            } catch (e) {
+                if (e.message != "Cancelled") {
+                    this.tabdata.macro_state = -1;
+                    this.tabdata.macro_error = e;
+                    this.tabdata.popup.update();
+                    return;
+                }
+            }
 
-
-        protected macro_end() {
-            this.tabdata.macro_progress = this.tabdata.macro_progress_max;
             this.tabdata.macro_state = 0;
+            this.tabdata.macro_progress = this.tabdata.macro_progress_max;
             this.tabdata.macros_init();
             try {
                 this.tabdata.popup.close();
             } catch(e) {
                 // Do nothing
             }
-        }
+
+        };
+
+        abstract async content(): Promise<void>;
+
+
+
+
+
+
 
     }
 
@@ -309,18 +345,21 @@ namespace MJS {
                 this.course_template_id = 6548;
             } else                                                                      { return; }
 
+            this.progress_max = 14;
             this.prereq = true;
         
         }
 
-        public async run() {  // TODO: Set properties.
+        public async content() {  // TODO: Set properties.
+
+            // Start
+            //this.macro_start();
 
             const name = this.new_course.fullname;
             const shortname = this.new_course.shortname;
             const startdate = this.new_course.startdate;
 
-            // Start
-            this.macro_start(14 + 1);
+
 
             // Get template course context (1 load)
             await this.page_load("/course/view.php", {id: this.course_template_id, section: 0},
@@ -388,7 +427,7 @@ namespace MJS {
             */
 
             // End.
-            this.macro_end();
+            //this.macro_end();
 
         }
 
@@ -438,18 +477,19 @@ namespace MJS {
             this.modules_tab_num = modules_tab_num;
             this.last_module_tab_num = last_module_tab_num;
             
+            this.progress_max = this.last_module_tab_num - this.modules_tab_num + 2;
             this.prereq = true;
 
         }
 
 
         
-        public async run() {
+        public async content() {
         
-            this.init();
+            //this.init();
 
             // Start
-            this.macro_start(13);
+            //this.macro_start();
 
             // TODO: Don't include hidden tabs or topic headings?
         
@@ -515,7 +555,7 @@ namespace MJS {
             await this.page_loaded( "page-course-view-", {course: this.course_id});
         
             // End.
-            this.macro_end();
+            //this.macro_end();
         
         } 
     
@@ -589,22 +629,24 @@ namespace MJS {
             {} else {return;}
             this.new_section_pos = last_module_tab_num + 1;
 
-
+            this.progress_max = 17;
             this.prereq = true;
             console.log("new section pre success");
         }
         
 
         
-        public async run() {
+        public async content() {
 
-            this.init();
+            //this.init();
+
+
+
+            // Start
+            //this.macro_start();
 
             const name = this.new_section.fullname;
             const short_name = this.new_section.name;
-
-            // Start
-            this.macro_start(17+1);
 
             // Add new tab (1 load)
             await this.page_load(  // TODO: Fix for flexsections?
@@ -740,7 +782,7 @@ namespace MJS {
             await this.page_loaded( "page-course-view-", {course: this.course_id});
 
             // End.
-            this.macro_end();
+            //this.macro_end();
 
         }
         
@@ -824,21 +866,24 @@ namespace MJS {
         
             this.topic_first = (mod_pos < 0) ? true : false;
 
+            this.progress_max = 12;
             this.prereq = true;
             console.log("new topic pre success");
         }
         
 
 
-        public async run() {
+        public async content() {
 
-            this.init();
+            //this.init();
 
-            const name = this.new_topic_name;
+
 
             // Start
-            this.macro_start(12+1);
+            //this.macro_start();
     
+
+            const name = this.new_topic_name;
         
             // Create topic heading (4 loads?)
             await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
@@ -925,7 +970,6 @@ namespace MJS {
                 this.tabdata.page_load_count(4);
             }
         
-        
             // Create space (4 loads?)
             await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
                 "page-mod-label-mod", {course: this.course_id},
@@ -951,7 +995,7 @@ namespace MJS {
 
 
             // End.
-            this.macro_end();
+            //this.macro_end();
 
         }
 
@@ -963,18 +1007,19 @@ namespace MJS {
     class Test_Macro extends Macro {
 
         init() {
+            this.progress_max = 10;
             this.prereq = true;
         }
 
 
         
-        public async run() {
+        public async content() {
 
             //this.m_log += "test\n";
-            if (this.tabdata.macro_state != 0) {return}
-            this.tabdata.macro_progress = 0;
-            this.tabdata.macro_progress_max = 10;
-            this.tabdata.macro_state = 1;
+            //if (this.tabdata.macro_state != 0) {return}
+            //this.tabdata.macro_progress = 0;
+            //this.tabdata.macro_progress_max = 10;
+            //this.tabdata.macro_state = 1;
             //await page_load("/course/view.php", { id: 7015}, "page-course-view", {"course": 7015});
             //alert(await page_call({}));
             //let page_data: Partial<Page_Data>|null = await this.page_call({});
@@ -1013,32 +1058,32 @@ namespace MJS {
                 }
             }
             */
-        //   try {
-        //    await this.popup.update();
-        //} catch(e) {
-        //    // Do nothing
-        //}
+            //   try {
+            //    await this.popup.update();
+            //} catch(e) {
+            //    // Do nothing
+            //}
 
-        await this.page_load(
-            "/course/index.php", {},
-            "page-course-index", {course: 1},
-        );
+            await this.page_load(
+                "/course/index.php", {},
+                "page-course-index", {course: 1},
+            );
 
-        const site_map = await this.page_call({page: "course-index-category?", dom_expand: true});
+            const site_map = await this.page_call({page: "course-index-category?", dom_expand: true});
 
-        let course_id = 7015;
-        let course_context = 911164;
+            let course_id = 7015;
+            let course_context = 911164;
 
-        await this.page_load(
-            "/backup/restorefile.php", {contextid: course_context},
-            "page-backup-restorefile", {course: course_id},
-        );
+            await this.page_load(
+                "/backup/restorefile.php", {contextid: course_context},
+                "page-backup-restorefile", {course: course_id},
+            );
 
-        const message = await this.page_call({page: "backup-restorefile"});
+            const message = await this.page_call({page: "backup-restorefile"});
 
-        await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
+            await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
 
-        this.tabdata.macro_state = 0;
+            //this.tabdata.macro_state = 0;
 
         }
 

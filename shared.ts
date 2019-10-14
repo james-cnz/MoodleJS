@@ -1,6 +1,12 @@
 namespace MJS {
 
 
+    export type Errorlike = {
+        name:               "Error";
+        message:            string;
+    }
+    
+
     export type DeepPartial<T> = {
         [P in keyof T]?: T[P] extends Array<infer U>
           ? Array<DeepPartial<U>>
@@ -23,11 +29,11 @@ namespace MJS {
 
 
 
-    export function is_Page_Error(possible_page_error: Page_Data_Out|Page_Error): possible_page_error is Page_Error {
-        return ((possible_page_error as Page_Error).name !== undefined)
-            && (typeof ((possible_page_error as Page_Error).name) == "string")
-            && ((possible_page_error as Page_Error).message !== undefined)
-            && (typeof ((possible_page_error as Page_Error).message) == "string")
+    export function is_Errorlike(possible_Errorlike: Page_Data_Out|Errorlike): possible_Errorlike is Errorlike {
+        return ((possible_Errorlike as Errorlike).name !== undefined)
+            && (typeof ((possible_Errorlike as Errorlike).name) == "string")
+            && ((possible_Errorlike as Errorlike).message !== undefined)
+            && (typeof ((possible_Errorlike as Errorlike).message) == "string")
     } 
 
 
