@@ -39,8 +39,8 @@ namespace MJS {
 
         async init() {
             const tab       = (await browser.tabs.query({active:true, currentWindow: true}))[0];
-            const bg_page   = await browser.runtime.getBackgroundPage();
-            this.tabData    = bg_page.mjs_background.getTabData(tab.id);
+            const bg_page   = await browser.runtime.getBackgroundPage() as unknown as BackgroundWindow;
+            this.tabData    = bg_page.mjs_background.getTabData(tab.id as number);
             this.tabData.popup = this;
             this.update();
         }
@@ -112,10 +112,10 @@ namespace MJS {
         }
 
         onClick() {
-            this.popup.tabData.macros.new_course.new_course = {
+            (this.popup.tabData.macros.new_course as New_Course_Macro).new_course = {
                 fullname:   this.new_course_name_dom.value,
                 shortname:  this.new_course_shortname_dom.value,
-                startdate:  this.new_course_start_dom.valueAsDate.getTime() / 1000
+                startdate:  (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000
             };
             this.popup.tabData.macros.new_course.run();
         }
@@ -178,7 +178,7 @@ namespace MJS {
         }
 
         onClick() {
-            this.popup.tabData.macros.new_section.new_section = {
+            (this.popup.tabData.macros.new_section as New_Section_Macro).new_section = {
                 fullname: this.new_section_name_dom.value,
                 name: this.new_section_shortname_dom.value
             }
@@ -214,7 +214,7 @@ namespace MJS {
         }
 
         onClick() {
-            this.popup.tabData.macros.new_topic.new_topic_name = this.new_topic_name_dom.value;
+            (this.popup.tabData.macros.new_topic as New_Topic_Macro).new_topic_name = this.new_topic_name_dom.value;
             this.popup.tabData.macros.new_topic.run();
         }
 

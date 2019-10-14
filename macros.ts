@@ -11,7 +11,7 @@ namespace MJS {
 
         page_tab_id:        number;
 
-        page_details:       Page_Data;
+        page_details:       Page_Data_Out;
         page_wwwroot:       string;
         page_sesskey:       string;
 
@@ -61,18 +61,17 @@ namespace MJS {
 
 
 
-        public async page_call(message: Partial<Page_Data>): Promise<Page_Data> {
+        public async page_call(message: Page_Data_In): Promise<Page_Data_Out> {
 
             (this.macro_state == 1)                                             || throwf(new Error("MJS page call: Unexpected state."));
 
             if (message.dom_submit) {
                 this.macro_state = 2;
             }
-            const result = await browser.tabs.sendMessage(this.page_tab_id, message);
+            const result = await browser.tabs.sendMessage(this.page_tab_id, message) as Page_Data_Out|Page_Error;
+            (!is_Page_Error(result))                                            || throwf(new Error(result.message));
 
-            (typeof result == "object" && result.hasOwnProperty("page"))        || throwf(new Error("MJS page call: Response unexpected."));
-
-            return result;
+            return result as Page_Data_Out;
         }
 
 
@@ -112,7 +111,7 @@ namespace MJS {
         }
 
 
-        private page_load_count(count: number = 1): void {
+        public page_load_count(count: number = 1): void {
             this.macro_progress += count;
         }
 
@@ -130,7 +129,7 @@ namespace MJS {
         }
 
 
-        public async onMessage(message: Page_Data, _sender: browser.runtime.MessageSender) {
+        public async onMessage(message: Page_Data_Out, _sender: browser.runtime.MessageSender) {
             this.page_details = message;
             console.log("updated page details");
             this.page_wwwroot = this.page_details.page_window.location_origin;
@@ -228,23 +227,26 @@ namespace MJS {
             this.prereq = false;
         }
 
-
-        protected get page_details(): Page_Data {
+        protected get page_details(): Page_Data_Out {
             return this.tabdata.page_details;
         }
 
-        protected async page_call(message: Partial<Page_Data>): Promise<Page_Data> {
+        protected set page_details(page_details_in: Page_Data_Out) {
+            (page_details_in == this.tabdata.page_details)                      || throwf(new Error("Page details mismatch."));
+        }
+
+        protected async page_call(message: Page_Data_In): Promise<Page_Data_Out> {
             return await this.tabdata.page_call(message);
         }
 
         protected async page_load(pathname: string, search: {[index: string]: number|string},
             body_id_start: string, body_class: {[index: string]: string|number},
             count: number = 1): Promise<void> {
-            return await this.tabdata.page_load(pathname, search, body_id_start, body_class, count);
+            await this.tabdata.page_load(pathname, search, body_id_start, body_class, count);
         }
 
         protected async page_loaded(body_id_start: string, body_class: {[index: string]: string|number}, count: number = 1): Promise<void> {
-            return await this.tabdata.page_loaded(body_id_start, body_class, count);
+            await this.tabdata.page_loaded(body_id_start, body_class, count);
         }
 
         abstract init(): void;
@@ -274,7 +276,7 @@ namespace MJS {
 
 
 
-    class New_Course_Macro extends Macro {
+    export class New_Course_Macro extends Macro {
 
         prereq:             boolean;
 
@@ -294,10 +296,12 @@ namespace MJS {
             console.log("new course pre starting");
             this.prereq = false;
 
-            if (this.tabdata.page_details.page_window.body_id != "page-course-index-category") { return; }
+            if (this.page_details.page != "course-index-category?")     { return; }
 
-            this.category_id  = this.tabdata.page_details.mdl_course_categories.id;
-            this.category_name = this.tabdata.page_details.mdl_course_categories.name;
+            if (this.page_details.page_window.body_id != "page-course-index-category") { return; }
+
+            this.category_id  = this.page_details.mdl_course_categories.id;
+            this.category_name = this.page_details.mdl_course_categories.name;
 
             if (this.tabdata.page_wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
                 this.course_template_id = 6548;
@@ -311,18 +315,16 @@ namespace MJS {
 
         public async run() {  // TODO: Set properties.
 
-            const this_data = this;
-
-            const name = this_data.new_course.fullname;
-            const shortname = this_data.new_course.shortname;
-            const startdate = this_data.new_course.startdate;
+            const name = this.new_course.fullname;
+            const shortname = this.new_course.shortname;
+            const startdate = this.new_course.startdate;
 
             // Start
             this.macro_start(14 + 1);
 
             // Get template course context (1 load)
-            await this.page_load("/course/view.php", {id: this_data.course_template_id, section: 0},
-                "page-course-view-", {course: this_data.course_template_id},
+            await this.page_load("/course/view.php", {id: this.course_template_id, section: 0},
+                "page-course-view-", {course: this.course_template_id},
             );
             const source_context_match = this.page_details.page_window.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                         || throwf(new Error("WS course restore, source context not found."));
@@ -331,43 +333,45 @@ namespace MJS {
             // Load course restore page (1 load)
             await this.page_load(
                 "/backup/restorefile.php", {contextid: source_context},
-                "page-backup-restorefile", {course: this_data.course_template_id},
+                "page-backup-restorefile", {course: this.course_template_id},
             );
 
             // Click restore backup file (1 load)
-            await this.page_call({dom_submit: "restore"});
-            await this.page_loaded("page-backup-restore", {course: this_data.course_template_id});
+            await this.page_call({page: "backup-restorefile", dom_submit: "restore"});
+            await this.page_loaded("page-backup-restore", {course: this.course_template_id});
+            this.page_details = this.tabdata.page_details;
+            if (this.page_details.page != "backup-restore")                       { throw (new Error("Click restore backup file, page response unexpected.")) };
 
             // Confirm (1 load)
             (this.page_details.stage == 2)                                      || throwf(new Error("WS course_restore, step 1 state unexpected."));
-            await this.page_call({dom_submit: "stage 2 submit"});
-            await this.page_loaded("page-backup-restore", {course: this_data.course_template_id});
+            await this.page_call({page: "backup-restore", dom_submit: "stage 2 submit"});
+            await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Destination: Search for category (1 load)
             (this.page_details.stage == 4)                                      || throwf(new Error("WS course_restore, step 2 state unexpected."));
-            await this.page_call({mdl_course_categories: {name: this_data.category_name}, dom_submit: "stage 4 new cat search"});
+            await this.page_call({mdl_course_categories: {name: this.category_name}, dom_submit: "stage 4 new cat search"});
             await this.page_loaded("", {});  // TODO: Add details
             
             // Destination: Select category (1 load)
-            await this.page_call({mdl_course_categories: {id: this_data.category_id}, dom_submit: "stage 4 new continue"});       
-            await this.page_loaded("page-backup-restore", {course: this_data.course_template_id});
+            await this.page_call({mdl_course_categories: {id: this.category_id}, dom_submit: "stage 4 new continue"});       
+            await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Restore settings (1 load)
             (this.page_details.stage == 4)                                      || throwf(new Error("WS course_restore, step 3 state unexpected."));
             await this.page_call({dom_set_key: "stage 4 settings users", dom_set_value: false});
             await this.page_call({dom_submit: "stage 4 settings submit"});
-            await this.page_loaded("page-backup-restore", {course: this_data.course_template_id});
+            await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Course settings (1 load)
             (this.page_details.stage == 8)                                      || throwf(new Error("WS course_restore, step 4 state unexpected."));
             const course: Partial<MDL_Course> = {fullname: name, shortname: shortname, startdate: startdate};
             await this.page_call({mdl_course: course, dom_submit: "stage 8 submit"});
-            await this.page_loaded("page-backup-restore", {course: this_data.course_template_id});
+            await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Review & Process (~5 loads)
             (this.page_details.stage == 16)                                     || throwf(new Error("WS course_restore, step 5 state unexpected."));
             await this.page_call({mdl_course: course, dom_submit: "stage 16 submit"});
-            await this.page_loaded("page-backup-restore", {course: this_data.course_template_id}, 5);
+            await this.page_loaded("page-backup-restore", {course: this.course_template_id}, 5);
 
             // Complete--Go to new course (1 load)
             (this.page_details.stage == null)                                   || throwf(new Error("WS course_restore, step 7 state unexpected."));
@@ -391,7 +395,7 @@ namespace MJS {
     }
 
 
-    class Index_Rebuild_Macro extends Macro {
+    export class Index_Rebuild_Macro extends Macro {
 
         prereq: boolean;
         
@@ -405,12 +409,12 @@ namespace MJS {
             this.prereq = false;
 
             // Check course type
-            const course = this.tabdata.page_details.mdl_course;
-            if (!course || course.format != "onetopic") {  return; }
+            const course = this.page_details.mdl_course;
+            if (!course || course.format != "onetopic" || !course.id) {  return; }
             this.course_id = course.id;
 
             // Check editing on
-            if (!this.tabdata.page_details.page_window || !this.tabdata.page_details.page_window.body_class || !this.tabdata.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
                 console.log("index rebuild pre: editing not on");
                 return;
             }
@@ -420,7 +424,7 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if (section.x_options.level <= 0 && section.section <= this.tabdata.page_details.mdl_course_sections.section && section.name.toUpperCase().trim() == "MODULES") {
+                if (section.x_options.level <= 0 && section.section <= this.page_details.mdl_course_sections.section && section.name.toUpperCase().trim() == "MODULES") {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
                 } else if (last_module_tab_num && section.x_options.level > 0) { // TODO: Need to scrape level property.
@@ -428,7 +432,7 @@ namespace MJS {
                 }
             }
             if (modules_tab_num) {  } else                                        {  return; }
-            if (this.tabdata.page_details.mdl_course_sections.section <= last_module_tab_num)
+            if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
             {} else {return;}
             this.modules_tab_num = modules_tab_num;
             this.last_module_tab_num = last_module_tab_num;
@@ -442,7 +446,6 @@ namespace MJS {
         public async run() {
         
             this.init();
-            const this_data = this;
 
             // Start
             this.macro_start(13);
@@ -452,8 +455,8 @@ namespace MJS {
             const parser = new DOMParser();
         
             // Get list of modules
-            await this.page_load("/course/view.php", {id: this_data.course_id, section: this_data.modules_tab_num},
-                "page-course-view-", {course: this_data.course_id},
+            await this.page_load("/course/view.php", {id: this.course_id, section: this.modules_tab_num},
+                "page-course-view-", {course: this.course_id},
             );
             const modules_list = this.page_details.mdl_course_sections.mdl_course_modules;
         
@@ -461,23 +464,23 @@ namespace MJS {
         
             const modules_index = modules_list[0];
         
-            this.tabdata.macro_progress_max = 1 + this_data.last_module_tab_num - this_data.modules_tab_num + 2;
+            this.tabdata.macro_progress_max = 1 + this.last_module_tab_num - this.modules_tab_num + 2;
         
             let index_html = '<div class="textblock">\n';
         
         // modules_list.shift();
         
-            for (let section_num = this_data.modules_tab_num + 1; section_num <= this_data.last_module_tab_num; section_num++) {
+            for (let section_num = this.modules_tab_num + 1; section_num <= this.last_module_tab_num; section_num++) {
                 //const section_num = section.section                                     || throwf(new Error("Module number not found."));
-                await this.page_load("/course/view.php", {id: this_data.course_id, section: section_num},
-                                    "page-course-view-", {course: this_data.course_id});
+                await this.page_load("/course/view.php", {id: this.course_id, section: section_num},
+                                    "page-course-view-", {course: this.course_id});
                 const section_full = this.page_details.mdl_course_sections;
                 const section_name = (parser.parseFromString(section_full.summary, "text/html").querySelector(".header1")
                                                                                         || throwf(new Error("Module name not found."))
                                     ).textContent                                      || throwf(new Error("Module name content not found."));
         
                 index_html = index_html
-                            + '<a href="' + this.tabdata.page_wwwroot + "/course/view.php?id=" + this_data.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
+                            + '<a href="' + this.tabdata.page_wwwroot + "/course/view.php?id=" + this.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
         
                 for (const mod of section_full.mdl_course_modules) {
@@ -503,11 +506,11 @@ namespace MJS {
             index_html = index_html
                         + "</div>\n";
         
-            await this.page_load("/course/mod.php", {sesskey: this.page_sesskey, update: modules_index.id},
-                                    "page-mod-label-mod", {course: this_data.course_id});
-            await this.page_call({mdl_course_modules: {course: this_data.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+            await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, update: modules_index.id},
+                                    "page-mod-label-mod", {course: this.course_id});
+            await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
             mdl_course_module_instance: {intro: index_html}}, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
         
             // End.
             this.macro_end();
@@ -519,7 +522,7 @@ namespace MJS {
     }
 
 
-    class New_Section_Macro extends Macro {
+    export class New_Section_Macro extends Macro {
 
         prereq:                 boolean;
 
@@ -548,20 +551,20 @@ namespace MJS {
             } else                                                                      { return; }
         
             // Check page type
-            if (this.tabdata.page_details.page != "course-view-*") {
+            if (this.page_details.page != "course-view-*") {
                 console.log("new section pre: wrong page type");
                 return;
             }
 
             // Check editing on
-            if (!this.tabdata.page_details.page_window || !this.tabdata.page_details.page_window.body_class || !this.tabdata.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
                 console.log("new section pre: editing not on");
                 return;
             }
 
             // Get course details
             console.log("get course details");
-            const course = (this.tabdata.page_details as page_course_view_data).mdl_course;//(await this.page_call({})).mdl_course;
+            const course = (this.page_details as page_course_view_data).mdl_course;//(await this.page_call({})).mdl_course;
             if (!course) {console.log("new section pre: couldn't get course details"); return;}
             this.course_id = course.id;
 
@@ -572,7 +575,7 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if (section.x_options.level <= 0 && section.section <= this.tabdata.page_details.mdl_course_sections.section && section.name.toUpperCase().trim() == "MODULES") {
+                if (section.x_options.level <= 0 && section.section <= this.page_details.mdl_course_sections.section && section.name.toUpperCase().trim() == "MODULES") {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
                 } else if (last_module_tab_num && section.x_options.level > 0) { // TODO: Need to scrape level property.
@@ -580,7 +583,7 @@ namespace MJS {
                 }
             }
             if (modules_tab_num) {  } else                                        {  return; }
-            if (this.tabdata.page_details.mdl_course_sections.section <= last_module_tab_num)
+            if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
             {} else {return;}
             this.new_section_pos = last_module_tab_num + 1;
 
@@ -594,35 +597,34 @@ namespace MJS {
         public async run() {
 
             this.init();
-            const this_data = this;
 
-            const name = this_data.new_section.fullname;
-            const short_name = this_data.new_section.name;
+            const name = this.new_section.fullname;
+            const short_name = this.new_section.name;
 
             // Start
             this.macro_start(17+1);
 
             // Add new tab (1 load)
             await this.page_load(  // TODO: Fix for flexsections?
-                "/course/changenumsections.php", {courseid: this_data.course_id, increase: 1, sesskey: this.tabdata.page_sesskey, insertsection: 0},
-                "page-course-view-", {course: this_data.course_id},
+                "/course/changenumsections.php", {courseid: this.course_id, increase: 1, sesskey: this.tabdata.page_sesskey, insertsection: 0},
+                "page-course-view-", {course: this.course_id},
             );
             let new_section = this.page_details.mdl_course_sections;
 
             // Move new tab (1 load)
             console.log("Move new tab")
             await this.page_load(
-                "/course/view.php", {id: this_data.course_id, section: new_section.section, sesskey: this.tabdata.page_sesskey, move: this_data.new_section_pos - new_section.section
+                "/course/view.php", {id: this.course_id, section: new_section.section, sesskey: this.tabdata.page_sesskey, move: this.new_section_pos - new_section.section
                                                                                     /*|| throwf(new Error("WS course section edit, no amount specified."))*/},
-                "page-course-view-", {course: this_data.course_id},
+                "page-course-view-", {course: this.course_id},
             );
-            new_section.section = this_data.new_section_pos;     
+            new_section.section = this.new_section_pos;     
 
             // Set new tab details (2 loads)
             await this.page_load(
                 "/course/editsection.php", {id: new_section.id, sr: new_section.section,
                                                                                     /*|| throwf(new Error("WS course section edit, no amount specified."))*/},
-                                                                                    "page-course-editsection", {course: this_data.course_id},
+                                                                                    "page-course-editsection", {course: this.course_id},
                                                                                     );
             await this.page_call({mdl_course_sections: {id: new_section.id, name: short_name, x_options: {level: 1},
                 summary:
@@ -646,13 +648,13 @@ namespace MJS {
         
                 <p>We recommend that you visit this module on a regular basis, to complete the activities and to self-test your increasing knowledge and skills.</p>`.replace(/^        /gm, ""),
             }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
 
             // Add pre-topic message (2 loads)
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
-                                    "page-mod-label-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+                                    "page-mod-label-mod", {course: this.course_id},
                                     );
-            await this.page_call({mdl_course_modules: {course: this_data.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+            await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
                 mdl_course_module_instance: {intro:
                 `<p></p>
         
@@ -660,21 +662,21 @@ namespace MJS {
                 you're now ready to demonstrate evidence of what you have learnt in this module.
                 Please click on the <strong>Assessments</strong> tab above for further information.</p>`.replace(/^        /gm, "")},
                 }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
 
             // Add blank line (2 loads)
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
-            "page-mod-label-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            "page-mod-label-mod", {course: this.course_id},
             );
-            await this.page_call({mdl_course_modules: {course: this_data.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+            await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
             mdl_course_module_instance: {intro: ""}, }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
 
             // Add feedback topic (2 loads)
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
-            "page-mod-label-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            "page-mod-label-mod", {course: this.course_id},
             );
-            await this.page_call({mdl_course_modules: {course: this_data.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+            await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
             mdl_course_module_instance: {intro: 
                 `<p></p>
         
@@ -684,13 +686,13 @@ namespace MJS {
                 Please click the 'Your feedback' link below if you wish to respond to a five-question survey.
                 Thanks!</p>`.replace(/^        /gm, "")},
             }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
         
             // Add feedback activity (2 load)
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "feedback", section: new_section.section},
-            "page-mod-feedback-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "feedback", section: new_section.section},
+            "page-mod-feedback-mod", {course: this.course_id},
             );
-            await this.page_call({mdl_course_modules: {course: this_data.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+            await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
             mdl_course_module_instance: {name: "Your feedback", intro: 
                 `<div class="header2"> <i class="fa fa-bullhorn" aria-hidden="true"></i> FEEDBACK</div>
         
@@ -701,7 +703,7 @@ namespace MJS {
                 <p>Please help us improve this learning module by answering five questions about your experience.
                 This survey is anonymous.</p>
                 </div>`.replace(/^        /gm, "")}, }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
             new_section = (this.page_details as page_course_view_data).mdl_course_sections;
             let feedback_act: Partial<MDL_Course_Modules>|null = null;
                 for (const module of new_section.mdl_course_modules) {
@@ -713,16 +715,16 @@ namespace MJS {
             // Configure Feedback activity (3 loads?)            
             await this.page_load("/mod/feedback/edit.php", {id: feedback_act.id, do_show: "templates"},
                                 "page-mod-feedback-edit", {cmid: feedback_act.id});
-            await this.page_call({page: "mod-feedback-edit", mdl_course_modules: { mdl_course_module_instance: {mdl_feedback_template_id: this_data.feedback_template_id}}, dom_submit: true});  // TODO: fix;
+            await this.page_call({page: "mod-feedback-edit", mdl_course_modules: { mdl_course_module_instance: {mdl_feedback_template_id: this.feedback_template_id}}, dom_submit: true});  // TODO: fix;
             await this.page_loaded("page-mod-feedback-use_templ", {});
             await this.page_call({page: "mod-feedback-use_templ", mdl_course_modules: {}, dom_submit: true});
             await this.page_loaded("page-mod-feedback-edit", {});
             
             // Add footer (2 loads).
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
-            "page-mod-label-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            "page-mod-label-mod", {course: this.course_id},
             );
-            await this.page_call({mdl_course_modules: {course: this_data.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+            await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
             mdl_course_module_instance: {intro:
                 `<p></p>
         
@@ -732,7 +734,7 @@ namespace MJS {
                 licensed under <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.en" target="_blank">CC0</a>
                 </span></p>`.replace(/^        /gm, "")},
             }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
 
             // End.
             this.macro_end();
@@ -744,7 +746,7 @@ namespace MJS {
     }
 
 
-    class New_Topic_Macro extends Macro {
+    export class New_Topic_Macro extends Macro {
 
 
         prereq:         boolean;
@@ -763,13 +765,13 @@ namespace MJS {
             this.prereq = false;
 
             // var doc_details = ws_page_call({wsfunction: "x_doc_get_details"});
-            const course = this.tabdata.page_details.mdl_course;
+            const course = this.page_details.mdl_course;
             if (course && course.hasOwnProperty("format") && course.format == "onetopic") {  } else { return; }
             this.course_id = course.id;
 
 
             // Check editing on
-            if (!this.tabdata.page_details.page_window || !this.tabdata.page_details.page_window.body_class || !this.tabdata.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
                 console.log("new topic pre: editing not on");
                 return;
             }
@@ -781,7 +783,7 @@ namespace MJS {
             //const section_num = parseInt(section_match[3]);
         
             //let section = (await ws_call({wsfunction: "core_course_get_contents", courseid: course.id, options: [{name: "sectionnumber", value: section_num}]}))[0];
-            let section = this.tabdata.page_details.mdl_course_sections;
+            let section = this.page_details.mdl_course_sections;
             //const section_num = section.section;
             this.section_num = section.section;
 
@@ -827,20 +829,19 @@ namespace MJS {
         public async run() {
 
             this.init();
-            const this_data = this;
 
-            const name = this_data.new_topic_name;
+            const name = this.new_topic_name;
 
             // Start
             this.macro_start(12+1);
     
         
             // Create topic heading (4 loads?)
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this_data.section_num},
-                "page-mod-label-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
+                "page-mod-label-mod", {course: this.course_id},
             );
-            await this.page_call({page: "page-mod-*-mod", mdl_course_modules: {course: this_data.course_id, //section: section_num, modname: "label",
-            mdl_course_module_instance: { intro: this_data.topic_first ?
+            await this.page_call({page: "mod-*-mod", mdl_course_modules: {course: this.course_id, //section: section_num, modname: "label",
+            mdl_course_module_instance: { intro: this.topic_first ?
                 `<p></p>
         
                 <div class="header2"> <i class="fa fa-align-justify" aria-hidden="true"></i> ${name}</div>
@@ -877,26 +878,26 @@ namespace MJS {
                 </div>`.replace(/^        /gm, ""),
             },
             }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
             
-            //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this_data.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
+            //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
             let section: MDL_Course_Sections = this.page_details.mdl_course_sections;
 
             // Move new module.
             await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length-1].id},
             "page-course-view-", {},
             );
-            await this.page_load("/course/mod.php", {moveto: this_data.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
+            await this.page_load("/course/mod.php", {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
                 "page-course-view-", {},
             );
 
             
             // Create topic end message (4 loads?)
-            if (this_data.topic_first) {
-                await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this_data.section_num},
-                    "page-mod-label-mod", {course: this_data.course_id},
+            if (this.topic_first) {
+                await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
+                    "page-mod-label-mod", {course: this.course_id},
                 );
-                await this.page_call({page: "page-mod-*-mod", mdl_course_modules: {course: this_data.course_id, //section: section_num, modname: "label",
+                await this.page_call({page: "mod-*-mod", mdl_course_modules: {course: this.course_id, //section: section_num, modname: "label",
                     mdl_course_module_instance: { intro: 
                     `<p></p>
     
@@ -904,42 +905,42 @@ namespace MJS {
                     please continue to the next topic below—<strong>[xxxxxxx]</strong>.</p>`
                     },
                     }, dom_submit: true});
-                await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+                await this.page_loaded( "page-course-view-", {course: this.course_id});
                 
-                //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this_data.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
+                //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
                 section = this.page_details.mdl_course_sections;
     
                 // Move new module.
                 await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length-1].id},
                 "page-course-view-", {},
                 );
-                await this.page_load("/course/mod.php", {moveto: this_data.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
+                await this.page_load("/course/mod.php", {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
                     "page-course-view-", {},
                 );
             } else {
-                this.page_load_count(4);
+                this.tabdata.page_load_count(4);
             }
         
         
             // Create space (4 loads?)
-            await this.page_load("/course/mod.php", {id: this_data.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this_data.section_num},
-                "page-mod-label-mod", {course: this_data.course_id},
+            await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
+                "page-mod-label-mod", {course: this.course_id},
             );
-            await this.page_call({page: "page-mod-*-mod", mdl_course_modules: {course: this_data.course_id, //section: section_num, modname: "label",
+            await this.page_call({page: "mod-*-mod", mdl_course_modules: {course: this.course_id, //section: section_num, modname: "label",
                 mdl_course_module_instance: { intro: 
                 ""
                 },
                 }, dom_submit: true});
-            await this.page_loaded( "page-course-view-", {course: this_data.course_id});
+            await this.page_loaded( "page-course-view-", {course: this.course_id});
             
-            //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this_data.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
+            //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
             section = this.page_details.mdl_course_sections;
 
             // Move new module.
             await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length-1].id},
             "page-course-view-", {},
             );
-            await this.page_load("/course/mod.php", {moveto: this_data.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
+            await this.page_load("/course/mod.php", {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
                 "page-course-view-", {},
             );
 

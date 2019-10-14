@@ -11,27 +11,18 @@ namespace MJS {
     }
 
 
-    export type Page_Data = {
-        page:               string;
-        browser_source:     string;
-        page_window:        Page_Window;
-        mdl_course_categories: Partial<MDL_Course_Categories>;
-        mdl_course:         Partial<MDL_Course>;
-        mdl_course_sections: Partial<MDL_Course_Sections>;
-        mdl_course_modules: Partial<MDL_Course_Modules>;
-        dom_submit:         boolean|string;
-        dom_set_key:        string;
-        dom_set_value:      boolean|number|string;
-        error:              {message: string};
-    }
 
 
-    export type Page_Window = {
-        location_origin:    string;
-        sesskey:            string;
-        body_id:            string;
-        body_class:         string;
-    }
+
+    export function is_Page_Error(possible_page_error: Page_Data_Out|Page_Error): possible_page_error is Page_Error {
+        return ((possible_page_error as Page_Error).name !== undefined)
+            && (typeof ((possible_page_error as Page_Error).name) == "string")
+            && ((possible_page_error as Page_Error).message !== undefined)
+            && (typeof ((possible_page_error as Page_Error).message) == "string")
+    } 
+
+
+
 
 
     export type MDL_Context_Instance = {

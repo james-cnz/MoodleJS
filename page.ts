@@ -2,8 +2,60 @@
 namespace MJS {
 
 
+    export type Page_Data_Generic = {
+        page:               string;
+        mdl_course_categories?: Partial<MDL_Course_Categories>;
+        mdl_course?:         Partial<MDL_Course>;
+        mdl_course_sections?: Partial<MDL_Course_Sections>;
+        mdl_course_modules?: Partial<MDL_Course_Modules>;
+    }
 
-    export type page_course_index_data = Partial<Page_Data> & {
+
+    export type Page_Data_Specific =
+        page_backup_restore_data
+        | page_backup_restorefile_data
+        | page_course_editsection_data
+        | page_course_index_data
+        | page_course_view_data
+        | page_mod_feedback_edit_data
+        | page_mod_feedback_use_templ_data
+        | page_module_edit_data;
+
+
+    export type Page_Data_In = Partial<Page_Data_Specific> & {
+        dom_submit?:         boolean|string;
+        dom_set_key?:        string;
+        dom_set_value?:      boolean|number|string;
+    }
+
+    export type Page_Data_Inter = Page_Data_In & {
+        page_window:        Page_Window;
+    };
+
+    export type Page_Data_Out = Page_Data_Specific & {
+        page_window:        Page_Window;
+    }
+
+
+
+    export type Page_Window = {
+        location_origin:    string;
+        sesskey:            string;
+        body_id:            string;
+        body_class:         string;
+    }
+
+
+
+
+
+    export type Page_Error = {
+        name:               "Error";
+        message:            string;
+    }
+
+
+    export type page_course_index_data = Page_Data_Generic & {
         page: "course-index-category?"
         mdl_course_categories: {
             id:         number;
@@ -11,14 +63,14 @@ namespace MJS {
             description: string }
     }
 
-    async function page_course_index(message: Partial<Page_Data>): Promise<page_course_index_data> {
+    async function page_course_index(message: Page_Data_Inter): Promise<page_course_index_data> {
 
         async function category(category_dom?: HTMLDivElement): Promise<Partial<MDL_Course_Categories>> {
 
 
             async function course(course_dom: HTMLDivElement): Promise<Partial<MDL_Course>> {
                 const course_id_out = parseInt(course_dom.getAttribute("data-courseid"));
-                const course_name_out = course_dom.querySelector(":scope .coursename a").text;
+                const course_name_out = (course_dom.querySelector(":scope .coursename a") as HTMLAnchorElement).text;
                 return {id: course_id_out, fullname: course_name_out};
             }
 
@@ -91,11 +143,11 @@ namespace MJS {
 
 
     
-    export type page_backup_restorefile_data = Partial<Page_Data> & {
+    export type page_backup_restorefile_data = Page_Data_Generic & {
         page: "backup-restorefile"
     };
     
-    async function page_backup_restorefile(message: Partial<Page_Data>): Promise<page_backup_restorefile_data> {
+    async function page_backup_restorefile(message: Page_Data_Inter): Promise<page_backup_restorefile_data> {
         const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
         const restore_link = document.querySelector("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']") as HTMLAnchorElement;
         //if (message.dom_submit && message.dom_submit == "download") {
@@ -109,12 +161,12 @@ namespace MJS {
     
 
 
-    export type page_backup_restore_data = Partial<Page_Data> & {
+    export type page_backup_restore_data = Page_Data_Generic & {
         page: "backup-restore",
-        stage: number
+        stage: number|null
     };
     
-    async function page_backup_restore(message: Partial<Page_Data>): Promise<page_backup_restore_data> {
+    async function page_backup_restore(message: Page_Data_Inter): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
         const stage = stage_dom ? parseInt(stage_dom.value) : null;
 
@@ -154,7 +206,7 @@ namespace MJS {
                 const stage_4_settings_submit_dom = document.querySelector("#region-main form#mform1.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
 
                 if (message.dom_set_key == "stage 4 settings users") {
-                    stage_4_settings_users_dom.checked = message.dom_set_value;  // TODO: Check
+                    stage_4_settings_users_dom.checked = message.dom_set_value ? true : false;  // TODO: Check
                     await stage_4_settings_users_dom.dispatchEvent(new Event("change"));            
                     await sleep(100);
                 }
@@ -221,7 +273,7 @@ namespace MJS {
 
 
 
-    export type page_course_view_data = Partial<Page_Data> & {
+    export type page_course_view_data = Page_Data_Generic & {
         page: "course-view-*"
         mdl_course: page_course_view_course;
         mdl_course_sections?: page_course_view_course_sections;
@@ -248,7 +300,7 @@ namespace MJS {
         }
     }
 
-    async function page_course_view(message: Partial<Page_Data>): Promise<page_course_view_data> {
+    async function page_course_view(message: Page_Data_Inter): Promise<page_course_view_data> {
 
         // Course Start
         const main_dom:        Element             = window.document.querySelector(":root #region-main")
@@ -257,7 +309,7 @@ namespace MJS {
 
         const course_out_id =    parseInt((message.page_window.body_class.match(/\bcourse-(\d+)\b/) || throwf(new Error("WS course get displayed, course id not found."))
                                  )[1]);
-        const course_out_fullname =  window.document.querySelector(":root .breadcrumb a[title]").getAttribute("title") || "";
+        const course_out_fullname =  (window.document.querySelector(":root .breadcrumb a[title]") as HTMLAnchorElement).getAttribute("title") || "";
         const course_out_format =     (message.page_window.body_class.match(/\bformat-([a-z]+)\b/)    || throwf(new Error("WS course get displayed, course format not found."))
                         )[1];
         
@@ -472,7 +524,7 @@ namespace MJS {
     */
 
 
-    export type page_course_editsection_data = Partial<Page_Data> & {
+    export type page_course_editsection_data = Page_Data_Generic & {
         page: "course-editsection";
         mdl_course_sections: page_course_editsection_section;
     }
@@ -484,7 +536,7 @@ namespace MJS {
     }
     
 
-    async function page_course_editsection(message: Partial<Page_Data>): Promise<page_course_editsection_data> {
+    async function page_course_editsection(message: Page_Data_Inter): Promise<page_course_editsection_data> {
         // const section_id    = message.sectionid;
         // Start
         const section_in = message.mdl_course_sections;
@@ -557,7 +609,7 @@ namespace MJS {
     }
 
 
-    export type page_module_edit_data = Partial<Page_Data> & {
+    export type page_module_edit_data = Page_Data_Generic & {
         page: "mod-*-mod"
         mdl_course_modules: page_module_edit_module
     }
@@ -573,7 +625,7 @@ namespace MJS {
         }
     }
     
-    async function page_module_edit(message: Partial<Page_Data>): Promise<page_module_edit_data> {
+    async function page_module_edit(message: Page_Data_Inter): Promise<page_module_edit_data> {
 
         // Module Start
         const module_in = message.mdl_course_modules;
@@ -715,12 +767,12 @@ namespace MJS {
     
 
 
-    export type page_mod_feedback_edit_data = Partial<Page_Data> & {
+    export type page_mod_feedback_edit_data = Page_Data_Generic & {
         page: "mod-feedback-edit"
         mdl_course_modules: {mdl_course_module_instance: {mdl_feedback_template_id: number;}}
     }
     
-    async function page_mod_feedback_edit(message: Partial<Page_Data>): Promise<Partial<page_mod_feedback_edit_data>> {
+    async function page_mod_feedback_edit(message: Page_Data_Inter): Promise<page_mod_feedback_edit_data> {
        const template_id_dom = document.querySelector(":root #region-main form#mform2.mform select#id_templateid") as HTMLSelectElement;
        if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
             && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
@@ -732,13 +784,13 @@ namespace MJS {
     }
 
 
-    export type page_mod_feedback_use_templ_data = Partial<Page_Data> & {
+    export type page_mod_feedback_use_templ_data = Page_Data_Generic & {
         page: "mod-feedback-use_templ";
         //mdl_course_modules: {x_submit: boolean;};
         //dom_submit: boolean
     }
     
-    async function page_mod_feedback_use_templ(message: Partial<Page_Data>): Promise<page_mod_feedback_use_templ_data> {
+    async function page_mod_feedback_use_templ(message: Page_Data_Inter): Promise<page_mod_feedback_use_templ_data> {
        const submit_dom = document.querySelector(":root #region-main form#mform1.mform input#id_submitbutton") as HTMLInputElement;
        if (message && message.mdl_course_modules && message.mdl_course_modules && message.dom_submit) { //message.mdl_course_modules.x_submit) {
             submit_dom.click();
@@ -752,18 +804,17 @@ namespace MJS {
 
 
     
-    async function page_onMessage(message: Partial<Page_Data>, sender?: browser.runtime.MessageSender): Promise<Page_Data> {
+    async function page_onMessage(message: Page_Data_In, sender?: browser.runtime.MessageSender): Promise<Page_Data_Out> {
         console.log("page_onmessage starting");
         if (sender && sender.tab !== undefined) { throw new Error("Unexpected message"); };
         console.log("page onmessage ending");
         return await page_get_set(message);
     }
 
-    async function page_get_set(message: Partial<Page_Data>): Promise<Page_Data> {
+    async function page_get_set(message_in: Page_Data_In): Promise<Page_Data_Out> {
 
-        if (message.page_window) {
-            throw new Error("DOM window data set unexpectedly.");
-        }
+        let message: Page_Data_Inter = message_in;
+
         message.page_window = {
                 location_origin:    window.location.origin,
                 //location_pathname:  window.location.pathname,
@@ -780,7 +831,7 @@ namespace MJS {
             
         };
 
-        let result: Partial<Page_Data>;
+        let result: Page_Data_Specific;
 
         switch (window.document.body.id) {
             case "page-course-index":
@@ -833,13 +884,10 @@ namespace MJS {
                 result = await page_mod_feedback_use_templ(message);
                 break;
             default:
-                //throw new Error("Unrecognised page");
-                result = {};
+                throw new Error("Unrecognised page");
                 break;
         }
-        if (result.page_window) {
-            throw new Error("DOM window data set unexpectedly.");
-        }
+
         result.page_window = message.page_window;
 
         return result;
@@ -852,9 +900,9 @@ namespace MJS {
         // return {status: true};
         //return c_on_call({});
         try {
-            browser.runtime.sendMessage(await page_onMessage({}));
+            browser.runtime.sendMessage(await page_onMessage({page: "*"}));
         } catch (e) {
-            browser.runtime.sendMessage({error: e});
+            browser.runtime.sendMessage({name: "Error", message: e});
         }
     }
 
