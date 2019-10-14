@@ -11,15 +11,13 @@ namespace MJS {
 
         page_tab_id:        number;
 
-        //page_details_or_error: Page_Data_Out|Errorlike;
+        page_load_wait:     number = 0;
+        page_message:       Page_Data_Out|Errorlike = null;
+        page_is_loaded:     boolean = false;
+
         page_details:       Page_Data_Out;
         page_wwwroot:       string;
         page_sesskey:       string;
-
-        page_is_loaded:     boolean = false;
-        page_message:       Page_Data_Out|Errorlike = null;
-        //page_load_state:    number = 0;     // 0 loading / 1 script loaded / 2 page loaded / 3 script & page loaded
-        page_load_wait:     number = 0;
 
         macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 awaiting load / 3 loaded
         macro_error:        Errorlike;
@@ -57,10 +55,8 @@ namespace MJS {
         constructor(tab_id: number) {
             this.page_tab_id = tab_id;
             this.macro_state = 0;
-            //this.page_load_state = 0;
             this.page_is_loaded = false;
             this.page_message = null;
-            //console.log("load state: "+ this.page_load_state);
         }
 
 
@@ -108,7 +104,7 @@ namespace MJS {
                 if (this.page_load_wait <= count * 30) {  // Assume a step takes 3 seconds
                     this.page_load_count(1 / 30);
                 }
-            } while (/*this.macro_state != 3*/!this.page_is_loaded || !this.page_message);
+            } while (!this.page_is_loaded || !this.page_message);
             this.macro_state = 3;
             (!is_Errorlike(this.page_message))                        || throwf(new Error(this.page_message.message));
             this.page_details = this.page_message as Page_Data_Out;
@@ -139,7 +135,6 @@ namespace MJS {
 
 
         public async onMessage(message: Page_Data_Out|Errorlike, _sender: browser.runtime.MessageSender) {
-            //this.page_details_or_error = message;
 
             if (!this.page_message) {
                 this.page_message = message;
@@ -154,12 +149,9 @@ namespace MJS {
                 }
 
                 if (this.page_is_loaded ) {
-                    //this.page_load_state = 3;
 
                     console.log("*** late page message ***");
-                    //console.log("load state: "+ this.page_load_state);
-                    //if (this.macro_state==2) {/*this.macro_state = 3;*/}
-                    /*else*/ if (this.macro_state==0) { this.macros_init(); }
+                    if (this.macro_state==0) { this.macros_init(); }
                     try {
                         await this.popup.update();
                     } catch(e) {
@@ -167,7 +159,6 @@ namespace MJS {
                     }
                 }
             } else if (!is_Errorlike(this.page_message)) {
-                //console.log("Unexpected state: " + this.page_load_state);
                 this.page_message = {name:"Error", message: "Duplicate message"};
             }
 
@@ -175,41 +166,27 @@ namespace MJS {
 
 
         public async onTabUpdated(_tab_id: number, update_info: Partial<browser.tabs.Tab>, _tab: browser.tabs.Tab): Promise<void> {
-            //this.m_log += "tab updated "+ _update_info.status +"\n";
-            //if (this.m_tab && tab_id == this.m_tab.id) {
-                //p_update();
-            //}
+
             if (update_info && update_info.status) {
                 if (update_info.status == "loading") {
-                    //this.page_load_state = 0;
                     this.page_is_loaded = false;
                     this.page_message = null;
-                    //console.log("load state: "+ this.page_load_state);
-                    //(this.macro_state == 0 || this.macro_state == 2) || throwf(new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status));
-                } else if (update_info.status == "complete" && /*this.page_load_state == 0*/ !this.page_is_loaded) {
+                } else if (update_info.status == "complete" && !this.page_is_loaded) {
                     this.page_is_loaded = true;
+                    
                     if (!this.page_message) {
-                        //plugin_started = true;
-                        //this.page_load_state = this.page_load_state + 2;
-
-                        //console.log("load state: "+ this.page_load_state);
-                        //(this.macro_state == 0 || this.macro_state == 2) || throwf(new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status));
                         if (this.macro_state == 2) { console.log("*** missing page message ***"); }
                     } else {
-                        //this.page_load_state = this.page_load_state + 2;
-                        //console.log("load state: "+ this.page_load_state);
                         if (this.macro_state==0) { this.macros_init(); }
-                        //else if (this.macro_state==2) {/*this.macro_state = 3;*/}
-                        //else { throw new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status); }
                         try {
                             await this.popup.update();
                         } catch(e) {
                             // Do nothing
                         }
                     }
-                } else {
+                } else if (!this.page_message || !is_Errorlike(this.page_message)) {
                     //this.m_state = -1;
-                    throw new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status);
+                    this.page_message = { name: "Error", message: "Unexpected tab update: " + update_info.status };
                 }
             }
 
