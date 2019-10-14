@@ -2,13 +2,12 @@
 namespace MJS {
 
 
-    export type Page_Data_Generic = {
-        page:               string;
-        mdl_course_categories?: Partial<MDL_Course_Categories>;
-        mdl_course?:         Partial<MDL_Course>;
-        mdl_course_sections?: Partial<MDL_Course_Sections>;
-        mdl_course_modules?: Partial<MDL_Course_Modules>;
-    }
+    export type Page_Data_Generic = { page: string; } & DeepPartial<{
+        mdl_course_categories:  MDL_Course_Categories;
+        mdl_course:             MDL_Course;
+        mdl_course_sections:    MDL_Course_Sections;
+        mdl_course_modules:     MDL_Course_Modules;
+    }>;
 
 
     export type Page_Data_Specific =
@@ -22,7 +21,7 @@ namespace MJS {
         | page_module_edit_data;
 
 
-    export type Page_Data_In = Partial<Page_Data_Specific> & {
+    export type Page_Data_In = DeepPartial<Page_Data_Specific> & {
         dom_submit?:         boolean|string;
         dom_set_key?:        string;
         dom_set_value?:      boolean|number|string;
@@ -60,21 +59,27 @@ namespace MJS {
         mdl_course_categories: {
             id:         number;
             name:       string;
-            description: string }
+             }
     }
 
     async function page_course_index(message: Page_Data_Inter): Promise<page_course_index_data> {
 
-        async function category(category_dom?: HTMLDivElement): Promise<Partial<MDL_Course_Categories>> {
+        async function category(category_dom?: HTMLDivElement): Promise<DeepPartial<MDL_Course_Categories> & {
+            id:         number;
+            name:       string;
+             }> {
 
 
-            async function course(course_dom: HTMLDivElement): Promise<Partial<MDL_Course>> {
-                const course_id_out = parseInt(course_dom.getAttribute("data-courseid"));
+            async function course(course_dom: HTMLDivElement): Promise<DeepPartial<MDL_Course>> {
+                const course_id_out = parseInt(course_dom.getAttribute("data-courseid") as string);
                 const course_name_out = (course_dom.querySelector(":scope .coursename a") as HTMLAnchorElement).text;
                 return {id: course_id_out, fullname: course_name_out};
             }
 
-            let category_out: Partial<MDL_Course_Categories>;
+            let category_out: DeepPartial<MDL_Course_Categories> & {
+                id:         number;
+                name:       string;
+                 };
 
             if (!category_dom) {
                 // Category ID
@@ -105,27 +110,27 @@ namespace MJS {
                     //category_out_description = "";
                     category_out = { id: 0, name: "", description: ""};
                 }
-                category_dom = document.querySelector(".course_category_tree");
+                category_dom = document.querySelector(".course_category_tree") as HTMLDivElement;
             } else {
                 const category_link_dom = category_dom.querySelector(":scope > .info > .categoryname > a") as HTMLAnchorElement;
-                const category_out_id = parseInt(category_dom.getAttribute("data-categoryid"));
+                const category_out_id = parseInt(category_dom.getAttribute("data-categoryid") as string);
                 const category_out_name = category_link_dom.text;
                 category_out = {id: category_out_id, name: category_out_name};
                 if (message.dom_expand && category_dom.classList.contains("collapsed")) {
                     console.log("About to click");
-                    await category_dom.querySelector(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname").click();
+                    await (category_dom.querySelector(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname") as HTMLHeadingElement).click();
                     console.log("Clicked");
                     do {
                         await sleep(200);
                     } while (category_dom.classList.contains("notloaded"));
                 }
             }
-            const subcategories_out: Partial<MDL_Course_Categories>[] = [];
+            const subcategories_out: DeepPartial<MDL_Course_Categories>[] = [];
             category_out.mdl_course_categories = subcategories_out;
             for (const subcategory_dom of category_dom.querySelectorAll(":scope > .content > .subcategories > div.category")) {
                 subcategories_out.push(await category(subcategory_dom));
             }
-            const courses_out: Partial<MDL_Course>[] = [];
+            const courses_out: DeepPartial<MDL_Course>[] = [];
             category_out.mdl_course = courses_out;
             for (const course_dom of category_dom.querySelectorAll(":scope > .content > .courses > div.coursebox")) {
                 courses_out.push(await course(course_dom));
@@ -276,15 +281,15 @@ namespace MJS {
     export type page_course_view_data = Page_Data_Generic & {
         page: "course-view-*"
         mdl_course: page_course_view_course;
-        mdl_course_sections?: page_course_view_course_sections;
+        mdl_course_sections: page_course_view_course_sections;
     }
-    type page_course_view_course = Partial<MDL_Course> & {
+    type page_course_view_course = DeepPartial<MDL_Course> & {
         id:         number;
         fullname:   string;
         format:     string
         mdl_course_sections: page_course_view_course_sections[]
     }
-    type page_course_view_course_sections = Partial<MDL_Course_Sections> & {
+    type page_course_view_course_sections = DeepPartial<MDL_Course_Sections> & {
         id?:         number;
         section:    number;
         name:       string;
@@ -292,7 +297,7 @@ namespace MJS {
         summary?:    string;
         mdl_course_modules?: page_course_view_course_modules[]
     }
-    type page_course_view_course_modules = Partial<MDL_Course_Modules> & {
+    type page_course_view_course_modules = DeepPartial<MDL_Course_Modules> & {
         id:         number;
         mdl_course_module_instance: {
             name:       string;
@@ -395,7 +400,7 @@ namespace MJS {
                             // TODO: For folder (to handle inline) if no .instancename, use .fp-filename ???
 
                     // Module Intro
-                    const module_out_instance_intro: string = (module_modname == "label")  // TODO: Test
+                    const module_out_instance_intro: string|undefined = (module_modname == "label")  // TODO: Test
                                         ? (module_dom.querySelector(":scope .contentwithoutlink") || throwf(new Error("WSC course get content, label description not found."))
                                         ).innerHTML
                                         : (module_dom.querySelector(":scope .contentafterlink") || { innerHTML: undefined }
@@ -528,7 +533,7 @@ namespace MJS {
         page: "course-editsection";
         mdl_course_sections: page_course_editsection_section;
     }
-    type page_course_editsection_section = Partial<MDL_Course_Sections> & {
+    type page_course_editsection_section = DeepPartial<MDL_Course_Sections> & {
         id:         number;
         name:       string;
         summary:    string;
@@ -581,10 +586,10 @@ namespace MJS {
         const section_out_summary = section_summary_dom.value;
         //section_out.summary = section_summary_dom.value.replace("https://moodle.op.ac.nz/draftfile.php/"+user_context+"/user/draft/"+section_summary_item_id, "@@PLUGINFILE@@");
 
-        let section_out_x_options = { };
+        let section_out_x_options: {level?: number} = { };
 
         // Level
-        const section_level_dom: HTMLInputElement|null  = section_dom.querySelector("select[name='level']");
+        const section_level_dom = section_dom.querySelector("select[name='level']") as HTMLSelectElement;
         if (section_in && section_in.x_options && section_in.x_options.level != undefined) {
             section_level_dom.value = "" + section_in.x_options.level;
         }
@@ -611,18 +616,18 @@ namespace MJS {
 
     export type page_module_edit_data = Page_Data_Generic & {
         page: "mod-*-mod"
-        mdl_course_modules: page_module_edit_module
+        mdl_course_modules: DeepPartial<page_module_edit_module>
     }
-    type page_module_edit_module = Partial<MDL_Course_Modules> & {
+    type page_module_edit_module = DeepPartial<MDL_Course_Modules> & {
         id:         number;
         instance:   number;
         course:     number;
         section:    number;
         mdl_modules_name: string;
-        mdl_course_module_instance: {
+        mdl_course_module_instance: Partial<{
             name: string;
             intro: string;
-        }
+        }>
     }
     
     async function page_module_edit(message: Page_Data_Inter): Promise<page_module_edit_data> {
@@ -633,18 +638,18 @@ namespace MJS {
         const module_dom:              HTMLFormElement         = window.document.querySelector(":root form#mform1")  as HTMLFormElement;
     
         // Module ID
-        const module_id_dom:           Element|RadioNodeList  = module_dom.elements.namedItem("coursemodule")
+        const module_id_dom  = module_dom.elements.namedItem("coursemodule") as HTMLInputElement
                                                                                     || throwf(new Error("WSC course get module, ID not found."));
         const module_out_id =             parseInt(module_id_dom.value);
 
         // Module Instance ID
-        const module_instance_dom:     Element|RadioNodeList  = module_dom.elements.namedItem("instance")
+        const module_instance_dom  = module_dom.elements.namedItem("instance") as HTMLInputElement
                                                                                     || throwf(new Error("WSC course get module, instance ID not found."));
         const module_out_instance = parseInt(module_instance_dom.value); //                    || throwf(new Error("WSC course get module, instance ID not recognised"));
         //const module_out__instance = {id: module_out.instance};
 
         // Module Course
-        const module_course_dom:       Element|RadioNodeList  = module_dom.elements.namedItem("course")
+        const module_course_dom  = module_dom.elements.namedItem("course") as HTMLInputElement
                                                                                     || throwf(new Error("WSC course get module, course ID not found."));
         const module_out_course = parseInt(module_course_dom.value)                      || throwf(new Error("WSC course get module, course ID not recognised"));
 
@@ -653,12 +658,12 @@ namespace MJS {
         || throwf(new Error("WSC course get module, section num not found.")) ) as HTMLInputElement).value);
 
         // Module ModName
-        const module_modname_dom:      Element|RadioNodeList  = module_dom.elements.namedItem("modulename")
+        const module_modname_dom  = module_dom.elements.namedItem("modulename") as HTMLInputElement
                                                                                     || throwf(new Error("WSC course get module, modname not found."));
         const module_out_modname =        module_modname_dom.value;
 
         // Module Intro/Description
-        const module_description_dom:  Element|RadioNodeList = module_dom.elements.namedItem("introeditor[text]")
+        const module_description_dom = module_dom.elements.namedItem("introeditor[text]") as HTMLTextAreaElement
                                                                                     || throwf(new Error("WSC course get module, description not found."));
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.intro != undefined) {
             module_description_dom.value = module_in.mdl_course_module_instance.intro;
@@ -666,7 +671,7 @@ namespace MJS {
         const module_out_instance_intro = module_description_dom.value;
 
         // Module Name
-        const module_name_dom:                                     Element|RadioNodeList|null = module_dom.elements.namedItem("name");
+        const module_name_dom = module_dom.elements.namedItem("name") as HTMLInputElement;
         // TODO: For label, instead of name field, use introeditor[text] field (without markup)?
 
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.name != undefined) {
@@ -677,16 +682,15 @@ namespace MJS {
 
 
         // Module Completion
-        const module_completion_dom:   Element|RadioNodeList|null = module_dom.elements.namedItem("completion");
+        const module_completion_dom = module_dom.elements.namedItem("completion") as HTMLInputElement;
         const module_completion: number = module_completion_dom ? parseInt(module_completion_dom.value) : 0;
         if (module_completion == 0 || module_completion == 1 || module_completion == 2) {  }
         else                                                                        { throw new Error("WSC course get module, completion value unexpected."); }
         //module_out_completion = module_completion;
 
         // For assignments
-        const module_assignsubmission_file_enabled_x_dom:          Element|RadioNodeList|null = module_dom.elements.namedItem("assignsubmission_file_enabled");
-        const module_assignsubmission_onlinetext_enabled_x_dom:    Element|RadioNodeList|null =
-                                                                                            module_dom.elements.namedItem("assignsubmission_onlinetext_enabled");
+        const module_assignsubmission_file_enabled_x_dom = module_dom.elements.namedItem("assignsubmission_file_enabled") as HTMLInputElement;
+        const module_assignsubmission_onlinetext_enabled_x_dom = module_dom.elements.namedItem("assignsubmission_onlinetext_enabled") as HTMLInputElement;
     
         // TODO: Add these
         // const module_completionview_x_dom:     Element|RadioNodeList|null = module_dom.elements.namedItem("completionview");
@@ -724,12 +728,12 @@ namespace MJS {
         //                                                                          { throw new Error("In module, couldn't get completion submit."); }
     
 
-    
+        /*
         const module_assignsubmission_file_enabled_x:       0|1|undefined   = module_assignsubmission_file_enabled_x_dom
                                                                               ? (module_assignsubmission_file_enabled_x_dom.checked ? 1 : 0)       : undefined;
         const module_assignsubmission_onlinetext_enabled_x: 0|1|undefined   = module_assignsubmission_onlinetext_enabled_x_dom
                                                                               ? (module_assignsubmission_onlinetext_enabled_x_dom.checked ? 1 : 0) : undefined;
-    
+        */
         // TODO: Fix to handle checkboxes appropriately (as above)
         // const module_completionview_x:     number|undefined = module_completionview_x_dom     ? parseInt(module_completionview_x_dom.value)     : undefined;
         // const module_completionusegrade_x: number|undefined = module_completionusegrade_x_dom ? parseInt(module_completionusegrade_x_dom.value) : undefined;
@@ -813,7 +817,7 @@ namespace MJS {
 
     async function page_get_set(message_in: Page_Data_In): Promise<Page_Data_Out> {
 
-        let message: Page_Data_Inter = message_in;
+        let message = message_in as Page_Data_Inter;
 
         message.page_window = {
                 location_origin:    window.location.origin,
@@ -890,7 +894,7 @@ namespace MJS {
 
         result.page_window = message.page_window;
 
-        return result;
+        return result as Page_Data_Out;
     }
 
 

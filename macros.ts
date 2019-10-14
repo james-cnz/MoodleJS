@@ -284,7 +284,7 @@ namespace MJS {
         private category_id:        number;
         private category_name:      string;
 
-        new_course: Partial<MDL_Course> & {
+        new_course: DeepPartial<MDL_Course> & {
             fullname: string;
             shortname: string;
             startdate: number;
@@ -364,7 +364,7 @@ namespace MJS {
 
             // Course settings (1 load)
             (this.page_details.stage == 8)                                      || throwf(new Error("WS course_restore, step 4 state unexpected."));
-            const course: Partial<MDL_Course> = {fullname: name, shortname: shortname, startdate: startdate};
+            const course: DeepPartial<MDL_Course> = {fullname: name, shortname: shortname, startdate: startdate};
             await this.page_call({mdl_course: course, dom_submit: "stage 8 submit"});
             await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
@@ -375,7 +375,7 @@ namespace MJS {
 
             // Complete--Go to new course (1 load)
             (this.page_details.stage == null)                                   || throwf(new Error("WS course_restore, step 7 state unexpected."));
-            const course_id = this.page_details.mdl_course.id;
+            const course_id = (this.page_details.mdl_course as DeepPartial<MDL_Course>).id as number;
             await this.page_call({dom_submit: "stage complete submit"});
             await this.page_loaded("page-course-view-", {course: course_id});
         
@@ -409,6 +409,7 @@ namespace MJS {
             this.prereq = false;
 
             // Check course type
+            if (this.page_details.page != "course-view-*")                      { return; }
             const course = this.page_details.mdl_course;
             if (!course || course.format != "onetopic" || !course.id) {  return; }
             this.course_id = course.id;
@@ -424,7 +425,7 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if (section.x_options.level <= 0 && section.section <= this.page_details.mdl_course_sections.section && section.name.toUpperCase().trim() == "MODULES") {
+                if ((section.x_options.level <= 0) && (section.section as number <= this.page_details.mdl_course_sections.section) && (section.name.toUpperCase().trim() == "MODULES")) {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
                 } else if (last_module_tab_num && section.x_options.level > 0) { // TODO: Need to scrape level property.
@@ -458,7 +459,8 @@ namespace MJS {
             await this.page_load("/course/view.php", {id: this.course_id, section: this.modules_tab_num},
                 "page-course-view-", {course: this.course_id},
             );
-            const modules_list = this.page_details.mdl_course_sections.mdl_course_modules;
+            if (this.page_details.page != "course-view-*")                      { throw new Error("Unexpected page type."); }
+            const modules_list = this.page_details.mdl_course_sections.mdl_course_modules as MDL_Course_Modules[];
         
             (modules_list.length == 1)                                          || throwf(new Error("Expected exactly one resource in Modules tab."));
         
@@ -475,7 +477,7 @@ namespace MJS {
                 await this.page_load("/course/view.php", {id: this.course_id, section: section_num},
                                     "page-course-view-", {course: this.course_id});
                 const section_full = this.page_details.mdl_course_sections;
-                const section_name = (parser.parseFromString(section_full.summary, "text/html").querySelector(".header1")
+                const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")
                                                                                         || throwf(new Error("Module name not found."))
                                     ).textContent                                      || throwf(new Error("Module name content not found."));
         
@@ -483,10 +485,10 @@ namespace MJS {
                             + '<a href="' + this.tabdata.page_wwwroot + "/course/view.php?id=" + this.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
         
-                for (const mod of section_full.mdl_course_modules) {
+                for (const mod of section_full.mdl_course_modules as DeepPartial<MDL_Course_Modules>[]) {
         
                     // parse description
-                    const mod_desc = parser.parseFromString(mod.mdl_course_module_instance.intro || "", "text/html");
+                    const mod_desc = parser.parseFromString((mod.mdl_course_module_instance as DeepPartial<MDL_Course_Module_Instance>).intro || "", "text/html");
                     const part_name = mod_desc.querySelector(".header2, .header2gradient");
                     if (part_name) {
                         index_html = index_html
@@ -530,7 +532,7 @@ namespace MJS {
         private course_id:              number;
         private new_section_pos:        number|null;
 
-        new_section: Partial<MDL_Course_Sections> & {
+        new_section: DeepPartial<MDL_Course_Sections> & {
             fullname: string;
             name: string;
         }
@@ -609,6 +611,7 @@ namespace MJS {
                 "/course/changenumsections.php", {courseid: this.course_id, increase: 1, sesskey: this.tabdata.page_sesskey, insertsection: 0},
                 "page-course-view-", {course: this.course_id},
             );
+            if (this.page_details.page != "course-view-*")                      { throw new Error("Unexpected page type."); }
             let new_section = this.page_details.mdl_course_sections;
 
             // Move new tab (1 load)
@@ -705,7 +708,7 @@ namespace MJS {
                 </div>`.replace(/^        /gm, "")}, }, dom_submit: true});
             await this.page_loaded( "page-course-view-", {course: this.course_id});
             new_section = (this.page_details as page_course_view_data).mdl_course_sections;
-            let feedback_act: Partial<MDL_Course_Modules>|null = null;
+            let feedback_act: DeepPartial<MDL_Course_Modules>|null = null;
                 for (const module of new_section.mdl_course_modules) {
                     if (!feedback_act || module.id > feedback_act.id) {
                         feedback_act = module;
@@ -765,8 +768,9 @@ namespace MJS {
             this.prereq = false;
 
             // var doc_details = ws_page_call({wsfunction: "x_doc_get_details"});
+            if (this.page_details.page != "course-view-*")                      { throw new Error("Unexpected page type."); }
             const course = this.page_details.mdl_course;
-            if (course && course.hasOwnProperty("format") && course.format == "onetopic") {  } else { return; }
+            if (course && course.hasOwnProperty("format") && course.format == "onetopic" && course.id) {  } else { return; }
             this.course_id = course.id;
 
 

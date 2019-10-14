@@ -20,8 +20,8 @@ namespace MJS {
         public constructor() {
             const bg_this = this;
             browser.runtime.onMessage.addListener(
-                function (message: Page_Data_Out, sender: browser.runtime.MessageSender) {
-                    bg_this.onMessage(message, sender)
+                function (message: object, sender: browser.runtime.MessageSender) {
+                    bg_this.onMessage(message as Page_Data_Out, sender)
                 }
             );
             browser.tabs.onUpdated.addListener(

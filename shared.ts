@@ -1,6 +1,15 @@
 namespace MJS {
 
 
+    export type DeepPartial<T> = {
+        [P in keyof T]?: T[P] extends Array<infer U>
+          ? Array<DeepPartial<U>>
+          : T[P] extends ReadonlyArray<infer U>
+            ? ReadonlyArray<DeepPartial<U>>
+            : DeepPartial<T[P]>
+      };
+
+
     export function throwf(err: Error): never {
         throw err;
     }
@@ -45,6 +54,8 @@ namespace MJS {
         depth:              number;
         path:               string;
         theme:              string;
+        mdl_course_categories: MDL_Course_Categories[];
+        mdl_course:         MDL_Course[];
     }
 
     export type MDL_Course = MDL_Context_Instance & {
@@ -79,7 +90,7 @@ namespace MJS {
         enablecompletion:   number;
         //completionnotify
         //cacherev
-        mdl_course_sections: Partial<MDL_Course_Sections>[];
+        mdl_course_sections: MDL_Course_Sections[];
     }
 
 
@@ -96,7 +107,7 @@ namespace MJS {
         timemodified:       number;
         x_options: {level?: number};
         //x_submit:           boolean;
-        mdl_course_modules: Partial<MDL_Course_Modules>[];
+        mdl_course_modules: MDL_Course_Modules[];
     }
 
 
@@ -109,7 +120,7 @@ namespace MJS {
         module:             number;
         mdl_modules_name: string;
         instance:           number;     // -> activity.id for type module
-        mdl_course_module_instance: Partial<MDL_Course_Module_Instance>;
+        mdl_course_module_instance: MDL_Course_Module_Instance;
         section:            number;
         idnumber:           string|null;
         added:              number;
