@@ -800,7 +800,7 @@ namespace MJS {
             this.prereq = false;
 
             // var doc_details = ws_page_call({wsfunction: "x_doc_get_details"});
-            if (this.page_details.page != "course-view-*")                      { throw new Error("Unexpected page type."); }
+            if (this.page_details.page != "course-view-*")                      { return; }
             const course = this.page_details.mdl_course;
             if (course && course.hasOwnProperty("format") && course.format == "onetopic" && course.id) {  } else { return; }
             this.course_id = course.id;
