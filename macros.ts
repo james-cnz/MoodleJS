@@ -11,12 +11,14 @@ namespace MJS {
 
         page_tab_id:        number;
 
-        page_details_or_error: Page_Data_Out|Errorlike;
+        //page_details_or_error: Page_Data_Out|Errorlike;
         page_details:       Page_Data_Out;
         page_wwwroot:       string;
         page_sesskey:       string;
 
-        page_load_state:    number = 0;     // 0 loading / 1 script loaded / 2 page loaded / 3 script & page loaded
+        page_is_loaded:     boolean = false;
+        page_message:       Page_Data_Out|Errorlike = null;
+        //page_load_state:    number = 0;     // 0 loading / 1 script loaded / 2 page loaded / 3 script & page loaded
         page_load_wait:     number = 0;
 
         macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 awaiting load / 3 loaded
@@ -55,8 +57,10 @@ namespace MJS {
         constructor(tab_id: number) {
             this.page_tab_id = tab_id;
             this.macro_state = 0;
-            this.page_load_state = 0;
-            console.log("load state: "+ this.page_load_state);
+            //this.page_load_state = 0;
+            this.page_is_loaded = false;
+            this.page_message = null;
+            //console.log("load state: "+ this.page_load_state);
         }
 
 
@@ -104,9 +108,10 @@ namespace MJS {
                 if (this.page_load_wait <= count * 30) {  // Assume a step takes 3 seconds
                     this.page_load_count(1 / 30);
                 }
-            } while (this.macro_state != 3);
-            (!is_Errorlike(this.page_details_or_error))                        || throwf(new Error(this.page_details_or_error.message));
-            this.page_details = this.page_details_or_error as Page_Data_Out;
+            } while (/*this.macro_state != 3*/!this.page_is_loaded || !this.page_message);
+            this.macro_state = 3;
+            (!is_Errorlike(this.page_message))                        || throwf(new Error(this.page_message.message));
+            this.page_details = this.page_message as Page_Data_Out;
             if (this.page_load_wait <= count * 30) {
                 this.page_load_count(count - this.page_load_wait / 30);
             }
@@ -134,34 +139,36 @@ namespace MJS {
 
 
         public async onMessage(message: Page_Data_Out|Errorlike, _sender: browser.runtime.MessageSender) {
-            this.page_details_or_error = message;
-            if (is_Errorlike(message)) {
-                this.page_wwwroot = null;
-                this.page_sesskey = null;
-            } else {
-                this.page_details = message;
-                console.log("updated page details");
-                this.page_wwwroot = this.page_details.page_window.location_origin;
-                this.page_sesskey = this.page_details.page_window.sesskey;
-            }
+            //this.page_details_or_error = message;
 
-            if (this.page_load_state == 0) {
-                this.page_load_state = 1;
-                console.log("load state: "+ this.page_load_state);
-            } else if (this.page_load_state == 2) {
-                this.page_load_state = 3;
-                console.log("*** late page message ***");
-                console.log("load state: "+ this.page_load_state);
-                if (this.macro_state==2) {this.macro_state = 3;}
-                else if (this.macro_state==0) { this.macros_init(); }
-                try {
-                    await this.popup.update();
-                } catch(e) {
-                    // Do nothing
+            if (!this.page_message) {
+                this.page_message = message;
+                if (is_Errorlike(message)) {
+                    this.page_wwwroot = null;
+                    this.page_sesskey = null;
+                } else {
+                    this.page_details = message;
+                    console.log("updated page details");
+                    this.page_wwwroot = this.page_details.page_window.location_origin;
+                    this.page_sesskey = this.page_details.page_window.sesskey;
                 }
-            } else {
-                console.log("Unexpected state: " + this.page_load_state);
-                throw new Error("unexpected state");
+
+                if (this.page_is_loaded ) {
+                    //this.page_load_state = 3;
+
+                    console.log("*** late page message ***");
+                    //console.log("load state: "+ this.page_load_state);
+                    //if (this.macro_state==2) {/*this.macro_state = 3;*/}
+                    /*else*/ if (this.macro_state==0) { this.macros_init(); }
+                    try {
+                        await this.popup.update();
+                    } catch(e) {
+                        // Do nothing
+                    }
+                }
+            } else if (!is_Errorlike(this.page_message)) {
+                //console.log("Unexpected state: " + this.page_load_state);
+                this.page_message = {name:"Error", message: "Duplicate message"};
             }
 
         }
@@ -174,29 +181,35 @@ namespace MJS {
             //}
             if (update_info && update_info.status) {
                 if (update_info.status == "loading") {
-                    this.page_load_state = 0;
-                    console.log("load state: "+ this.page_load_state);
-                    (this.macro_state == 0 || this.macro_state == 2) || throwf(new Error("unexpected state: " + this.page_load_state + " for status: " + update_info.status));
-                } else if (update_info.status == "complete" && this.page_load_state == 0) {
-                    //plugin_started = true;
-                    this.page_load_state = this.page_load_state + 2;
-                    console.log("load state: "+ this.page_load_state);
-                    (this.macro_state == 0 || this.macro_state == 2) || throwf(new Error("unexpected state: " + this.page_load_state + " for status: " + update_info.status));
-                    if (this.macro_state == 2) { console.log("*** missing page message ***"); }
-                } else if (update_info.status == "complete" && this.page_load_state == 1) {
-                    this.page_load_state = this.page_load_state + 2;
-                    console.log("load state: "+ this.page_load_state);
-                    if (this.macro_state==0) { this.macros_init(); }
-                    else if (this.macro_state==2) {this.macro_state = 3;}
-                    else { throw new Error("unexpected state: " + this.page_load_state + " for status: " + update_info.status); }
-                    try {
-                        await this.popup.update();
-                    } catch(e) {
-                        // Do nothing
+                    //this.page_load_state = 0;
+                    this.page_is_loaded = false;
+                    this.page_message = null;
+                    //console.log("load state: "+ this.page_load_state);
+                    //(this.macro_state == 0 || this.macro_state == 2) || throwf(new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status));
+                } else if (update_info.status == "complete" && /*this.page_load_state == 0*/ !this.page_is_loaded) {
+                    this.page_is_loaded = true;
+                    if (!this.page_message) {
+                        //plugin_started = true;
+                        //this.page_load_state = this.page_load_state + 2;
+
+                        //console.log("load state: "+ this.page_load_state);
+                        //(this.macro_state == 0 || this.macro_state == 2) || throwf(new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status));
+                        if (this.macro_state == 2) { console.log("*** missing page message ***"); }
+                    } else {
+                        //this.page_load_state = this.page_load_state + 2;
+                        //console.log("load state: "+ this.page_load_state);
+                        if (this.macro_state==0) { this.macros_init(); }
+                        //else if (this.macro_state==2) {/*this.macro_state = 3;*/}
+                        //else { throw new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status); }
+                        try {
+                            await this.popup.update();
+                        } catch(e) {
+                            // Do nothing
+                        }
                     }
                 } else {
                     //this.m_state = -1;
-                    throw new Error("unexpected state: " + this.page_load_state + " for status: " + update_info.status);
+                    throw new Error("unexpected state: " /*+ this.page_load_state*/ + " for status: " + update_info.status);
                 }
             }
 
