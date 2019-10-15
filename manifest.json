@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
 
-  "name":         "MoodleJS2",
+  "name":         "MoodleJS",
   "author":       "James C",
   "version":      "2",
   "description":  "A script for automating some Moodle tasks at Otago Polytechnic (New Zealand).",
@@ -20,7 +20,7 @@
       "48": "icons/moodlejs-48.png",
       "128": "icons/moodlejs-128.png"
     },  
-    "default_title": "MoodleJS2--Automates some Moodle tasks"
+    "default_title": "MoodleJS--Automates some Moodle tasks"
   },
 
   "content_scripts": [ {

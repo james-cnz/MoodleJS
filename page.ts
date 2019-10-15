@@ -281,7 +281,7 @@ namespace MJS {
         mdl_course_sections: page_course_view_course_sections;
     }
     type page_course_view_course = DeepPartial<MDL_Course> & {
-        id:         number;
+        id:         number; // Needs editing on.
         fullname:   string;
         format:     string
         mdl_course_sections: page_course_view_course_sections[]

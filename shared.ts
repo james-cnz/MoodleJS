@@ -1,12 +1,5 @@
 namespace MJS {
 
-
-    export type Errorlike = {
-        name:               "Error";
-        message:            string;
-    }
-    
-
     export type DeepPartial<T> = {
         [P in keyof T]?: T[P] extends Array<infer U>
           ? Array<DeepPartial<U>>
@@ -15,19 +8,18 @@ namespace MJS {
             : DeepPartial<T[P]>
       };
 
+    export function sleep(time: number): Promise<{}> {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
 
     export function throwf(err: Error): never {
         throw err;
     }
 
-
-    export function sleep(time: number): Promise<{}> {
-        return new Promise((resolve) => setTimeout(resolve, time));
+    export type Errorlike = {
+        name:               "Error";
+        message:            string;
     }
-
-
-
-
 
     export function is_Errorlike(possible_Errorlike: Page_Data_Out|Errorlike): possible_Errorlike is Errorlike {
         return ((possible_Errorlike as Errorlike).name !== undefined)

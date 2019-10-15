@@ -12,7 +12,7 @@ namespace MJS {
         page_tab_id:        number;
 
         page_load_wait:     number = 0;
-        page_message:       Page_Data_Out|Errorlike = null;
+        page_message:       Page_Data_Out|Errorlike|null = null;
         page_is_loaded:     boolean = false;
 
         page_details:       Page_Data_Out;
@@ -20,7 +20,7 @@ namespace MJS {
         page_sesskey:       string;
 
         macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 awaiting load / 3 loaded
-        macro_error:        Errorlike;
+        macro_error:        Errorlike|null;
         macro_progress:     number = 100;
         macro_progress_max: number = 100;
         macro_cancel:       boolean = false;
@@ -54,18 +54,45 @@ namespace MJS {
 
         constructor(tab_id: number) {
             this.page_tab_id = tab_id;
-            this.macro_state = 0;
-            this.page_is_loaded = false;
-            this.page_message = null;
+            this.init();
         }
 
+
+        public async init() {
+            this.page_load_wait = 0;
+            this.page_message = null;
+            this.page_is_loaded = true;
+            this.macro_error = null;
+            this.macro_progress = 100;
+            this.macro_progress_max = 100;
+            this.macro_cancel = false;
+            try {
+                this.macro_state = 1;
+                this.page_details = await this.page_call({});
+                this.page_wwwroot = this.page_details.page_window.location_origin;
+                this.page_sesskey = this.page_details.page_window.sesskey;
+                this.macro_state = 0;
+            } catch(e) {
+                this.macro_state = 0;
+                this.page_details = null;
+                this.page_wwwroot = null;
+                this.page_sesskey = null;
+            }
+            this.macros_init();
+            this.macro_state = 0;
+            try {
+                this.popup.update();
+            } catch(e) {
+            }
+            console.log("init finished.")
+        }
 
 
 
 
         public async page_call(message: Page_Data_In): Promise<Page_Data_Out> {
 
-            (this.macro_state == 1)                                             || throwf(new Error("MJS page call: Unexpected state."));
+            (this.macro_state == 1)                                             || throwf(new Error("Page call:\nUnexpected state."));
 
             if (message.dom_submit) {
                 this.macro_state = 2;
@@ -83,8 +110,8 @@ namespace MJS {
                                 body_id_start: string, body_class: {[index: string]: string|number},
                                 count: number = 1): Promise<void> {
 
-            (this.macro_state == 1)                                             || throwf(new Error("MJS page load: Unexpected state."));
-            (pathname.match(/(?:\/[a-z]+)+\.php/))                              || throwf(new Error("MJS page load: Pathname unexpected."));
+            (this.macro_state == 1)                                             || throwf(new Error("Page load:\nUnexpected state."));
+            (pathname.match(/(?:\/[a-z]+)+\.php/))                              || throwf(new Error("Page load:\nPathname unexpected."));
 
             this.macro_state = 2;
             this.page_is_loaded = false;
@@ -97,7 +124,7 @@ namespace MJS {
 
         public async page_loaded(body_id_start: string, body_class: {[index: string]: string|number}, count: number = 1): Promise<void> {
 
-            (this.macro_state == 2)                                             || throwf(new Error("MJS page loaded: Unexpected state."));
+            (this.macro_state == 2)                                             || throwf(new Error("Page loaded:\nUnexpected state."));
 
             this.page_load_wait  = 0;
             do {
@@ -108,14 +135,15 @@ namespace MJS {
                 if (this.page_load_wait <= count * 30) {  // Assume a step takes 3 seconds
                     this.page_load_count(1 / 30);
                 }
-            } while (!this.page_is_loaded || !this.page_message);
+            } while (!(this.page_is_loaded && this.page_message) && !(this.page_message && is_Errorlike(this.page_message)));
             this.macro_state = 3;
             (!is_Errorlike(this.page_message))                        || throwf(new Error(this.page_message.message));
             this.page_details = this.page_message as Page_Data_Out;
+            this.page_message = null;
             if (this.page_load_wait <= count * 30) {
                 this.page_load_count(count - this.page_load_wait / 30);
             }
-            (this.page_load_match(body_id_start, body_class))                   || throwf(new Error("MJS page loaded: Body ID or class unexpected."));
+            (this.page_load_match(body_id_start, body_class))                   || throwf(new Error("Page loaded:\nBody ID or class unexpected."));
             this.macro_state = 1;
         }
 
@@ -199,7 +227,7 @@ namespace MJS {
                             }
                         }
                     }
-                } else if (!is_Errorlike(this.page_message)) {
+                } else if (!this.page_message || !is_Errorlike(this.page_message)) {
                     //this.m_state = -1;
                     this.page_message = { name: "Error", message: "Unexpected tab update" };
                     
@@ -251,7 +279,7 @@ namespace MJS {
         }
 
         protected set page_details(page_details_in: Page_Data_Out) {
-            (page_details_in == this.tabdata.page_details)                      || throwf(new Error("Page details mismatch."));
+            (page_details_in == this.tabdata.page_details)                      || throwf(new Error("Page details:\nPage details mismatch."));
         }
 
         protected async page_call(message: Page_Data_In): Promise<Page_Data_Out> {
@@ -358,28 +386,23 @@ namespace MJS {
                 this.course_template_id = 6548;
             } else                                                                      { return; }
 
-            this.progress_max = 16;
+            this.progress_max = 17 + 1;
             this.prereq = true;
         
         }
 
         public async content() {  // TODO: Set properties.
 
-            // Start
-            //this.macro_start();
-
             const name = this.new_course.fullname;
             const shortname = this.new_course.shortname;
             const startdate = this.new_course.startdate;
-
-
 
             // Get template course context (1 load)
             await this.page_load("/course/view.php", {id: this.course_template_id, section: 0},
                 "page-course-view-", {course: this.course_template_id},
             );
             const source_context_match = this.page_details.page_window.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
-                                                                                        || throwf(new Error("WS course restore, source context not found."));
+                                                                                        || throwf(new Error("New course macro, get template:\nContext not found."));
             const source_context = parseInt(source_context_match[1]);
 
             // Load course restore page (1 load)
@@ -392,15 +415,15 @@ namespace MJS {
             await this.page_call({page: "backup-restorefile", dom_submit: "restore"});
             await this.page_loaded("page-backup-restore", {course: this.course_template_id});
             this.page_details = this.tabdata.page_details;
-            if (this.page_details.page != "backup-restore")                       { throw (new Error("Click restore backup file, page response unexpected.")) };
+            if (this.page_details.page != "backup-restore")                       { throw (new Error("New course macro, Click restore:\nPage response unexpected.")) };
 
             // Confirm (1 load)
-            (this.page_details.stage == 2)                                      || throwf(new Error("WS course_restore, step 1 state unexpected."));
+            (this.page_details.stage == 2)                                      || throwf(new Error("New course macro, confirm:\nStage unexpected."));
             await this.page_call({page: "backup-restore", dom_submit: "stage 2 submit"});
             await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Destination: Search for category (1 load)
-            (this.page_details.stage == 4)                                      || throwf(new Error("WS course_restore, step 2 state unexpected."));
+            (this.page_details.stage == 4)                                      || throwf(new Error("New course macro, destination:\nStage unexpected."));
             await this.page_call({mdl_course_categories: {name: this.category_name}, dom_submit: "stage 4 new cat search"});
             await this.page_loaded("", {});  // TODO: Add details
             
@@ -409,30 +432,42 @@ namespace MJS {
             await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Restore settings (1 load)
-            (this.page_details.stage == 4)                                      || throwf(new Error("WS course_restore, step 3 state unexpected."));
+            (this.page_details.stage == 4)                                      || throwf(new Error("New course macro, restore settings:\nStage unexpected."));
             await this.page_call({dom_set_key: "stage 4 settings users", dom_set_value: false});
             await this.page_call({dom_submit: "stage 4 settings submit"});
             await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Course settings (1 load)
-            (this.page_details.stage == 8)                                      || throwf(new Error("WS course_restore, step 4 state unexpected."));
+            (this.page_details.stage == 8)                                      || throwf(new Error("New course macro, course settings:\nStage unexpected."));
             const course: DeepPartial<MDL_Course> = {fullname: name, shortname: shortname, startdate: startdate};
             await this.page_call({mdl_course: course, dom_submit: "stage 8 submit"});
             await this.page_loaded("page-backup-restore", {course: this.course_template_id});
 
             // Review & Process (~5 loads)
-            (this.page_details.stage == 16)                                     || throwf(new Error("WS course_restore, step 5 state unexpected."));
+            (this.page_details.stage == 16)                                     || throwf(new Error("New course macro, review & process:\nStage unexpected"));
             await this.page_call({mdl_course: course, dom_submit: "stage 16 submit"});
             await this.page_loaded("page-backup-restore", {course: this.course_template_id}, 5);
 
             // Complete--Go to new course (1 load)
-            (this.page_details.stage == null)                                   || throwf(new Error("WS course_restore, step 7 state unexpected."));
+            (this.page_details.stage == null)                                   || throwf(new Error("New course macro, complete:\nStage unexpected."));
             const course_id = (this.page_details.mdl_course as DeepPartial<MDL_Course>).id as number;
             await this.page_call({dom_submit: "stage complete submit"});
             await this.page_loaded("page-course-view-", {course: course_id});
         
+            // TODO: Turn editing on (1 load).
+            if (!this.page_details.page_window.body_class.match(/\bediting\b/)) {
+                await this.page_load(
+                    "/course/view.php", {id: course_id, section: 0, sesskey: this.tabdata.page_sesskey, edit: "on"},
+                    "page-course-view-", {course: course_id},
+                );
+            } else {
+                await this.tabdata.page_load_count(1);
+            }
+            (this.page_details.page_window.body_class.match(/\bediting\b/))     || throwf(new Error("New course macro, turn editing on:\nEditing not on."));
+
             // Fill in course name (2 loads)
-            await this.page_load("/course/editsection.php", {id: this.page_details.mdl_course_sections.id},
+            const section_0_id = this.page_details.mdl_course_sections.id       || throwf(new Error("New course macro, fill in course name:\nID not found."));
+            await this.page_load("/course/editsection.php", {id: section_0_id}, // TODO: Needs editing on.
                 "page-course-editsection", {course: course_id},
             );
             const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.new_course.fullname);
@@ -487,7 +522,7 @@ namespace MJS {
             this.modules_tab_num = modules_tab_num;
             this.last_module_tab_num = last_module_tab_num;
             
-            this.progress_max = this.last_module_tab_num - this.modules_tab_num + 2;
+            this.progress_max = this.last_module_tab_num - this.modules_tab_num + 3 + 1;
             this.prereq = true;
 
         }
@@ -505,67 +540,55 @@ namespace MJS {
         
             const parser = new DOMParser();
         
-            // Get list of modules
+            // Get list of sections (1 load)
             await this.page_load("/course/view.php", {id: this.course_id, section: this.modules_tab_num},
                 "page-course-view-", {course: this.course_id},
             );
-            if (this.page_details.page != "course-view-*")                      { throw new Error("Unexpected page type."); }
+            if (this.page_details.page != "course-view-*")                      { throw new Error("Index rebuild macro, get list:\nUnexpected page type."); }
             const modules_list = this.page_details.mdl_course_sections.mdl_course_modules as MDL_Course_Modules[];
-        
-            (modules_list.length == 1)                                          || throwf(new Error("Expected exactly one resource in Modules tab."));
-        
+            (modules_list.length == 1)                                          || throwf(new Error("Index rebuild macro, get list:\nExpected exactly one resource in Modules tab."));
             const modules_index = modules_list[0];
-        
-            this.tabdata.macro_progress_max = 1 + this.last_module_tab_num - this.modules_tab_num + 2;
-        
+            //this.tabdata.macro_progress_max = 1 + this.last_module_tab_num - this.modules_tab_num + 2;
+            
+            // Get section contents (1 load per section)
             let index_html = '<div class="textblock">\n';
-        
         // modules_list.shift();
-        
             for (let section_num = this.modules_tab_num + 1; section_num <= this.last_module_tab_num; section_num++) {
                 //const section_num = section.section                                     || throwf(new Error("Module number not found."));
                 await this.page_load("/course/view.php", {id: this.course_id, section: section_num},
                                     "page-course-view-", {course: this.course_id});
                 const section_full = this.page_details.mdl_course_sections;
                 const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")
-                                                                                        || throwf(new Error("Module name not found."))
-                                    ).textContent                                      || throwf(new Error("Module name content not found."));
-        
+                                                                                        || throwf(new Error("Index rebuild macro, get section:\nModule name not found."))
+                                    ).textContent                                      || throwf(new Error("Index rebuild macro, get section:\nModule name content not found."));
                 index_html = index_html
                             + '<a href="' + this.tabdata.page_wwwroot + "/course/view.php?id=" + this.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
-        
                 for (const mod of section_full.mdl_course_modules as DeepPartial<MDL_Course_Modules>[]) {
-        
                     // parse description
                     const mod_desc = parser.parseFromString((mod.mdl_course_module_instance as DeepPartial<MDL_Course_Module_Instance>).intro || "", "text/html");
                     const part_name = mod_desc.querySelector(".header2, .header2gradient");
                     if (part_name) {
                         index_html = index_html
                                     + "<li>"
-                                    + TabData.escapeHTML((part_name.textContent                 || throwf(new Error("Couldn't get text content."))
+                                    + TabData.escapeHTML((part_name.textContent                 || throwf(new Error("Index rebuild macro, get section:\nCouldn't get text content."))
                                     ).trim())
                                     + "</li>\n";
                     }
-        
                 }
-        
                 index_html = index_html
                             + "</ul>\n"
                             + "<br />\n";
             }
-        
             index_html = index_html
                         + "</div>\n";
         
+            // Update TOC (2 loads)
             await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, update: modules_index.id},
                                     "page-mod-label-mod", {course: this.course_id});
             await this.page_call({mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
             mdl_course_module_instance: {intro: index_html}}, dom_submit: true});
             await this.page_loaded( "page-course-view-", {course: this.course_id});
-        
-            // End.
-            //this.macro_end();
         
         } 
     
@@ -641,7 +664,7 @@ namespace MJS {
             {} else {return;}
             this.new_section_pos = last_module_tab_num + 1;
 
-            this.progress_max = 17;
+            this.progress_max = 17 + 1;
             this.prereq = true;
             console.log("new section pre success");
         }
@@ -650,12 +673,6 @@ namespace MJS {
         
         public async content() {
 
-            //this.init();
-
-
-
-            // Start
-            //this.macro_start();
 
             const name = this.new_section.fullname;
             const short_name = this.new_section.name;
@@ -793,9 +810,6 @@ namespace MJS {
             }, dom_submit: true});
             await this.page_loaded( "page-course-view-", {course: this.course_id});
 
-            // End.
-            //this.macro_end();
-
         }
         
 
@@ -878,7 +892,7 @@ namespace MJS {
         
             this.topic_first = (mod_pos < 0) ? true : false;
 
-            this.progress_max = 12;
+            this.progress_max = 12 + 1;
             this.prereq = true;
             console.log("new topic pre success");
         }
@@ -886,15 +900,7 @@ namespace MJS {
 
 
         public async content() {
-
-            //this.init();
-
-
-
-            // Start
-            //this.macro_start();
     
-
             const name = this.new_topic_name;
         
             // Create topic heading (4 loads?)
@@ -1004,11 +1010,6 @@ namespace MJS {
                 "page-course-view-", {},
             );
 
-
-
-            // End.
-            //this.macro_end();
-
         }
 
 
@@ -1027,11 +1028,7 @@ namespace MJS {
         
         public async content() {
 
-            //this.m_log += "test\n";
-            //if (this.tabdata.macro_state != 0) {return}
-            //this.tabdata.macro_progress = 0;
-            //this.tabdata.macro_progress_max = 10;
-            //this.tabdata.macro_state = 1;
+
             //await page_load("/course/view.php", { id: 7015}, "page-course-view", {"course": 7015});
             //alert(await page_call({}));
             //let page_data: Partial<Page_Data>|null = await this.page_call({});
@@ -1094,8 +1091,6 @@ namespace MJS {
             //const message = await this.page_call({page: "backup-restorefile"});
 
             //await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
-
-            //this.tabdata.macro_state = 0;
 
         }
 
