@@ -122,7 +122,10 @@ namespace MJS {
 
         public page_load_count(count: number = 1): void {
             this.macro_progress += count;
-            this.popup.update_progress();
+            try {
+                this.popup.update_progress();
+            } catch(e) {
+            }
         }
 
 
@@ -291,7 +294,10 @@ namespace MJS {
                 if (e.message != "Cancelled") {
                     this.tabdata.macro_state = -1;
                     this.tabdata.macro_error = e;
-                    this.tabdata.popup.update();
+                    try {
+                        this.tabdata.popup.update();
+                    } catch(e) {
+                    }
                     return;
                 }
             }
