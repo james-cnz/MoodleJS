@@ -79,6 +79,10 @@ namespace MJS {
         }
 
 
+        update_progress() {
+            this.progress_bar_dom.value = this.tabData.macro_progress;
+        }
+
         onCancel() {
             this.tabData.macro_cancel = true;
         }

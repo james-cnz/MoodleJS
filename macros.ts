@@ -69,6 +69,8 @@ namespace MJS {
 
             if (message.dom_submit) {
                 this.macro_state = 2;
+                this.page_is_loaded = false;
+                this.page_message = null;
             }
             const result = await browser.tabs.sendMessage(this.page_tab_id, message) as Page_Data_Out|Errorlike;
             (!is_Errorlike(result))                                            || throwf(new Error(result.message));
@@ -85,6 +87,8 @@ namespace MJS {
             (pathname.match(/(?:\/[a-z]+)+\.php/))                              || throwf(new Error("MJS page load: Pathname unexpected."));
 
             this.macro_state = 2;
+            this.page_is_loaded = false;
+            this.page_message = null;
 
             await browser.tabs.update(this.page_tab_id, {url: this.page_wwwroot + pathname + "?" + TabData.json_to_search_params(search)});
             await this.page_loaded(body_id_start, body_class, count);
@@ -118,6 +122,7 @@ namespace MJS {
 
         public page_load_count(count: number = 1): void {
             this.macro_progress += count;
+            this.popup.update_progress();
         }
 
 
@@ -136,7 +141,7 @@ namespace MJS {
 
         public async onMessage(message: Page_Data_Out|Errorlike, _sender: browser.runtime.MessageSender) {
 
-            if (!this.page_message) {
+            if (!this.page_message || this.macro_state == 0) {
                 this.page_message = message;
                 if (is_Errorlike(message)) {
                     this.page_wwwroot = null;
@@ -159,7 +164,7 @@ namespace MJS {
                     }
                 }
             } else if (!is_Errorlike(this.page_message)) {
-                this.page_message = {name:"Error", message: "Duplicate message"};
+                this.page_message = {name:"Error", message: "Unexpected page message"};
             }
 
         }
@@ -168,33 +173,45 @@ namespace MJS {
         public async onTabUpdated(_tab_id: number, update_info: Partial<browser.tabs.Tab>, _tab: browser.tabs.Tab): Promise<void> {
 
             if (update_info && update_info.status) {
-                if (update_info.status == "loading") {
-                    this.page_is_loaded = false;
-                    this.page_message = null;
-                } else if (update_info.status == "complete" && !this.page_is_loaded) {
-                    this.page_is_loaded = true;
-                    
-                    if (!this.page_message) {
-                        if (this.macro_state == 2) { console.log("*** missing page message ***"); }
-                    } else {
-                        if (this.macro_state==0) { this.macros_init(); }
-                        try {
-                            await this.popup.update();
-                        } catch(e) {
-                            // Do nothing
+                
+                if (!this.page_is_loaded || this.macro_state == 0) {
+
+                    if (update_info.status == "loading") {
+                        if (this.macro_state == 0) {
+                            this.page_is_loaded = false;
+                            this.page_message = null;
+                        }
+                    } else if (update_info.status == "complete") {
+                        this.page_is_loaded = true;
+                        
+                        if (!this.page_message) {
+                            if (this.macro_state == 0) { this.page_details = null; this.macros_init(); }
+                            else if (this.macro_state == 2) { console.log("*** missing page message ***"); }
+                        } else {
+                            if (this.macro_state==0) { this.macros_init(); }
+                            try {
+                                await this.popup.update();
+                            } catch(e) {
+                                // Do nothing
+                            }
                         }
                     }
-                } else if (!this.page_message || !is_Errorlike(this.page_message)) {
+                } else if (!is_Errorlike(this.page_message)) {
                     //this.m_state = -1;
-                    this.page_message = { name: "Error", message: "Unexpected tab update: " + update_info.status };
+                    this.page_message = { name: "Error", message: "Unexpected tab update" };
+                    
+
                 }
+
+                try {
+                    await this.popup.update();
+                } catch(e) {
+                    // Do nothing
+                }
+
             }
 
-            try {
-                await this.popup.update();
-            } catch(e) {
-                // Do nothing
-            }
+
         }
 
 
@@ -322,7 +339,7 @@ namespace MJS {
             console.log("new course pre starting");
             this.prereq = false;
 
-            if (this.page_details.page != "course-index-category?")     { return; }
+            if (!this.page_details || this.page_details.page != "course-index-category?")     { return; }
 
             if (this.page_details.page_window.body_id != "page-course-index-category") { return; }
 
@@ -335,7 +352,7 @@ namespace MJS {
                 this.course_template_id = 6548;
             } else                                                                      { return; }
 
-            this.progress_max = 14;
+            this.progress_max = 16;
             this.prereq = true;
         
         }
@@ -408,16 +425,13 @@ namespace MJS {
             await this.page_call({dom_submit: "stage complete submit"});
             await this.page_loaded("page-course-view-", {course: course_id});
         
-            /*
-            // TODO: Edit course names in first section?  And level? ***
-            const new_contents = await ws_call({wsfunction: "core_course_get_contents", courseid: new_course.id
-                                                                                        || throwf(new Error("Course ID not found."))});
-            const new_s0 = await ws_call({wsfunction: "core_course_get_section_x", sectionid: new_contents[0].id});
-            await ws_call({wsfunction: "core_course_update_section_x", section: {id: new_s0.id, summary: new_s0.summary.replace("[Course Name]", name)}});
-            */
-
-            // End.
-            //this.macro_end();
+            // Fill in course name (2 loads)
+            await this.page_load("/course/editsection.php", {id: this.page_details.mdl_course_sections.id},
+                "page-course-editsection", {course: course_id},
+            );
+            const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.new_course.fullname);
+            await this.page_call({mdl_course_sections: {summary: desc}, dom_submit: true});
+            await this.page_loaded("page-course-view-", {course: course_id});
 
         }
 
@@ -438,7 +452,7 @@ namespace MJS {
             this.prereq = false;
 
             // Check course type
-            if (this.page_details.page != "course-view-*")                      { return; }
+            if (!this.page_details || this.page_details.page != "course-view-*")                      { return; }
             const course = this.page_details.mdl_course;
             if (!course || course.format != "onetopic" || !course.id) {  return; }
             this.course_id = course.id;
@@ -575,6 +589,12 @@ namespace MJS {
             // Get site details
             // TODO: Also customise image link per site
 
+            // Check page type
+            if (!this.page_details || this.page_details.page != "course-view-*") {
+                console.log("new section pre: wrong page type");
+                return;
+            }
+
             //let feedback_template_id: number;
             if (this.tabdata.page_wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
                 this.feedback_template_id = 59;
@@ -582,11 +602,7 @@ namespace MJS {
                 this.feedback_template_id = 59;
             } else                                                                      { return; }
         
-            // Check page type
-            if (this.page_details.page != "course-view-*") {
-                console.log("new section pre: wrong page type");
-                return;
-            }
+
 
             // Check editing on
             if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
@@ -800,7 +816,7 @@ namespace MJS {
             this.prereq = false;
 
             // var doc_details = ws_page_call({wsfunction: "x_doc_get_details"});
-            if (this.page_details.page != "course-view-*")                      { return; }
+            if (!this.page_details || this.page_details.page != "course-view-*")                      { return; }
             const course = this.page_details.mdl_course;
             if (course && course.hasOwnProperty("format") && course.format == "onetopic" && course.id) {  } else { return; }
             this.course_id = course.id;
