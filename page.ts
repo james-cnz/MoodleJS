@@ -889,7 +889,7 @@ namespace MJS {
                 break;
         }
 
-        result.page_window = message.page_window;
+        (result as Page_Data_Out).page_window = message.page_window;
 
         return result as Page_Data_Out;
     }

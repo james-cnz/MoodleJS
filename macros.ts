@@ -920,7 +920,7 @@ namespace MJS {
             await this.page_loaded( "page-course-view-", {course: this.course_id});
             
             //section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
-            let section: MDL_Course_Sections = this.page_details.mdl_course_sections;
+            let section = this.page_details.mdl_course_sections;
 
             // Move new module.
             await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length-1].id},
@@ -1059,7 +1059,7 @@ namespace MJS {
                 "page-course-index", {course: 1},
             );
 
-            const site_map = await this.page_call({page: "course-index-category?", dom_expand: true});
+            //const site_map = await this.page_call({page: "course-index-category?", dom_expand: true});
 
             let course_id = 7015;
             let course_context = 911164;
@@ -1069,9 +1069,9 @@ namespace MJS {
                 "page-backup-restorefile", {course: course_id},
             );
 
-            const message = await this.page_call({page: "backup-restorefile"});
+            //const message = await this.page_call({page: "backup-restorefile"});
 
-            await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
+            //await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
 
             //this.tabdata.macro_state = 0;
 
