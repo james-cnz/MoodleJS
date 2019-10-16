@@ -17,8 +17,10 @@ namespace MJS {
     }
 
     export type Errorlike = {
-        name:               "Error";
-        message:            string;
+        name:           string;
+        message:        string;
+        fileName?:      string;
+        lineNumber?:    number;
     }
 
     export function is_Errorlike(possible_Errorlike: Page_Data_Out|Errorlike): possible_Errorlike is Errorlike {

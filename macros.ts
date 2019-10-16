@@ -6,6 +6,8 @@
 namespace MJS {
 
 
+
+
     export class TabData {
 
 
@@ -19,7 +21,8 @@ namespace MJS {
         page_wwwroot:       string;
         page_sesskey:       string;
 
-        macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 awaiting load / 3 loaded
+        macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
+        //macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
         macro_error:        Errorlike|null;
         macro_progress:     number = 100;
         macro_progress_max: number = 100;
@@ -80,14 +83,28 @@ namespace MJS {
             }
             this.macros_init();
             this.macro_state = 0;
-            try {
-                this.popup.update();
-            } catch(e) {
-            }
+            this.update_ui();
             console.log("init finished.")
         }
 
 
+        public update_ui(): void {
+            /*
+            if (this.macro_state == 0) {
+                browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
+                browser.browserAction.setBadgeText({text: "", tabId: this.page_tab_id});
+            } else if (this.macro_state > 0) {
+                browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
+                browser.browserAction.setBadgeText({text: ">", tabId: this.page_tab_id});
+            } else {
+                browser.browserAction.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
+                browser.browserAction.setBadgeText({text: "X", tabId: this.page_tab_id});
+            }
+            */
+            try {
+                this.popup.update();
+            } catch(e) { }
+        }
 
 
         public async page_call(message: Page_Data_In): Promise<Page_Data_Out> {
@@ -132,16 +149,16 @@ namespace MJS {
                 await sleep(100);
                 if (this.macro_cancel)                                          { throw new Error("Cancelled"); }
                 this.page_load_wait += 1;
-                if (this.page_load_wait <= count * 30) {  // Assume a step takes 3 seconds
-                    this.page_load_count(1 / 30);
+                if (this.page_load_wait <= count * 10) {  // Assume a step takes 1 second
+                    this.page_load_count(1 / 10);
                 }
             } while (!(this.page_is_loaded && this.page_message) && !(this.page_message && is_Errorlike(this.page_message)));
-            this.macro_state = 3;
-            (!is_Errorlike(this.page_message))                        || throwf(new Error(this.page_message.message));
+            this.macro_state = 1;
+            (!is_Errorlike(this.page_message))                        || throwf(new Error(this.page_message.message, this.page_message.fileName, this.page_message.lineNumber));
             this.page_details = this.page_message as Page_Data_Out;
             this.page_message = null;
-            if (this.page_load_wait <= count * 30) {
-                this.page_load_count(count - this.page_load_wait / 30);
+            if (this.page_load_wait <= count * 10) {
+                this.page_load_count(count - this.page_load_wait / 10);
             }
             (this.page_load_match(body_id_start, body_class))                   || throwf(new Error("Page loaded:\nBody ID or class unexpected."));
             this.macro_state = 1;
@@ -188,14 +205,10 @@ namespace MJS {
 
                     console.log("*** late page message ***");
                     if (this.macro_state==0) { this.macros_init(); }
-                    try {
-                        await this.popup.update();
-                    } catch(e) {
-                        // Do nothing
-                    }
+                    this.update_ui();
                 }
             } else if (!is_Errorlike(this.page_message)) {
-                this.page_message = {name:"Error", message: "Unexpected page message"};
+                this.page_message = new Error("Unexpected page message");
             }
 
         }
@@ -220,28 +233,18 @@ namespace MJS {
                             else if (this.macro_state == 2) { console.log("*** missing page message ***"); }
                         } else {
                             if (this.macro_state==0) { this.macros_init(); }
-                            try {
-                                await this.popup.update();
-                            } catch(e) {
-                                // Do nothing
-                            }
+                            this.update_ui();
                         }
                     }
                 } else if (!this.page_message || !is_Errorlike(this.page_message)) {
                     //this.m_state = -1;
-                    this.page_message = { name: "Error", message: "Unexpected tab update" };
+                    this.page_message = new Error("Unexpected tab update");
                     
-
                 }
 
-                try {
-                    await this.popup.update();
-                } catch(e) {
-                    // Do nothing
-                }
+                this.update_ui();
 
             }
-
 
         }
 
@@ -254,17 +257,13 @@ namespace MJS {
         }
 
 
-
-
-
-
-
-
-
     }
 
 
+
+
     abstract class Macro {
+
 
         protected tabdata: TabData;
 
@@ -274,23 +273,28 @@ namespace MJS {
             this.prereq = false;
         }
 
+
         protected get page_details(): Page_Data_Out {
             return this.tabdata.page_details;
         }
+
 
         protected set page_details(page_details_in: Page_Data_Out) {
             (page_details_in == this.tabdata.page_details)                      || throwf(new Error("Page details:\nPage details mismatch."));
         }
 
+
         protected async page_call(message: Page_Data_In): Promise<Page_Data_Out> {
             return await this.tabdata.page_call(message);
         }
+
 
         protected async page_load(pathname: string, search: {[index: string]: number|string},
             body_id_start: string, body_class: {[index: string]: string|number},
             count: number = 1): Promise<void> {
             await this.tabdata.page_load(pathname, search, body_id_start, body_class, count);
         }
+
 
         protected async page_loaded(body_id_start: string, body_class: {[index: string]: string|number}, count: number = 1): Promise<void> {
             await this.tabdata.page_loaded(body_id_start, body_class, count);
@@ -299,9 +303,12 @@ namespace MJS {
 
         prereq: boolean = false;
 
+
         abstract init(): void;
 
+
         progress_max: number;
+
 
         async run(): Promise<void> {
 
@@ -322,10 +329,7 @@ namespace MJS {
                 if (e.message != "Cancelled") {
                     this.tabdata.macro_state = -1;
                     this.tabdata.macro_error = e;
-                    try {
-                        this.tabdata.popup.update();
-                    } catch(e) {
-                    }
+                    this.tabdata.update_ui();
                     return;
                 }
             }
@@ -341,19 +345,17 @@ namespace MJS {
 
         };
 
+
         abstract async content(): Promise<void>;
-
-
-
-
-
 
 
     }
 
 
 
+
     export class New_Course_Macro extends Macro {
+
 
         prereq:             boolean;
 
@@ -390,6 +392,7 @@ namespace MJS {
             this.prereq = true;
         
         }
+
 
         public async content() {  // TODO: Set properties.
 
@@ -470,16 +473,21 @@ namespace MJS {
             await this.page_load("/course/editsection.php", {id: section_0_id}, // TODO: Needs editing on.
                 "page-course-editsection", {course: course_id},
             );
+            // TODO: Crashes around here with "can't access dead object"?
             const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.new_course.fullname);
             await this.page_call({mdl_course_sections: {summary: desc}, dom_submit: true});
             await this.page_loaded("page-course-view-", {course: course_id});
 
         }
 
+
     }
 
 
+
+
     export class Index_Rebuild_Macro extends Macro {
+
 
         prereq: boolean;
         
@@ -528,7 +536,6 @@ namespace MJS {
         }
 
 
-        
         public async content() {
         
             //this.init();
@@ -552,7 +559,7 @@ namespace MJS {
             
             // Get section contents (1 load per section)
             let index_html = '<div class="textblock">\n';
-        // modules_list.shift();
+            // modules_list.shift();
             for (let section_num = this.modules_tab_num + 1; section_num <= this.last_module_tab_num; section_num++) {
                 //const section_num = section.section                                     || throwf(new Error("Module number not found."));
                 await this.page_load("/course/view.php", {id: this.course_id, section: section_num},
@@ -593,17 +600,20 @@ namespace MJS {
         } 
     
 
-
     }
 
 
+
+
     export class New_Section_Macro extends Macro {
+
 
         prereq:                 boolean;
 
         private feedback_template_id:   number;
         private course_id:              number;
         private new_section_pos:        number|null;
+
 
         new_section: DeepPartial<MDL_Course_Sections> & {
             fullname: string;
@@ -630,8 +640,6 @@ namespace MJS {
             } else if (this.tabdata.page_wwwroot == "https://moodle.op.ac.nz") {
                 this.feedback_template_id = 59;
             } else                                                                      { return; }
-        
-
 
             // Check editing on
             if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
@@ -669,10 +677,8 @@ namespace MJS {
             console.log("new section pre success");
         }
         
-
         
         public async content() {
-
 
             const name = this.new_section.fullname;
             const short_name = this.new_section.name;
@@ -813,8 +819,9 @@ namespace MJS {
         }
         
 
-
     }
+
+
 
 
     export class New_Topic_Macro extends Macro {
@@ -898,7 +905,6 @@ namespace MJS {
         }
         
 
-
         public async content() {
     
             const name = this.new_topic_name;
@@ -958,7 +964,6 @@ namespace MJS {
                 "page-course-view-", {},
             );
 
-            
             // Create topic end message (4 loads?)
             if (this.topic_first) {
                 await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
@@ -1013,11 +1018,13 @@ namespace MJS {
         }
 
 
-
     }
 
 
+
+
     class Test_Macro extends Macro {
+
 
         init() {
             this.progress_max = 10;
@@ -1025,60 +1032,14 @@ namespace MJS {
         }
 
 
-        
         public async content() {
-
-
-            //await page_load("/course/view.php", { id: 7015}, "page-course-view", {"course": 7015});
-            //alert(await page_call({}));
-            //let page_data: Partial<Page_Data>|null = await this.page_call({});
-
-
-            //let new_page_data: Partial<Page_Data> = { mdl_course_sections: { summary:
-            //    page_data.mdl_course_sections.summary.replace("Hello", "Goodbye") /*replace(/https:\/\/moodle.op.ac.nz\/pluginfile.php\/\d+\/course\/section\/\d+\//,
-            //        "https://moodle.op.ac.nz/draftfile.php/807782/user/draft/n/")*/
-            //}}
-
-            /*
-            for (let count =0; count < 20; count++) {
-                await sleep(100);
-                //box.value = box.value + ".";
-                this.macro_progress++;
-                try {
-                    await this.popup.update();
-                } catch(e) {
-                    // Do nothing
-                }
-            }
-            */
-
-            //await this.page_call(new_page_data);
-            //await this.page_loaded("page-course-view", {});
-            //this.macro_progress = 1;
-            /*
-            for (let count =0; count < 20; count++) {
-                await sleep(100);
-                //box.value = box.value + ".";
-                this.macro_progress++;
-                try {
-                    await this.popup.update();
-                } catch(e) {
-                    // Do nothing
-                }
-            }
-            */
-            //   try {
-            //    await this.popup.update();
-            //} catch(e) {
-            //    // Do nothing
-            //}
 
             await this.page_load(
                 "/course/index.php", {},
                 "page-course-index", {course: 1},
             );
 
-            //const site_map = await this.page_call({page: "course-index-category?", dom_expand: true});
+            // const site_map = await this.page_call({page: "course-index-category?", dom_expand: true});
 
             let course_id = 7015;
             let course_context = 911164;
@@ -1088,14 +1049,16 @@ namespace MJS {
                 "page-backup-restorefile", {course: course_id},
             );
 
-            //const message = await this.page_call({page: "backup-restorefile"});
+            // const message = await this.page_call({page: "backup-restorefile"});
 
-            //await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
+            // await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
 
         }
 
 
     }
+
+
 
 
 }

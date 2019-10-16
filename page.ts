@@ -903,7 +903,7 @@ namespace MJS {
         try {
             browser.runtime.sendMessage(await page_onMessage({page: "*"}));
         } catch (e) {
-            browser.runtime.sendMessage({name: "Error", message: e});
+            browser.runtime.sendMessage({name: "Error", message: e.message, fileName: e.fileName, lineNumber: e.lineNumber});
         }
     }
 
