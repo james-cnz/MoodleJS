@@ -21,14 +21,14 @@ namespace MJS {
         message:        string;
         fileName?:      string;
         lineNumber?:    number;
-    }
+    };
 
     export function is_Errorlike(possible_Errorlike: Page_Data_Out|Errorlike): possible_Errorlike is Errorlike {
         return ((possible_Errorlike as Errorlike).name !== undefined)
             && (typeof ((possible_Errorlike as Errorlike).name) == "string")
             && ((possible_Errorlike as Errorlike).message !== undefined)
-            && (typeof ((possible_Errorlike as Errorlike).message) == "string")
-    } 
+            && (typeof ((possible_Errorlike as Errorlike).message) == "string");
+    }
 
 
 
@@ -36,7 +36,7 @@ namespace MJS {
 
     export type MDL_Context_Instance = {
         readonly id:        number;     // key
-    }
+    };
 
 
     export type MDL_Course_Categories = MDL_Context_Instance & {
@@ -56,7 +56,7 @@ namespace MJS {
         theme:              string;
         mdl_course_categories: MDL_Course_Categories[];
         mdl_course:         MDL_Course[];
-    }
+    };
 
     export type MDL_Course = MDL_Context_Instance & {
         // context level 50
@@ -66,32 +66,32 @@ namespace MJS {
         shortname:          string;
         idnumber:           string;
         summary:            string;
-        //summaryformat:      number;
+        // summaryformat:      number;
         format:             string;
         showgrades:         number;
         newsitems:          number;
         startdate:          number; // date?
-        //enddate:            number;
+        // enddate:            number;
         marker:             number;
         maxbytes:           number;
-        //legacyfiles:        number;
+        // legacyfiles:        number;
         showreports:        number;
         visible:            number;
-        //visibleold:         number;
+        // visibleold:         number;
         groupmode:          number;
         groupmodeforce:     number;
         defaultgroupingid:  number;
         lang:               string;
-        //calendartype:       string;
-        //theme
-        //timecreated
-        //timemodified
-        //requested
+        // calendartype:       string;
+        // theme
+        // timecreated
+        // timemodified
+        // requested
         enablecompletion:   number;
-        //completionnotify
-        //cacherev
+        // completionnotify
+        // cacherev
         mdl_course_sections: MDL_Course_Sections[];
-    }
+    };
 
 
     export type MDL_Course_Sections = {
@@ -106,14 +106,14 @@ namespace MJS {
         availability:       string;
         timemodified:       number;
         x_options: {level?: number};
-        //x_submit:           boolean;
+        // x_submit:           boolean;
         mdl_course_modules: MDL_Course_Modules[];
-    }
+    };
 
 
     // course_format_options
 
-    
+
     export type MDL_Course_Modules = MDL_Context_Instance & {
         // context level 70
         course:             number;
@@ -138,8 +138,8 @@ namespace MJS {
         showdescription:    number;
         availability:       string;
         deletioninprogress: number;
-        //x_submit:           boolean;
-    }
+        // x_submit:           boolean;
+    };
 
 
     export type MDL_Course_Module_Instance_Abstract = {
@@ -148,7 +148,7 @@ namespace MJS {
         name:               string;
         intro:              string;
         introformat:        number;
-    }
+    };
 
 
     export type MDL_Assignment = MDL_Course_Module_Instance_Abstract & {
@@ -175,7 +175,7 @@ namespace MJS {
         markingallocation:  number;
         sendstudentnotifications: number;
         preventsubmissionnotingroup: number;
-    }
+    };
 
 
     export type MDL_Forum = MDL_Course_Module_Instance_Abstract & {
@@ -199,12 +199,12 @@ namespace MJS {
         completionposts:    number;
         displaywordcount:   number;
         lockdiscussionafter: number;
-    }
+    };
 
 
     export type MDL_Feedback = MDL_Course_Module_Instance_Abstract & {
         mdl_feedback_template_id: number;
-    }
+    };
 
 
     export type MDL_Course_Module_Instance = MDL_Assignment | MDL_Forum | MDL_Feedback;
