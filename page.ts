@@ -2,15 +2,10 @@
 namespace MJS {
 
 
-    export type Page_Data_Generic = { page: string; } & DeepPartial<{
-        mdl_course_categories:  MDL_Course_Categories;
-        mdl_course:             MDL_Course;
-        mdl_course_sections:    MDL_Course_Sections;
-        mdl_course_modules:     MDL_Course_Modules;
-    }>;
 
 
-    export type Page_Data_Specific =
+
+    export type Page_Data =
         page_backup_restore_data
         | page_backup_restorefile_data
         | page_course_editsection_data
@@ -18,23 +13,28 @@ namespace MJS {
         | page_course_view_data
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
-        | page_module_edit_data;
+        | page_module_edit_data
+        | page_unspecified_data;
 
 
-    export type Page_Data_In = DeepPartial<Page_Data_Specific> & {
+    export type Page_Data_In_Base = {
+        page:               string;
         dom_submit?:         boolean|string;
         dom_set_key?:        string;
         dom_set_value?:      boolean|number|string;
     };
 
-    export type Page_Data_Inter = Page_Data_In & {
+    export type Page_Data_In = DeepPartial<Page_Data> & Page_Data_In_Base;
+
+    type Page_Data_Inter_Base = Page_Data_In_Base & Page_Data_Out_Base;
+
+    export type Page_Data_Inter = DeepPartial<Page_Data> & Page_Data_Inter_Base;
+
+    export type Page_Data_Out_Base = {
         page_window:        Page_Window;
     };
 
-    export type Page_Data_Out = Page_Data_Specific & {
-        page_window:        Page_Window;
-    };
-
+    export type Page_Data_Out = Page_Data & Page_Data_Out_Base;
 
 
     export type Page_Window = {
@@ -46,20 +46,22 @@ namespace MJS {
 
 
 
+    export type page_unspecified_data = {
+        page: "*"
+    }
 
 
 
 
-
-    export type page_course_index_data = Page_Data_Generic & {
-        page: "course-index-category?"
+    export type page_course_index_data = {
+        page: "course-index(-category)?"
         mdl_course_categories: {
             id:         number;
             name:       string;
              }
     };
 
-    async function page_course_index(message: Page_Data_Inter): Promise<page_course_index_data> {
+    async function page_course_index(message: Page_Data_Inter_Base & DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
 
         async function category(category_dom?: HTMLDivElement): Promise<DeepPartial<MDL_Course_Categories> & {
             id:         number;
@@ -137,7 +139,7 @@ namespace MJS {
         }
 
         return {
-            page: "course-index-category?",
+            page: "course-index(-category)?",
             mdl_course_categories: await category()
         };
 
@@ -145,11 +147,11 @@ namespace MJS {
 
 
 
-    export type page_backup_restorefile_data = Page_Data_Generic & {
+    export type page_backup_restorefile_data = {
         page: "backup-restorefile"
     };
 
-    async function page_backup_restorefile(message: Page_Data_Inter): Promise<page_backup_restorefile_data> {
+    async function page_backup_restorefile(message: Page_Data_Inter_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
         const restore_link = document.querySelector("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']") as HTMLAnchorElement;
         // if (message.dom_submit && message.dom_submit == "download") {
@@ -163,12 +165,12 @@ namespace MJS {
 
 
 
-    export type page_backup_restore_data = Page_Data_Generic & {
+    export type page_backup_restore_data = {
         page: "backup-restore",
         stage: number|null
     };
 
-    async function page_backup_restore(message: Page_Data_Inter): Promise<page_backup_restore_data> {
+    async function page_backup_restore(message: Page_Data_Inter_Base & DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
         const stage = stage_dom ? parseInt(stage_dom.value) : null;
 
@@ -275,8 +277,8 @@ namespace MJS {
 
 
 
-    export type page_course_view_data = Page_Data_Generic & {
-        page: "course-view-*"
+    export type page_course_view_data = {
+        page: "course-view-[a-z]+"
         mdl_course: page_course_view_course;
         mdl_course_sections: page_course_view_course_sections;
     };
@@ -302,7 +304,7 @@ namespace MJS {
         }
     };
 
-    async function page_course_view(message: Page_Data_Inter): Promise<page_course_view_data> {
+    async function page_course_view(message: Page_Data_Inter_Base & DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
 
         // Course Start
         const main_dom:        Element             = window.document.querySelector(":root #region-main")
@@ -510,7 +512,7 @@ namespace MJS {
             mdl_course_sections: course_out_sections
         };
 
-        return {page: "course-view-*", mdl_course: course_out, mdl_course_sections: single_section_out};
+        return {page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_sections: single_section_out};
     }
 
 
@@ -526,7 +528,7 @@ namespace MJS {
     */
 
 
-    export type page_course_editsection_data = Page_Data_Generic & {
+    export type page_course_editsection_data = {
         page: "course-editsection";
         mdl_course_sections: page_course_editsection_section;
     };
@@ -538,7 +540,7 @@ namespace MJS {
     };
 
 
-    async function page_course_editsection(message: Page_Data_Inter): Promise<page_course_editsection_data> {
+    async function page_course_editsection(message: Page_Data_Inter_Base & DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
         // const section_id    = message.sectionid;
         // Start
         const section_in = message.mdl_course_sections;
@@ -611,8 +613,8 @@ namespace MJS {
     }
 
 
-    export type page_module_edit_data = Page_Data_Generic & {
-        page: "mod-*-mod"
+    export type page_module_edit_data = {
+        page: "mod-[a-z]+-mod"
         mdl_course_modules: DeepPartial<page_module_edit_module>
     };
     type page_module_edit_module = DeepPartial<MDL_Course_Modules> & {
@@ -627,7 +629,7 @@ namespace MJS {
         }>
     };
 
-    async function page_module_edit(message: Page_Data_Inter): Promise<page_module_edit_data> {
+    async function page_module_edit(message: Page_Data_Inter_Base & DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
 
         // Module Start
         const module_in = message.mdl_course_modules;
@@ -763,21 +765,21 @@ namespace MJS {
             }
         };
 
-        return {page: "mod-*-mod", mdl_course_modules: module_out};
+        return {page: "mod-[a-z]+-mod", mdl_course_modules: module_out};
     }
 
 
 
-    export type page_mod_feedback_edit_data = Page_Data_Generic & {
+    export type page_mod_feedback_edit_data = {
         page: "mod-feedback-edit",
         mdl_course_modules: { mdl_course_module_instance: { mdl_feedback_template_id: number; } }
     };
 
-    async function page_mod_feedback_edit(message: Page_Data_Inter): Promise<page_mod_feedback_edit_data> {
+    async function page_mod_feedback_edit(message: Page_Data_Inter_Base & DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
        const template_id_dom = document.querySelector(":root #region-main form#mform2.mform select#id_templateid") as HTMLSelectElement;
        if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
             && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
-            template_id_dom.value = message.mdl_course_modules.mdl_course_module_instance.mdl_feedback_template_id;
+            template_id_dom.value = "" + message.mdl_course_modules.mdl_course_module_instance.mdl_feedback_template_id;
             template_id_dom.dispatchEvent(new Event("change"));
 
        }
@@ -785,13 +787,13 @@ namespace MJS {
     }
 
 
-    export type page_mod_feedback_use_templ_data = Page_Data_Generic & {
+    export type page_mod_feedback_use_templ_data = {
         page: "mod-feedback-use_templ";
         // mdl_course_modules: {x_submit: boolean;};
         // dom_submit: boolean
     };
 
-    async function page_mod_feedback_use_templ(message: Page_Data_Inter): Promise<page_mod_feedback_use_templ_data> {
+    async function page_mod_feedback_use_templ(message: Page_Data_Inter_Base & DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
        const submit_dom = document.querySelector(":root #region-main form#mform1.mform input#id_submitbutton") as HTMLInputElement;
        if (message && message.mdl_course_modules && message.mdl_course_modules && message.dom_submit) { // message.mdl_course_modules.x_submit) {
             submit_dom.click();
@@ -832,7 +834,7 @@ namespace MJS {
 
         };
 
-        let result: Page_Data_Specific;
+        let result: Page_Data;
 
         switch (window.document.body.id) {
             case "page-course-index":
@@ -885,7 +887,7 @@ namespace MJS {
                 result = await page_mod_feedback_use_templ(message);
                 break;
             default:
-                throw new Error("Unrecognised page");
+                result = { page: "*" };
                 break;
         }
 
