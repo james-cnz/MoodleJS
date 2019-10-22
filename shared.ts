@@ -23,7 +23,7 @@ namespace MJS {
         lineNumber?:    number;
     };
 
-    export function is_Errorlike(possible_Errorlike: Page_Data_Out|Errorlike): possible_Errorlike is Errorlike {
+    export function is_Errorlike(possible_Errorlike: any): possible_Errorlike is Errorlike {
         return ((possible_Errorlike as Errorlike).name !== undefined)
             && (typeof ((possible_Errorlike as Errorlike).name) == "string")
             && ((possible_Errorlike as Errorlike).message !== undefined)

@@ -14,21 +14,15 @@ namespace MJS {
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
-        | page_unspecified_data;
+        | {page: "*"};  // some other page
 
 
     export type Page_Data_In_Base = {
-        page:               string;
         dom_submit?:         boolean|string;
-        dom_set_key?:        string;
-        dom_set_value?:      boolean|number|string;
     };
 
-    export type Page_Data_In = DeepPartial<Page_Data> & Page_Data_In_Base;
+    export type Page_Data_In = ({page: string} & DeepPartial<Page_Data> | {}) & Page_Data_In_Base;
 
-    type Page_Data_Inter_Base = Page_Data_In_Base & Page_Data_Out_Base;
-
-    export type Page_Data_Inter = DeepPartial<Page_Data> & Page_Data_Inter_Base;
 
     export type Page_Data_Out_Base = {
         page_window:        Page_Window;
@@ -46,22 +40,20 @@ namespace MJS {
 
 
 
-    export type page_unspecified_data = {
-        page: "*"
-    }
-
 
 
 
     export type page_course_index_data = {
-        page: "course-index(-category)?"
+        page: "course-index(-category)?",
+        mdl_course?: {id: number},
         mdl_course_categories: {
             id:         number;
             name:       string;
              }
+        dom_expand?: boolean;
     };
 
-    async function page_course_index(message: Page_Data_Inter_Base & DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
+    async function page_course_index(message: Page_Data_In_Base & DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
 
         async function category(category_dom?: HTMLDivElement): Promise<DeepPartial<MDL_Course_Categories> & {
             id:         number;
@@ -148,10 +140,11 @@ namespace MJS {
 
 
     export type page_backup_restorefile_data = {
-        page: "backup-restorefile"
+        page: "backup-restorefile",
+        mdl_course: {id?: number, x_backup_url: string}
     };
 
-    async function page_backup_restorefile(message: Page_Data_Inter_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
+    async function page_backup_restorefile(message: Page_Data_In_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
         const restore_link = document.querySelector("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']") as HTMLAnchorElement;
         // if (message.dom_submit && message.dom_submit == "download") {
@@ -167,12 +160,23 @@ namespace MJS {
 
     export type page_backup_restore_data = {
         page: "backup-restore",
-        stage: number|null
-    };
+        stage: number|null,
+        mdl_course?: {template_id?: number}
+    } & (
+        {stage: 2, dom_submit?: "stage 2 submit"}
+        | { stage: 4, mdl_course_categories?: {id: number, name: string}, restore_settings?: {users?: boolean}, dom_submit?: "stage 4 new cat search"|"stage 4 new continue"|"stage 4 settings submit"}
+        | { stage: 8, mdl_course: {fullname: string, shortname: string, startdate: number}, dom_submit?: "stage 8 submit"}
+        | { stage: 16, dom_submit?: "stage 16 submit" }
+        | { stage: null, mdl_course: {id: number}}
+    );
 
-    async function page_backup_restore(message: Page_Data_Inter_Base & DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
+    async function page_backup_restore(message: Page_Data_In_Base & DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
         const stage = stage_dom ? parseInt(stage_dom.value) : null;
+
+        if (message.stage && message.stage !== stage) {
+            throw new Error("Page backup restore: Stage mismatch");
+        }
 
         switch (stage) {
 
@@ -190,14 +194,14 @@ namespace MJS {
                 const stage_4_new_cat_name_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']") as HTMLInputElement;
                 const stage_4_new_cat_search_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']") as HTMLInputElement;
                 const stage_4_new_continue_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']") as HTMLInputElement;
-                if (message.mdl_course_categories && message.mdl_course_categories.name) {
+                if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.name) {
                     stage_4_new_cat_name_dom.value = message.mdl_course_categories.name;
                 }
                 if (message.dom_submit && message.dom_submit == "stage 4 new cat search") {
                     stage_4_new_cat_search_dom.click();
                 }
 
-                if (message.mdl_course_categories && message.mdl_course_categories.id) {
+                if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.id) {
                     const stage_4_new_cat_id_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_categories.id + "']") as HTMLInputElement;
                     stage_4_new_cat_id_dom.click();
                 }
@@ -209,10 +213,12 @@ namespace MJS {
                 const stage_4_settings_users_dom = document.querySelector("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']") as HTMLInputElement;
                 const stage_4_settings_submit_dom = document.querySelector("#region-main form#mform1.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
 
-                if (message.dom_set_key == "stage 4 settings users") {
-                    stage_4_settings_users_dom.checked = message.dom_set_value ? true : false;  // TODO: Check
-                    stage_4_settings_users_dom.dispatchEvent(new Event("change"));
-                    await sleep(100);
+                if (message.stage == 4 && message.restore_settings) {
+                    if (message.restore_settings.hasOwnProperty("users")) {
+                        stage_4_settings_users_dom.checked = message.restore_settings.users;  // TODO: Check
+                        stage_4_settings_users_dom.dispatchEvent(new Event("change"));
+                        await sleep(100);
+                    }
                 }
 
                 if (message.dom_submit && message.dom_submit == "stage 4 settings submit") {
@@ -230,15 +236,15 @@ namespace MJS {
                 const course_startdate_year_dom = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[year]']") as HTMLSelectElement;
                 const submit_dom = document.querySelector("#region-main form#mform2.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
 
-                if (message.mdl_course && message.mdl_course.fullname) {
+                if (message.stage == 8 && message.mdl_course && message.mdl_course.fullname) {
                     course_name_dom.value = message.mdl_course.fullname;
                 }
 
-                if (message.mdl_course && message.mdl_course.shortname) {
+                if (message.stage == 8 && message.mdl_course && message.mdl_course.shortname) {
                     course_shortname_dom.value = message.mdl_course.shortname;
                 }
 
-                if (message.mdl_course && message.mdl_course.startdate) {
+                if (message.stage == 8 && message.mdl_course && message.mdl_course.startdate) {
                     const startdate = new Date(message.mdl_course.startdate * 1000);
                     course_startdate_day_dom.value = "1";  // Set the day low initially, to avoid overflow when changing the year or month.
                     course_startdate_year_dom.value =  "" + startdate.getUTCFullYear();
@@ -304,17 +310,17 @@ namespace MJS {
         }
     };
 
-    async function page_course_view(message: Page_Data_Inter_Base & DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
+    async function page_course_view(_message: Page_Data_In_Base & DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
 
         // Course Start
         const main_dom:        Element             = window.document.querySelector(":root #region-main")
                                                                                     || throwf(new Error("WSC course get content, main region not found."));
         // const result: Partial<Page_Data> = {};
 
-        const course_out_id =    parseInt((message.page_window.body_class.match(/\bcourse-(\d+)\b/) || throwf(new Error("WS course get displayed, course id not found."))
+        const course_out_id =    parseInt((window.document.body.getAttribute("class").match(/\bcourse-(\d+)\b/) || throwf(new Error("WS course get displayed, course id not found."))
                                  )[1]);
         const course_out_fullname =  (window.document.querySelector(":root .breadcrumb a[title]") as HTMLAnchorElement).getAttribute("title") || "";
-        const course_out_format =     (message.page_window.body_class.match(/\bformat-([a-z]+)\b/)    || throwf(new Error("WS course get displayed, course format not found."))
+        const course_out_format =     (window.document.body.getAttribute("class").match(/\bformat-([a-z]+)\b/)    || throwf(new Error("WS course get displayed, course format not found."))
                         )[1];
 
         // Sections
@@ -530,6 +536,7 @@ namespace MJS {
 
     export type page_course_editsection_data = {
         page: "course-editsection";
+        mdl_course?: {id: number},
         mdl_course_sections: page_course_editsection_section;
     };
     type page_course_editsection_section = DeepPartial<MDL_Course_Sections> & {
@@ -540,7 +547,7 @@ namespace MJS {
     };
 
 
-    async function page_course_editsection(message: Page_Data_Inter_Base & DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
+    async function page_course_editsection(message: Page_Data_In_Base & DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
         // const section_id    = message.sectionid;
         // Start
         const section_in = message.mdl_course_sections;
@@ -615,9 +622,10 @@ namespace MJS {
 
     export type page_module_edit_data = {
         page: "mod-[a-z]+-mod"
-        mdl_course_modules: DeepPartial<page_module_edit_module>
+        mdl_course?: {id: number}
+        mdl_course_modules: page_module_edit_module
     };
-    type page_module_edit_module = DeepPartial<MDL_Course_Modules> & {
+    type page_module_edit_module = {
         id:         number;
         instance:   number;
         course:     number;
@@ -629,7 +637,7 @@ namespace MJS {
         }>
     };
 
-    async function page_module_edit(message: Page_Data_Inter_Base & DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
+    async function page_module_edit(message: Page_Data_In_Base & DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
 
         // Module Start
         const module_in = message.mdl_course_modules;
@@ -772,10 +780,10 @@ namespace MJS {
 
     export type page_mod_feedback_edit_data = {
         page: "mod-feedback-edit",
-        mdl_course_modules: { mdl_course_module_instance: { mdl_feedback_template_id: number; } }
+        mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
     };
 
-    async function page_mod_feedback_edit(message: Page_Data_Inter_Base & DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
+    async function page_mod_feedback_edit(message: Page_Data_In_Base & DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
        const template_id_dom = document.querySelector(":root #region-main form#mform2.mform select#id_templateid") as HTMLSelectElement;
        if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
             && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
@@ -793,9 +801,9 @@ namespace MJS {
         // dom_submit: boolean
     };
 
-    async function page_mod_feedback_use_templ(message: Page_Data_Inter_Base & DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
+    async function page_mod_feedback_use_templ(message: Page_Data_In_Base & DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
        const submit_dom = document.querySelector(":root #region-main form#mform1.mform input#id_submitbutton") as HTMLInputElement;
-       if (message && message.mdl_course_modules && message.mdl_course_modules && message.dom_submit) { // message.mdl_course_modules.x_submit) {
+       if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
             submit_dom.click();
        }
        return {page: "mod-feedback-use_templ"};
@@ -816,23 +824,9 @@ namespace MJS {
 
     async function page_get_set(message_in: Page_Data_In): Promise<Page_Data_Out> {
 
-        const message = message_in as Page_Data_Inter;
+        const message = message_in as Page_Data_In;
 
-        message.page_window = {
-                location_origin:    window.location.origin,
-                // location_pathname:  window.location.pathname,
-                // location_search:    window.location.search,
-                // location_hash:      window.location.hash,
-                body_id:            window.document.body.getAttribute("id")             || throwf(new Error("WSC doc details get, body ID not found.")),
-                body_class:         window.document.body.getAttribute("class")          || throwf(new Error("WSC doc details get, body class not found.")),
-                sesskey:       (((window.document.querySelector(":root a.menu-action[data-title='logout,moodle']")
-                                                                                        || throwf(new Error("WSC doc details get, couldn't get logout menu item.")) // Caught
-                                    ) as HTMLAnchorElement
-                                    ).search.match(/^\?sesskey=(\w+)$/)                || throwf(new Error("WSC doc details get, session key not found."))
-                                    )[1],
-                // error_message:      error_message_dom ? error_message_dom.textContent || "" : undefined,
 
-        };
 
         let result: Page_Data;
 
@@ -887,11 +881,26 @@ namespace MJS {
                 result = await page_mod_feedback_use_templ(message);
                 break;
             default:
-                result = { page: "*" };
+                result = {page: "*"};
                 break;
         }
 
-        (result as Page_Data_Out).page_window = message.page_window;
+        (result as Page_Data_Out).page_window = {
+                location_origin:    window.location.origin,
+                // location_pathname:  window.location.pathname,
+                // location_search:    window.location.search,
+                // location_hash:      window.location.hash,
+                body_id:            window.document.body.getAttribute("id")             || throwf(new Error("WSC doc details get, body ID not found.")),
+                body_class:         window.document.body.getAttribute("class")          || throwf(new Error("WSC doc details get, body class not found.")),
+                sesskey:       (((window.document.querySelector(":root a.menu-action[data-title='logout,moodle']")
+                                                                                        || throwf(new Error("WSC doc details get, couldn't get logout menu item.")) // Caught
+                                    ) as HTMLAnchorElement
+                                    ).search.match(/^\?sesskey=(\w+)$/)                || throwf(new Error("WSC doc details get, session key not found."))
+                                    )[1],
+                // error_message:      error_message_dom ? error_message_dom.textContent || "" : undefined,
+
+        };
+        
 
         return result as Page_Data_Out;
     }
@@ -904,7 +913,7 @@ namespace MJS {
         // return c_on_call({});
         let message: Page_Data_Out|Errorlike;
         try {
-            message = await page_onMessage({page: "*"});
+            message = await page_onMessage({});
         } catch (e) {
             message = {name: "Error", message: e.message, fileName: e.fileName, lineNumber: e.lineNumber};
         }
