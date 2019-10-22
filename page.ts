@@ -45,6 +45,7 @@ namespace MJS {
 
     export type page_course_index_data = {
         page: "course-index(-category)?",
+        location?: {pathname: "/course/index.php", search: {categoryid?: number}}
         mdl_course?: {id: number},
         mdl_course_categories: {
             id:         number;
@@ -141,6 +142,7 @@ namespace MJS {
 
     export type page_backup_restorefile_data = {
         page: "backup-restorefile",
+        location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
         mdl_course: {id?: number, x_backup_url: string}
     };
 
@@ -160,6 +162,7 @@ namespace MJS {
 
     export type page_backup_restore_data = {
         page: "backup-restore",
+        location?: {pathname: "/backup/restore.php"}
         stage: number|null,
         mdl_course?: {template_id?: number}
     } & (
@@ -284,7 +287,8 @@ namespace MJS {
 
 
     export type page_course_view_data = {
-        page: "course-view-[a-z]+"
+        page: "course-view-[a-z]+",
+        location?: {pathname: "/course/view.php", search: {id: number}}
         mdl_course: page_course_view_course;
         mdl_course_sections: page_course_view_course_sections;
     };
@@ -536,6 +540,7 @@ namespace MJS {
 
     export type page_course_editsection_data = {
         page: "course-editsection";
+        location?: {pathname: "/course/editsection.php", search: {id: number}},
         mdl_course?: {id: number},
         mdl_course_sections: page_course_editsection_section;
     };
@@ -621,7 +626,8 @@ namespace MJS {
 
 
     export type page_module_edit_data = {
-        page: "mod-[a-z]+-mod"
+        page: "mod-[a-z]+-mod",
+        location?: {pathname: "/course/modedit.php", search: {update: number}},
         mdl_course?: {id: number}
         mdl_course_modules: page_module_edit_module
     };
@@ -780,6 +786,7 @@ namespace MJS {
 
     export type page_mod_feedback_edit_data = {
         page: "mod-feedback-edit",
+        location?: {pathname: "/mod/feedback/edit.php", search: {id: number, do_show: "edit"|"templates"}},
         mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
     };
 
@@ -797,6 +804,7 @@ namespace MJS {
 
     export type page_mod_feedback_use_templ_data = {
         page: "mod-feedback-use_templ";
+        location?: {pathname: "/mod/feedback/use_templ.php"}
         // mdl_course_modules: {x_submit: boolean;};
         // dom_submit: boolean
     };

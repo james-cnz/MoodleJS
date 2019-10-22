@@ -137,9 +137,19 @@ namespace MJS {
         }
 
 
-        public async page_load<T extends Page_Data>(pathname: string, search: {[index: string]: number|string},
-                                page_data: DeepPartial<T>,
+        public async page_load<T extends Page_Data>(
+                                page_data: DeepPartial<T> & {location: {pathname: string, search: {[index: string]: number|string}}},
                                 count: number = 1): Promise<T & Page_Data_Out_Base> {
+            return await this.page_load2<T>(page_data, page_data, count);
+        }
+
+
+        public async page_load2<T extends Page_Data>(
+            page_data1: DeepPartial<Page_Data> & {location: {pathname: string, search: {[index: string]: number|string}}},
+            page_data2: DeepPartial<T>,
+            count: number = 1): Promise<T & Page_Data_Out_Base> {
+            const pathname = page_data1.location.pathname;
+            const search = page_data1.location.search;
 
             (this.macro_state == 1)                                             || throwf(new Error("Page load:\nUnexpected state."));
             (pathname.match(/(?:\/[a-z]+)+\.php/))                              || throwf(new Error("Page load:\nPathname unexpected."));
@@ -149,7 +159,7 @@ namespace MJS {
             this.page_message = null;
 
             await browser.tabs.update(this.page_tab_id, {url: this.page_wwwroot + pathname + "?" + TabData.json_to_search_params(search)});
-            return await this.page_loaded(page_data, count);
+            return await this.page_loaded(page_data2, count);
         }
 
 
@@ -351,19 +361,25 @@ namespace MJS {
         */
 
 
-       public async page_call<T extends Page_Data>(message: DeepPartial<T> & Page_Data_In_Base): Promise<T & Page_Data_Out_Base> {
+        protected async page_call<T extends Page_Data>(message: DeepPartial<T> & Page_Data_In_Base): Promise<T & Page_Data_Out_Base> {
             return await this.tabdata.page_call(message);
         }
 
 
-        public async page_load<T extends Page_Data>(pathname: string, search: {[index: string]: number|string},
-            page_data: DeepPartial<T>,
+        protected async page_load<T extends Page_Data>(
+            page_data: DeepPartial<T> & {location: {pathname: string, search: {[index: string]: number|string}}},
             count: number = 1): Promise<T & Page_Data_Out_Base> {
-            return await this.tabdata.page_load(pathname, search, page_data, count);
+            return await this.tabdata.page_load(page_data, count);
         }
 
+        protected async page_load2<T extends Page_Data>(
+            page_data1: DeepPartial<Page_Data> & {location: {pathname: string, search: {[index: string]: number|string}}},
+            page_data2: DeepPartial<T>,
+            count: number = 1): Promise<T & Page_Data_Out_Base> {
+            return await this.tabdata.page_load2(page_data1, page_data2, count);
+        }
 
-        public async page_loaded<T extends Page_Data>(page_data: DeepPartial<T>,
+        protected async page_loaded<T extends Page_Data>(page_data: DeepPartial<T>,
             count: number = 1): Promise<T & Page_Data_Out_Base> {
             return await this.tabdata.page_loaded(page_data, count);
         }
@@ -426,8 +442,9 @@ namespace MJS {
             const startdate = this.new_course.startdate;
 
             // Get template course context (1 load)
-            this.page_details = await this.page_load("/course/view.php", {id: this.course_template_id, section: 0},
-                {page: "course-view-[a-z]+", mdl_course: {id: this.course_template_id}},
+            this.page_details = await this.page_load(
+                {location: {pathname: "/course/view.php", search: {id: this.course_template_id, section: 0}},
+                page: "course-view-[a-z]+", mdl_course: {id: this.course_template_id}}
             );
             const source_context_match = this.page_details.page_window.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                         || throwf(new Error("New course macro, get template:\nContext not found."));
@@ -435,8 +452,8 @@ namespace MJS {
 
             // Load course restore page (1 load)
             this.page_details = await this.page_load(
-                "/backup/restorefile.php", {contextid: source_context},
-                {page: "backup-restorefile", mdl_course: {id: this.course_template_id}},
+                {location: {pathname: "/backup/restorefile.php", search: {contextid: source_context}},
+                page: "backup-restorefile", mdl_course: {id: this.course_template_id}},
             );
 
             // Click restore backup file (1 load)
@@ -483,8 +500,8 @@ namespace MJS {
             // TODO: Turn editing on (1 load).
             if (!this.page_details.page_window.body_class.match(/\bediting\b/)) {
                 this.page_details = await this.page_load<page_course_view_data>(
-                    "/course/view.php", {id: course_id, section: 0, sesskey: this.tabdata.page_sesskey, edit: "on"},
-                    {page: "course-view-[a-z]+", mdl_course: {id: course_id}},
+                    {location: {pathname: "/course/view.php", search: {id: course_id, section: 0, sesskey: this.tabdata.page_sesskey, edit: "on"}},
+                    page: "course-view-[a-z]+", mdl_course: {id: course_id}},
                 );
             } else {
                 this.tabdata.page_load_count(1);
@@ -493,8 +510,9 @@ namespace MJS {
 
             // Fill in course name (2 loads)
             const section_0_id = this.page_details.mdl_course_sections.id       || throwf(new Error("New course macro, fill in course name:\nID not found."));
-            this.page_details = await this.page_load<page_course_editsection_data>("/course/editsection.php", {id: section_0_id}, // TODO: Needs editing on.
-                {page: "course-editsection", mdl_course: {id: course_id}},
+            this.page_details = await this.page_load<page_course_editsection_data>(
+                {location: {pathname: "/course/editsection.php", search: {id: section_0_id}}, // TODO: Needs editing on.
+                page: "course-editsection", mdl_course: {id: course_id}},
             );
             // TODO: Crashes around here with "can't access dead object"?
             const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.new_course.fullname);
@@ -568,8 +586,9 @@ namespace MJS {
             const parser = new DOMParser();
 
             // Get list of sections (1 load)
-            this.page_details = await this.page_load<page_course_view_data>("/course/view.php", {id: this.course_id, section: this.modules_tab_num},
-                {page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
+            this.page_details = await this.page_load<page_course_view_data>(
+                {location: {pathname: "/course/view.php", search: {id: this.course_id, section: this.modules_tab_num}},
+                page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
             );
             const modules_list = this.page_details.mdl_course_sections.mdl_course_modules as MDL_Course_Modules[];
             (modules_list.length == 1)                                          || throwf(new Error("Index rebuild macro, get list:\nExpected exactly one resource in Modules tab."));
@@ -581,8 +600,9 @@ namespace MJS {
             // modules_list.shift();
             for (let section_num = this.modules_tab_num + 1; section_num <= this.last_module_tab_num; section_num++) {
                 // const section_num = section.section                                     || throwf(new Error("Module number not found."));
-                this.page_details = await this.page_load<page_course_view_data>("/course/view.php", {id: this.course_id, section: section_num},
-                                    {page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
+                this.page_details = await this.page_load<page_course_view_data>(
+                    {location: {pathname: "/course/view.php", search: {id: this.course_id, section: section_num}},
+                    page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
                 const section_full = this.page_details.mdl_course_sections;
                 const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")
                                                                                         || throwf(new Error("Index rebuild macro, get section:\nModule name not found."))
@@ -610,8 +630,9 @@ namespace MJS {
                         + "</div>\n";
 
             // Update TOC (2 loads)
-            this.page_details = await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, update: modules_index.id},
-                                    {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}});
+            this.page_details = await this.page_load2(
+                {location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, update: modules_index.id}}},
+                {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}});
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
                 mdl_course_module_instance: {intro: index_html}}, dom_submit: true});
             this.page_details = await this.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
@@ -706,8 +727,8 @@ namespace MJS {
             const short_name = this.new_section.name;
 
             // Add new tab (1 load)
-            this.page_details = await this.page_load<page_course_view_data>(  // TODO: Fix for flexsections?
-                "/course/changenumsections.php", {courseid: this.course_id, increase: 1, sesskey: this.tabdata.page_sesskey, insertsection: 0},
+            this.page_details = await this.page_load2<page_course_view_data>(  // TODO: Fix for flexsections?
+                {location: {pathname: "/course/changenumsections.php", search: {courseid: this.course_id, increase: 1, sesskey: this.tabdata.page_sesskey, insertsection: 0}}},
                 {page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
             );
             let new_section = this.page_details.mdl_course_sections;
@@ -715,17 +736,17 @@ namespace MJS {
             // Move new tab (1 load)
             // console.log("Move new tab");
             this.page_details = await this.page_load(
-                "/course/view.php", {id: this.course_id, section: new_section.section, sesskey: this.tabdata.page_sesskey, move: this.new_section_pos - new_section.section
+                {location: {pathname: "/course/view.php", search: {id: this.course_id, section: new_section.section, sesskey: this.tabdata.page_sesskey, move: this.new_section_pos - new_section.section},
                                                                                     /*|| throwf(new Error("WS course section edit, no amount specified."))*/},
-                {page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
+                page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
             );
             new_section.section = this.new_section_pos;
 
             // Set new tab details (2 loads)
             this.page_details = await this.page_load(
-                "/course/editsection.php", {id: new_section.id, sr: new_section.section,
-                                                                                    /*|| throwf(new Error("WS course section edit, no amount specified."))*/},
-                                                                                    {page: "course-editsection", mdl_course: {id: this.course_id}},
+                {location: {pathname: "/course/editsection.php", search: {id: new_section.id, sr: new_section.section,
+                                                                                    /*|| throwf(new Error("WS course section edit, no amount specified."))*/}},
+                                                                                    page: "course-editsection", mdl_course: {id: this.course_id}},
                                                                                     );
             this.page_details = await this.page_call({page: "course-editsection", mdl_course_sections: {id: new_section.id, name: short_name, x_options: {level: 1},
                 summary:
@@ -753,7 +774,7 @@ namespace MJS {
 
             // Add pre-topic message (2 loads)
             // Body ID or class unexpected.
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
                                     {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
                                     );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -767,7 +788,7 @@ namespace MJS {
             this.page_details = await this.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
 
             // Add blank line (2 loads)
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
             {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -775,7 +796,7 @@ namespace MJS {
             this.page_details = await this.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
 
             // Add feedback topic (2 loads)
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -791,7 +812,7 @@ namespace MJS {
             this.page_details = await this.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
 
             // Add feedback activity (2 load)
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "feedback", section: new_section.section},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "feedback", section: new_section.section}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -815,15 +836,15 @@ namespace MJS {
                 }
 
             // Configure Feedback activity (3 loads?)
-            this.page_details = await this.page_load("/mod/feedback/edit.php", {id: feedback_act.id, do_show: "templates"},
-                                {page: "mod-feedback-edit", mdl_course_modules: {id: feedback_act.id}});
+            this.page_details = await this.page_load({location: {pathname: "/mod/feedback/edit.php", search: {id: feedback_act.id, do_show: "templates"}},
+                                page: "mod-feedback-edit", mdl_course_modules: {id: feedback_act.id}});
             this.page_details = await this.page_call({page: "mod-feedback-edit", mdl_course_modules: { mdl_course_module_instance: {mdl_feedback_template_id: this.feedback_template_id}}, dom_submit: true});  // TODO: fix;
             this.page_details = await this.page_loaded({page: "mod-feedback-use_templ"});
             this.page_details = await this.page_call({page: "mod-feedback-use_templ", dom_submit: true});
             this.page_details = await this.page_loaded({page: "mod-feedback-edit"});
 
             // Add footer (2 loads).
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
             {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -934,7 +955,7 @@ namespace MJS {
             const name = this.new_topic_name;
 
             // Create topic heading (4 loads?)
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, // section: section_num, modname: "label",
@@ -981,16 +1002,16 @@ namespace MJS {
             let section = this.page_details.mdl_course_sections;
 
             // Move new module.
-            this.page_details = await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id},
-            {page: "course-view-[a-z]+"},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
+                {page: "course-view-[a-z]+"},
             );
-            this.page_details = await this.page_load("/course/mod.php", {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey}}},
                 {page: "course-view-[a-z]+"},
             );
 
             // Create topic end message (4 loads?)
             if (this.topic_first) {
-                this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
+                this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
                     {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
                 );
                 this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, // section: section_num, modname: "label",
@@ -1007,10 +1028,10 @@ namespace MJS {
                 section = this.page_details.mdl_course_sections;
 
                 // Move new module.
-                this.page_details = await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id},
-                {page: "course-view-[a-z]+"},
+                this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
+                    {page: "course-view-[a-z]+"},
                 );
-                this.page_details = await this.page_load("/course/mod.php", {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
+                this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey}}},
                     {page: "course-view-[a-z]+"},
                 );
             } else {
@@ -1018,7 +1039,7 @@ namespace MJS {
             }
 
             // Create space (4 loads?)
-            this.page_details = await this.page_load("/course/mod.php", {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, // section: section_num, modname: "label",
@@ -1032,10 +1053,10 @@ namespace MJS {
             section = this.page_details.mdl_course_sections;
 
             // Move new module.
-            this.page_details = await this.page_load("/course/mod.php", {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
             {page: "course-view-[a-z]+"},
             );
-            this.page_details = await this.page_load("/course/mod.php", {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey},
+            this.page_details = await this.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey}}},
                 {page: "course-view-[a-z]+"},
             );
 
@@ -1060,8 +1081,8 @@ namespace MJS {
         protected async content() {
 
             this.page_details = await this.page_load(
-                "/course/index.php", {},
-                {page: "course-index(-category)?", mdl_course: {id: 1}},
+                {location: {pathname: "/course/index.php", search: {}},
+                page: "course-index(-category)?", mdl_course: {id: 1}},
             );
 
             // const site_map = await this.page_call({page: "course-index(-category)?", dom_expand: true});
@@ -1070,8 +1091,8 @@ namespace MJS {
             const course_context = 911164;
 
             await this.page_load(
-                "/backup/restorefile.php", {contextid: course_context},
-                {page: "backup-restorefile", mdl_course: {id: course_id}},
+                {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
+                page: "backup-restorefile", mdl_course: {id: course_id}},
             );
 
             // const message = await this.page_call({page: "backup-restorefile"});
