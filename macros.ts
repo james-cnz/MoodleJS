@@ -25,17 +25,19 @@ namespace MJS {
             return search_obj.toString();
         }
 
-        private static compare_skel(data: any, skel: any): boolean {
+        private static check_with_skel(data: any, skel: any, exclude?: any): boolean {
             if (skel == undefined) { return true; }
             else if (typeof(skel) == "function")  {
                 throw new Error("Can't compare functions");
             } else if (typeof(skel) == "object") {
-                for (const prop in skel) if (skel.hasOwnProperty(prop) && skel.prop != undefined) {
-                    if (!data.hasOwnProperty(prop) || !this.compare_skel(data[prop], skel[prop])) { return false; }
+                for (const prop in skel) if (skel.hasOwnProperty(prop) && skel[prop] != undefined) {
+                    if (exclude && exclude.hasOwnProperty(prop)) continue;
+                    if (!data.hasOwnProperty(prop) || !this.check_with_skel(data[prop], skel[prop])) { throw new Error("Didin't find property: " + prop); }
                 }
                 return true;
             } else {
-                return data == skel;
+                if (data != skel) { throw new Error("Property failed compare."); };
+                return true;
             }
         }
 
@@ -138,7 +140,7 @@ namespace MJS {
 
 
         public async page_load<T extends Page_Data>(
-                                page_data: DeepPartial<T> & {location: {pathname: string, search: {[index: string]: number|string}}},
+                                page_data: DeepPartial<T & Page_Data_Out_Base> & {location: {pathname: string, search: {[index: string]: number|string}}},
                                 count: number = 1): Promise<T & Page_Data_Out_Base> {
             return await this.page_load2<T>(page_data, page_data, count);
         }
@@ -146,7 +148,7 @@ namespace MJS {
 
         public async page_load2<T extends Page_Data>(
             page_data1: DeepPartial<Page_Data> & {location: {pathname: string, search: {[index: string]: number|string}}},
-            page_data2: DeepPartial<T>,
+            page_data2: DeepPartial<T & Page_Data_Out_Base>,
             count: number = 1): Promise<T & Page_Data_Out_Base> {
             const pathname = page_data1.location.pathname;
             const search = page_data1.location.search;
@@ -163,7 +165,7 @@ namespace MJS {
         }
 
 
-        public async page_loaded<T extends Page_Data>(page_data: DeepPartial<T>,
+        public async page_loaded<T extends Page_Data>(page_data: DeepPartial<T & Page_Data_Out_Base>,
             count: number = 1): Promise<T & Page_Data_Out_Base> {
 
             (this.macro_state == 2)                                             || throwf(new Error("Page loaded:\nUnexpected state."));
@@ -272,7 +274,7 @@ namespace MJS {
         }
 
 
-        private page_load_match<T extends Page_Data>(page_details: any, page_data: DeepPartial<T>):
+        private page_load_match<T extends Page_Data>(page_details: Page_Data_Out, page_data: DeepPartial<T & Page_Data_Out_Base>):
             page_details is T & Page_Data_Out_Base {
             let result = true;
             if (!page_data.page || page_details.moodle_page.body_id.match(RegExp("^page-" + page_data.page + "$"))) { /* OK */ } else    { result = false; }
@@ -282,6 +284,7 @@ namespace MJS {
                 else
                     { result = false; }
             }*/
+            //TabData.check_with_skel(page_details/*.moodle_page*/, page_data/*.moodle_page*/, {location: true});
             return result;
         }
 
@@ -399,11 +402,14 @@ namespace MJS {
 
         // public prereq:             boolean;
 
-        public new_course: DeepPartial<MDL_Course> & {
+        /*public new_course: DeepPartial<MDL_Course> & { // TODO: need to split up?
             fullname: string;
             shortname: string;
             startdate: number;
-        };
+        };*/
+        public new_course_fullname: string;
+        public new_course_shortname: string;
+        public new_course_startdate: number;
 
         private course_template_id: number;
         private category_id:        number;
@@ -438,9 +444,9 @@ namespace MJS {
 
         protected async content() {  // TODO: Set properties.
 
-            const name = this.new_course.fullname;
-            const shortname = this.new_course.shortname;
-            const startdate = this.new_course.startdate;
+            const name = this.new_course_fullname;
+            const shortname = this.new_course_shortname;
+            const startdate = this.new_course_startdate;
 
             // Get template course context (1 load)
             this.page_details = await this.tabdata.page_load(
@@ -516,7 +522,7 @@ namespace MJS {
                 page: "course-editsection", mdl_course: {id: course_id}},
             );
             // TODO: Crashes around here with "can't access dead object"?
-            const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.new_course.fullname);
+            const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.new_course_fullname);
             this.page_details = await this.tabdata.page_call({page: "course-editsection", mdl_course_sections: {summary: desc}, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: course_id}});
 
