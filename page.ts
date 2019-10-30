@@ -25,17 +25,17 @@ namespace MJS {
 
 
     export type Page_Data_Out_Base = {
-        page_window:        Page_Window;
+        moodle_page:        Moodle_Page;
     };
 
     export type Page_Data_Out = Page_Data & Page_Data_Out_Base;
 
 
-    export type Page_Window = {
-        location_origin:    string;
-        sesskey:            string;
-        body_id:            string;
-        body_class:         string;
+    export type Moodle_Page = {
+        wwwroot:    string;
+        sesskey:    string;
+        body_id:    string;
+        body_class: string;
     };
 
 
@@ -167,7 +167,7 @@ namespace MJS {
         mdl_course?: {template_id?: number}
     } & (
         {stage: 2, dom_submit?: "stage 2 submit"}
-        | { stage: 4, mdl_course_categories?: {id: number, name: string}, restore_settings?: {users?: boolean}, dom_submit?: "stage 4 new cat search"|"stage 4 new continue"|"stage 4 settings submit"}
+        | { stage: 4, mdl_course_categories?: {id: number, name: string}, restore_settings: {users: boolean}, dom_submit?: "stage 4 new cat search"|"stage 4 new continue"|"stage 4 settings submit"}
         | { stage: 8, mdl_course: {fullname: string, shortname: string, startdate: number}, dom_submit?: "stage 8 submit"}
         | { stage: 16, dom_submit?: "stage 16 submit" }
         | { stage: null, mdl_course: {id: number}}
@@ -175,7 +175,7 @@ namespace MJS {
 
     async function page_backup_restore(message: Page_Data_In_Base & DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
-        const stage = stage_dom ? parseInt(stage_dom.value) : null;
+        const stage: 2|4|8|16|null = stage_dom ? parseInt(stage_dom.value) : null;
 
         if (message.stage && message.stage !== stage) {
             throw new Error("Page backup restore: Stage mismatch");
@@ -190,6 +190,7 @@ namespace MJS {
                     stage_2_submit_dom.click();
                 }
                 // console.log("page backup restore case 2 end");
+                return {page: "backup-restore", stage: stage};
                 break;
 
             case 4:
@@ -217,7 +218,7 @@ namespace MJS {
                 const stage_4_settings_submit_dom = document.querySelector("#region-main form#mform1.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
 
                 if (message.stage == 4 && message.restore_settings) {
-                    if (message.restore_settings.hasOwnProperty("users")) {
+                    if (/*message.restore_settings.hasOwnProperty("users") &&*/ message.restore_settings.users != undefined) {
                         stage_4_settings_users_dom.checked = message.restore_settings.users;  // TODO: Check
                         stage_4_settings_users_dom.dispatchEvent(new Event("change"));
                         await sleep(100);
@@ -229,15 +230,16 @@ namespace MJS {
                 }
 
                 // console.log("page backup restore case 4 end");
+                return {page: "backup-restore", stage: stage};
                 break;
 
             case 8:
-                const course_name_dom = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']") as HTMLInputElement;
-                const course_shortname_dom = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']") as HTMLInputElement;
-                const course_startdate_day_dom = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']") as HTMLSelectElement;
+                const course_name_dom           = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']") as HTMLInputElement;
+                const course_shortname_dom      = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']") as HTMLInputElement;
+                const course_startdate_day_dom  = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']") as HTMLSelectElement;
                 const course_startdate_month_dom = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[month]']") as HTMLSelectElement;
                 const course_startdate_year_dom = document.querySelector("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[year]']") as HTMLSelectElement;
-                const submit_dom = document.querySelector("#region-main form#mform2.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
+                const submit_dom                = document.querySelector("#region-main form#mform2.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
 
                 if (message.stage == 8 && message.mdl_course && message.mdl_course.fullname) {
                     course_name_dom.value = message.mdl_course.fullname;
@@ -259,6 +261,7 @@ namespace MJS {
                     submit_dom.click();
                 }
 
+                return {page: "backup-restore", stage: stage};
                 break;
 
             case 16:
@@ -268,6 +271,7 @@ namespace MJS {
                     submit16_dom.click();
                 }
 
+                return {page: "backup-restore", stage: stage};
                 break;
 
             case null:
@@ -277,7 +281,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "stage complete submit") {
                     submitcomplete_dom.click();
                 }
-                return {page: "backup-restore", stage: stage, mdl_course: {id: course_id}};
+                return {page: "backup-restore", stage: null, mdl_course: {id: course_id}};
                 break;
         }
 
@@ -893,8 +897,8 @@ namespace MJS {
                 break;
         }
 
-        (result as Page_Data_Out).page_window = {
-                location_origin:    window.location.origin,
+        (result as Page_Data_Out).moodle_page = {
+                wwwroot:    window.location.origin,
                 // location_pathname:  window.location.pathname,
                 // location_search:    window.location.search,
                 // location_hash:      window.location.hash,

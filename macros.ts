@@ -41,8 +41,8 @@ namespace MJS {
 
 
 
-        public page_wwwroot:       string;
-        public page_sesskey:       string;
+        //public page_wwwroot:       string;
+        //public page_sesskey:       string;
 
         public macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
         // macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
@@ -59,7 +59,7 @@ namespace MJS {
             test: new Test_Macro(this)
         };
 
-        private page_details:      Page_Data_Out;
+        private page_details:       Page_Data_Out|null;
         private page_tab_id:        number;
 
         private page_load_wait:     number = 0;
@@ -86,14 +86,14 @@ namespace MJS {
             try {
                 this.macro_state = 1;
                 this.page_details = await this.page_call({});
-                this.page_wwwroot = this.page_details.page_window.location_origin;
-                this.page_sesskey = this.page_details.page_window.sesskey;
+                //this.page_wwwroot = this.page_details.moodle_page.wwwroot;
+                //this.page_sesskey = this.page_details.moodle_page.sesskey;
                 this.macro_state = 0;
             } catch (e) {
                 this.macro_state = 0;
                 this.page_details = null;
-                this.page_wwwroot = null;
-                this.page_sesskey = null;
+                //this.page_wwwroot = null;
+                //this.page_sesskey = null;
             }
             this.macros_init(this.page_details);
             this.macro_state = 0;
@@ -158,7 +158,7 @@ namespace MJS {
             this.page_is_loaded = false;
             this.page_message = null;
 
-            await browser.tabs.update(this.page_tab_id, {url: this.page_wwwroot + pathname + "?" + TabData.json_to_search_params(search)});
+            await browser.tabs.update(this.page_tab_id, {url: this.page_details.moodle_page.wwwroot + pathname + "?" + TabData.json_to_search_params(search)});
             return await this.page_loaded(page_data2, count);
         }
 
@@ -204,13 +204,14 @@ namespace MJS {
             if (!this.page_message || this.macro_state == 0) {
                 this.page_message = message;
                 if (is_Errorlike(message)) {
-                    this.page_wwwroot = null;
-                    this.page_sesskey = null;
+                    this.page_details = null;
+                    //this.page_wwwroot = null;
+                    //this.page_sesskey = null;
                 } else {
                     this.page_details = message;
                     // console.log("updated page details");
-                    this.page_wwwroot = this.page_details.page_window.location_origin;
-                    this.page_sesskey = this.page_details.page_window.sesskey;
+                    //this.page_wwwroot = this.page_details.moodle_page.wwwroot;
+                    //this.page_sesskey = this.page_details.moodle_page.sesskey;
                 }
 
                 if (this.page_is_loaded ) {
@@ -263,7 +264,7 @@ namespace MJS {
         }
 
 
-        private macros_init(page_details: Page_Data_Out) {
+        private macros_init(page_details: Page_Data_Out|null) {
             this.macros.new_course.init(page_details);
             this.macros.index_rebuild.init(page_details);
             this.macros.new_section.init(page_details);
@@ -274,9 +275,9 @@ namespace MJS {
         private page_load_match<T extends Page_Data>(page_details: any, page_data: DeepPartial<T>):
             page_details is T & Page_Data_Out_Base {
             let result = true;
-            if (!page_data.page || page_details.page_window.body_id.match(RegExp("^page-" + page_data.page + "$"))) { /* OK */ } else    { result = false; }
+            if (!page_data.page || page_details.moodle_page.body_id.match(RegExp("^page-" + page_data.page + "$"))) { /* OK */ } else    { result = false; }
             /*for (const prop in body_class) if (body_class.hasOwnProperty(prop)) {
-                if ((" " + this.page_details.page_window.body_class + " ").match(" " + prop + (body_class[prop] ? ("-" + body_class[prop]) : "") + " "))
+                if ((" " + this.page_details.moodle_page.body_class + " ").match(" " + prop + (body_class[prop] ? ("-" + body_class[prop]) : "") + " "))
                     {  OK  }
                 else
                     { result = false; }
@@ -308,7 +309,7 @@ namespace MJS {
         }
 
 
-        public abstract init(page_details: Page_Data_Out): void;
+        public abstract init(page_details: Page_Data_Out|null): void;
 
 
         public async run(): Promise<void> {
@@ -418,14 +419,14 @@ namespace MJS {
 
             if (!this.page_details || !this.page_details.hasOwnProperty("page") || this.page_details.page != "course-index(-category)?")     { return; }
 
-            if (this.page_details.page_window.body_id != "page-course-index-category") { return; }
+            if (this.page_details.moodle_page.body_id != "page-course-index-category") { return; }
 
             this.category_id  = this.page_details.mdl_course_categories.id;
             this.category_name = this.page_details.mdl_course_categories.name;
 
-            if (this.tabdata.page_wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
+            if (page_details.moodle_page.wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
                 this.course_template_id = 6548;
-            } else if (this.tabdata.page_wwwroot == "https://moodle.op.ac.nz") {
+            } else if (page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 this.course_template_id = 6548;
             } else                                                                      { return; }
 
@@ -446,7 +447,7 @@ namespace MJS {
                 {location: {pathname: "/course/view.php", search: {id: this.course_template_id, section: 0}},
                 page: "course-view-[a-z]+", mdl_course: {id: this.course_template_id}}
             );
-            const source_context_match = this.page_details.page_window.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
+            const source_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                         || throwf(new Error("New course macro, get template:\nContext not found."));
             const source_context = parseInt(source_context_match[1]);
 
@@ -498,15 +499,15 @@ namespace MJS {
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: course_id}});
 
             // TODO: Turn editing on (1 load).
-            if (!this.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
                 this.page_details = await this.tabdata.page_load<page_course_view_data>(
-                    {location: {pathname: "/course/view.php", search: {id: course_id, section: 0, sesskey: this.tabdata.page_sesskey, edit: "on"}},
+                    {location: {pathname: "/course/view.php", search: {id: course_id, section: 0, sesskey: this.page_details.moodle_page.sesskey, edit: "on"}},
                     page: "course-view-[a-z]+", mdl_course: {id: course_id}},
                 );
             } else {
                 this.tabdata.page_load_count(1);
             }
-            (this.page_details.page_window.body_class.match(/\bediting\b/))     || throwf(new Error("New course macro, turn editing on:\nEditing not on."));
+            (this.page_details.moodle_page.body_class.match(/\bediting\b/))     || throwf(new Error("New course macro, turn editing on:\nEditing not on."));
 
             // Fill in course name (2 loads)
             const section_0_id = this.page_details.mdl_course_sections.id       || throwf(new Error("New course macro, fill in course name:\nID not found."));
@@ -550,7 +551,7 @@ namespace MJS {
             this.course_id = course.id;
 
             // Check editing on
-            if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
                 // console.log("index rebuild pre: editing not on");
                 return;
             }
@@ -608,7 +609,7 @@ namespace MJS {
                                                                                         || throwf(new Error("Index rebuild macro, get section:\nModule name not found."))
                                     ).textContent                                      || throwf(new Error("Index rebuild macro, get section:\nModule name content not found."));
                 index_html = index_html
-                            + '<a href="' + this.tabdata.page_wwwroot + "/course/view.php?id=" + this.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
+                            + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
                 for (const mod of section_full.mdl_course_modules as DeepPartial<MDL_Course_Modules>[]) {
                     // parse description
@@ -631,7 +632,7 @@ namespace MJS {
 
             // Update TOC (2 loads)
             this.page_details = await this.tabdata.page_load2(
-                {location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, update: modules_index.id}}},
+                {location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, update: modules_index.id}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}});
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
                 mdl_course_module_instance: {intro: index_html}}, dom_submit: true});
@@ -678,14 +679,14 @@ namespace MJS {
             }
 
             // let feedback_template_id: number;
-            if (this.tabdata.page_wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
+            if (this.page_details.moodle_page.wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
                 this.feedback_template_id = 59;
-            } else if (this.tabdata.page_wwwroot == "https://moodle.op.ac.nz") {
+            } else if (this.page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 this.feedback_template_id = 59;
             } else                                                                      { return; }
 
             // Check editing on
-            if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
                 // console.log("new section pre: editing not on");
                 return;
             }
@@ -728,7 +729,7 @@ namespace MJS {
 
             // Add new tab (1 load)
             this.page_details = await this.tabdata.page_load2<page_course_view_data>(  // TODO: Fix for flexsections?
-                {location: {pathname: "/course/changenumsections.php", search: {courseid: this.course_id, increase: 1, sesskey: this.tabdata.page_sesskey, insertsection: 0}}},
+                {location: {pathname: "/course/changenumsections.php", search: {courseid: this.course_id, increase: 1, sesskey: this.page_details.moodle_page.sesskey, insertsection: 0}}},
                 {page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
             );
             let new_section = this.page_details.mdl_course_sections;
@@ -736,7 +737,7 @@ namespace MJS {
             // Move new tab (1 load)
             // console.log("Move new tab");
             this.page_details = await this.tabdata.page_load(
-                {location: {pathname: "/course/view.php", search: {id: this.course_id, section: new_section.section, sesskey: this.tabdata.page_sesskey, move: this.new_section_pos - new_section.section},
+                {location: {pathname: "/course/view.php", search: {id: this.course_id, section: new_section.section, sesskey: this.page_details.moodle_page.sesskey, move: this.new_section_pos - new_section.section},
                                                                                     /*|| throwf(new Error("WS course section edit, no amount specified."))*/},
                 page: "course-view-[a-z]+", mdl_course: {id: this.course_id}},
             );
@@ -774,7 +775,7 @@ namespace MJS {
 
             // Add pre-topic message (2 loads)
             // Body ID or class unexpected.
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
                                     {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
                                     );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -788,7 +789,7 @@ namespace MJS {
             this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
 
             // Add blank line (2 loads)
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
             {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -796,7 +797,7 @@ namespace MJS {
             this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
 
             // Add feedback topic (2 loads)
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -812,7 +813,7 @@ namespace MJS {
             this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.course_id}});
 
             // Add feedback activity (2 load)
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "feedback", section: new_section.section}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: new_section.section, add: "feedback", section: new_section.section}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -844,7 +845,7 @@ namespace MJS {
             this.page_details = await this.tabdata.page_loaded({page: "mod-feedback-edit"});
 
             // Add footer (2 loads).
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: new_section.section, add: "label", section: new_section.section}}},
             {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
@@ -895,7 +896,7 @@ namespace MJS {
 
 
             // Check editing on
-            if (!this.page_details.page_window || !this.page_details.page_window.body_class || !this.page_details.page_window.body_class.match(/\bediting\b/)) {
+            if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
                 // console.log("new topic pre: editing not on");
                 return;
             }
@@ -955,7 +956,7 @@ namespace MJS {
             const name = this.new_topic_name;
 
             // Create topic heading (4 loads?)
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, // section: section_num, modname: "label",
@@ -1002,16 +1003,16 @@ namespace MJS {
             let section = this.page_details.mdl_course_sections;
 
             // Move new module.
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
                 {page: "course-view-[a-z]+"},
             );
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.page_details.moodle_page.sesskey}}},
                 {page: "course-view-[a-z]+"},
             );
 
             // Create topic end message (4 loads?)
             if (this.topic_first) {
-                this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
+                this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
                     {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
                 );
                 this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, // section: section_num, modname: "label",
@@ -1028,10 +1029,10 @@ namespace MJS {
                 section = this.page_details.mdl_course_sections;
 
                 // Move new module.
-                this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
+                this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
                     {page: "course-view-[a-z]+"},
                 );
-                this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey}}},
+                this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.page_details.moodle_page.sesskey}}},
                     {page: "course-view-[a-z]+"},
                 );
             } else {
@@ -1039,7 +1040,7 @@ namespace MJS {
             }
 
             // Create space (4 loads?)
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.tabdata.page_sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {id: this.course_id, sesskey: this.page_details.moodle_page.sesskey, sr: 0 /* TODO: remove? */, add: "label", section: this.section_num}}},
                 {page: "mod-[a-z]+-mod", mdl_course: {id: this.course_id}},
             );
             this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_modules: {course: this.course_id, // section: section_num, modname: "label",
@@ -1053,10 +1054,10 @@ namespace MJS {
             section = this.page_details.mdl_course_sections;
 
             // Move new module.
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.tabdata.page_sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
             {page: "course-view-[a-z]+"},
             );
-            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.tabdata.page_sesskey}}},
+            this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {moveto: this.mod_move_to /*???*/, sesskey: this.page_details.moodle_page.sesskey}}},
                 {page: "course-view-[a-z]+"},
             );
 
