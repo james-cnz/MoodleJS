@@ -3,7 +3,7 @@ namespace MJS {
 
 
 
-
+    export type Page_Data_Base = {page: string};
 
     export type Page_Data =
         page_backup_restore_data
@@ -43,7 +43,7 @@ namespace MJS {
 
 
 
-    export type page_course_index_data = {
+    export type page_course_index_data = Page_Data_Base & {
         page: "course-index(-category)?",
         location?: {pathname: "/course/index.php", search: {categoryid?: number}}
         mdl_course?: {id: number},
@@ -140,7 +140,7 @@ namespace MJS {
 
 
 
-    export type page_backup_restorefile_data = {
+    export type page_backup_restorefile_data = Page_Data_Base & {
         page: "backup-restorefile",
         location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
         mdl_course: {id?: number, x_backup_url: string}
@@ -160,7 +160,7 @@ namespace MJS {
 
 
 
-    export type page_backup_restore_data = {
+    export type page_backup_restore_data = Page_Data_Base & {
         page: "backup-restore",
         location?: {pathname: "/backup/restore.php"}
         stage: number|null,
@@ -290,7 +290,7 @@ namespace MJS {
 
 
 
-    export type page_course_view_data = {
+    export type page_course_view_data = Page_Data_Base & {
         page: "course-view-[a-z]+",
         location?: {pathname: "/course/view.php", search: {id: number}}
         mdl_course: page_course_view_course;
@@ -542,7 +542,7 @@ namespace MJS {
     */
 
 
-    export type page_course_editsection_data = {
+    export type page_course_editsection_data = Page_Data_Base & {
         page: "course-editsection";
         location?: {pathname: "/course/editsection.php", search: {id: number}},
         mdl_course?: {id: number},
@@ -629,7 +629,7 @@ namespace MJS {
     }
 
 
-    export type page_module_edit_data = {
+    export type page_module_edit_data = Page_Data_Base & {
         page: "mod-[a-z]+-mod",
         location?: {pathname: "/course/modedit.php", search: {update: number}},
         mdl_course?: {id: number}
@@ -788,7 +788,7 @@ namespace MJS {
 
 
 
-    export type page_mod_feedback_edit_data = {
+    export type page_mod_feedback_edit_data = Page_Data_Base & {
         page: "mod-feedback-edit",
         location?: {pathname: "/mod/feedback/edit.php", search: {id: number, do_show: "edit"|"templates"}},
         mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
@@ -806,7 +806,7 @@ namespace MJS {
     }
 
 
-    export type page_mod_feedback_use_templ_data = {
+    export type page_mod_feedback_use_templ_data = Page_Data_Base & {
         page: "mod-feedback-use_templ";
         location?: {pathname: "/mod/feedback/use_templ.php"}
         // mdl_course_modules: {x_submit: boolean;};
