@@ -155,9 +155,9 @@ namespace MJS {
 
         private onClick() {
 
-            //(this.popup.tabData.macros.new_course as New_Course_Macro).new_course_fullname = this.new_course_name_dom.value;
-            //(this.popup.tabData.macros.new_course as New_Course_Macro).new_course_shortname = this.new_course_shortname_dom.value;
-            //(this.popup.tabData.macros.new_course as New_Course_Macro).new_course_startdate = (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000;
+            // (this.popup.tabData.macros.new_course as New_Course_Macro).new_course_fullname = this.new_course_name_dom.value;
+            // (this.popup.tabData.macros.new_course as New_Course_Macro).new_course_shortname = this.new_course_shortname_dom.value;
+            // (this.popup.tabData.macros.new_course as New_Course_Macro).new_course_startdate = (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000;
             (this.popup.tabData.macros.new_course as New_Course_Macro).params = {mdl_course: {
                 fullname:   this.new_course_name_dom.value,
                 shortname:  this.new_course_shortname_dom.value,
@@ -189,6 +189,7 @@ namespace MJS {
         }
 
         private onClick() {
+            (this.popup.tabData.macros.new_course as Index_Rebuild_Macro).params = {};
             void this.popup.tabData.macros.index_rebuild.run();
         }
 
@@ -224,10 +225,10 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.new_section as New_Section_Macro).new_section = {
+            (this.popup.tabData.macros.new_section as New_Section_Macro).params = {mdl_course_sections: {
                 fullname: this.new_section_name_dom.value,
                 name: this.new_section_shortname_dom.value
-            };
+            }};
             void this.popup.tabData.macros.new_section.run();
         }
 
@@ -260,7 +261,7 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.new_topic as New_Topic_Macro).new_topic_name = this.new_topic_name_dom.value;
+            (this.popup.tabData.macros.new_topic as New_Topic_Macro).params = { mdl_course_modules: { fullname: this.new_topic_name_dom.value}};
             void this.popup.tabData.macros.new_topic.run();
         }
 
