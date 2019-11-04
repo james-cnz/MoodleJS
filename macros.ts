@@ -58,7 +58,7 @@ namespace MJS {
             index_rebuild: new Index_Rebuild_Macro(this),
             new_section: new New_Section_Macro(this),
             new_topic: new New_Topic_Macro(this),
-            test: new Test_Macro(this)
+            backup: new Backup_Macro(this)
         };
 
         private page_details:       Page_Data_Out|null = null;
@@ -281,6 +281,7 @@ namespace MJS {
             this.macros.index_rebuild.init(page_details);
             this.macros.new_section.init(page_details);
             this.macros.new_topic.init(page_details);
+            this.macros.backup.init(page_details);
         }
 
 
@@ -1128,37 +1129,58 @@ namespace MJS {
 
 
 
-    class Test_Macro extends Macro {
+    export class Backup_Macro extends Macro {
 
+        public params: { mdl_course_categories: { mdl_course: {id: number}[]} }
 
         public init(page_details: Page_Data_Out) {
-            this.progress_max = 10;
+            this.progress_max = 100;
             this.page_details = page_details;
+            this.data = {};
             this.prereq = true;
         }
 
 
         protected async content() {
 
+            this.progress_max = this.params.mdl_course_categories.mdl_course.length * 3 + 1;
+            // TODO: write progress max to tab data
+            /*
             this.page_details = await this.tabdata.page_load(
                 {location: {pathname: "/course/index.php", search: {}},
                 page: "course-index(-category)?", mdl_course: {id: 1}},
             );
+            */
 
             // const site_map = await this.tabdata.page_call({page: "course-index(-category)?", dom_expand: true});
 
-            const course_id = 7015;
-            const course_context = 911164;
+            //const course_id = 7035;
+            //const course_context = 913522;
 
-            await this.tabdata.page_load(
-                {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
-                page: "backup-restorefile", mdl_course: {id: course_id}},
-            );
+            for (const course of this.params.mdl_course_categories.mdl_course) {
 
-            // const message = await this.tabdata.page_call({page: "backup-restorefile"});
+                // Look up course context
+                let course_id = course.id;
+                this.page_details = await this.tabdata.page_load({location: {pathname: "/course/view.php", search: {id: course_id}}});
+                const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
+                                                                                || throwf(new Error("New course macro, get template:\nContext not found."));
+                const course_context = parseInt(course_context_match[1]);
 
-            // await browser.downloads.download({url: message.mdl_course.x_backup_url, saveAs: false});
+                // TODO: Create backup file
 
+                // Look up backup file URL
+                this.page_details = await this.tabdata.page_load(
+                    {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
+                    page: "backup-restorefile", mdl_course: {id: course_id}},
+                );
+
+                // Download backup file
+                /*const backup_download_id =*/ await browser.downloads.download({url: this.page_details.mdl_course.x_backup_url, saveAs: false});
+                this.tabdata.page_load_count(1);
+
+                // TODO: Delete backup file
+
+            }
         }
 
 
