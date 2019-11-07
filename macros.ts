@@ -1145,17 +1145,14 @@ namespace MJS {
 
             this.progress_max = this.params.mdl_course_categories.mdl_course.length * 3 + 1;
             // TODO: write progress max to tab data
+
             /*
             this.page_details = await this.tabdata.page_load(
                 {location: {pathname: "/course/index.php", search: {}},
                 page: "course-index(-category)?", mdl_course: {id: 1}},
             );
             */
-
             // const site_map = await this.tabdata.page_call({page: "course-index(-category)?", dom_expand: true});
-
-            //const course_id = 7035;
-            //const course_context = 913522;
 
             for (const course of this.params.mdl_course_categories.mdl_course) {
 
@@ -1164,21 +1161,47 @@ namespace MJS {
                 this.page_details = await this.tabdata.page_load({location: {pathname: "/course/view.php", search: {id: course_id}}});
                 const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                 || throwf(new Error("New course macro, get template:\nContext not found."));
-                const course_context = parseInt(course_context_match[1]);
+                //const course_context = parseInt(course_context_match[1]);
 
-                // TODO: Create backup file
+                // Create backup file
+                this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course_id}}, page: "backup-backup"});
 
-                // Look up backup file URL
+                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "final step"});
+                this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
+
+                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
+                this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
+
+                // TODO: Get backup file URL
+                /*
                 this.page_details = await this.tabdata.page_load(
                     {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
                     page: "backup-restorefile", mdl_course: {id: course_id}},
                 );
+                */
 
                 // Download backup file
-                /*const backup_download_id =*/ await browser.downloads.download({url: this.page_details.mdl_course.x_backup_url, saveAs: false});
+                const backup_url: string = this.page_details.mdl_course.x_backup_url;
+                /*const backup_download_id =*/ await browser.downloads.download({url: backup_url, saveAs: false});
                 this.tabdata.page_load_count(1);
 
-                // TODO: Delete backup file
+                // Delete backup file
+                const filename = backup_url.substring(backup_url.lastIndexOf("/")+1, backup_url.indexOf("?"));
+                this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
+                this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});
+
+                //alert("before click");
+                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: filename, click: true}]}});
+                await sleep(100);
+                /*
+                //alert("after click");
+                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
+                await sleep(100);
+                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete_ok"}});
+                await sleep(100);
+                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
+                this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
+                */
 
             }
         }

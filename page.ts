@@ -6,7 +6,9 @@ namespace MJS {
     export type Page_Data_Base = {page: string};
 
     export type Page_Data =
-        page_backup_restore_data
+          page_backup_backup_data
+        | page_backup_restore_data
+        | page_backup_backupfilesedit_data
         | page_backup_restorefile_data
         | page_course_editsection_data
         | page_course_index_data
@@ -39,8 +41,43 @@ namespace MJS {
     };
 
 
+    export type page_backup_backup_data = Page_Data_Base & {
+        page: "backup-backup",
+        location?: {pathname: "/backup/backup.php", search: {id: number}}
+        stage: 1|2|4|null
+    };
 
 
+    async function page_backup_backup(message: Page_Data_In_Base & DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
+        const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
+        const stage: 1|2|4|null = stage_dom ? parseInt(stage_dom.value) : null;
+
+        if (message.stage && message.stage !== stage) {
+            throw new Error("Page backup restore: Stage mismatch");
+        }
+
+        switch (stage) {
+
+            case 1:
+                // console.log("page backup restore case 2 start");
+                const step1_to_final_step_dom = document.querySelector("#region-main form input#id_oneclickbackup[type='submit']") as HTMLButtonElement;
+                if (message.dom_submit && message.dom_submit == "final step") {
+                    step1_to_final_step_dom.click();
+                }
+                // console.log("page backup restore case 2 end");
+                return {page: "backup-backup", stage: stage};
+                break;
+
+            case null:
+                const final_step_cont_dom = document.querySelector("#region-main div.continuebutton form button[type='submit']") as HTMLButtonElement;
+                if (message.dom_submit && message.dom_submit == "continue") {
+                    final_step_cont_dom.click();
+                }
+                // console.log("page backup restore case 2 end");
+                return {page: "backup-backup", stage: stage};
+                break;
+        }
+    }
 
 
     export type page_course_index_data = Page_Data_Base & {
@@ -149,15 +186,77 @@ namespace MJS {
     async function page_backup_restorefile(message: Page_Data_In_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
         const restore_link = document.querySelector("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']") as HTMLAnchorElement;
+        const manage_button_dom = document.querySelector("section#region-main div.singlebutton form button[type='submit']") as HTMLButtonElement;
         // if (message.dom_submit && message.dom_submit == "download") {
         //    await browser.downloads.download({url: download_link.href, saveAs: false});
         // }
         if (message.dom_submit && message.dom_submit == "restore") {
             restore_link.click();
+        } else if (message.dom_submit && message.dom_submit == "manage") {
+            manage_button_dom.click();
         }
         return {page: "backup-restorefile", mdl_course: {x_backup_url: download_link.href}};
     }
 
+
+    export type page_backup_backupfilesedit_data = Page_Data_Base & {
+        page: "backup-backupfilesedit",
+        location?: {pathname: "/backup/backupfilesedit.php"},
+        mdl_course: { backups: {filename: string, click?: boolean}[] },
+        backup?: { click?: "delete"|"delete_ok"},
+        dom_submit?: "save"|"cancel"
+    };
+
+
+    async function page_backup_backupfilesedit(message_in: Page_Data_In_Base & DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
+
+        const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content");
+        const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
+        // a .fp-filename
+        const save_button_dom = document.querySelector("input#id_submitbutton[type='submit']") as HTMLInputElement;
+        const delete_button_dom = document.querySelector("button.fp-file-delete") as HTMLButtonElement;
+
+        const message_out: page_backup_backupfilesedit_data = {page: "backup-backupfilesedit", mdl_course: { backups: []}};
+
+        //if (message_in && message_in.mdl_course && message_in.mdl_course.backups) {
+        //    alert ("given filename to click: " + message_in.mdl_course.backups[0].filename);
+        //}
+
+        for (let backup_dom of Object.values(backups_dom)) {
+            const backup_file_link = backup_dom.querySelector("a");
+            const backup_filename = backup_file_link.querySelector(".fp-filename").textContent;
+            //alert("filename to check: " + backup_filename);
+            const backup_file_in_index = (message_in && message_in.mdl_course && message_in.mdl_course.backups) ?
+                                            message_in.mdl_course.backups.findIndex(function (value) { return value.filename == backup_filename })
+                                            : -1;
+            //if (backup_file_in_index != -1) {
+            //    alert("found file: " + backup_filename + " index: " + backup_file_in_index);
+            //}
+            if (backup_file_in_index > -1 && message_in.mdl_course.backups[backup_file_in_index].click) {
+                //alert("clicking");
+                backup_file_link.click();
+                await sleep(100);
+            }
+            message_out.mdl_course.backups.push({filename: backup_filename});
+
+        }
+
+        if (message_in.backup && message_in.backup.click == "delete") {
+            delete_button_dom.click();
+            await sleep(100);
+        } else if (message_in.backup && message_in.backup.click == "delete_ok") {
+            const delete_ok_button_dom = document.querySelector("button.fp-dlg-butconfirm") as HTMLButtonElement;
+            delete_ok_button_dom.click();
+            await sleep(100);
+        }
+
+        if (message_in.dom_submit == "save") {
+            save_button_dom.click();
+            await sleep(100);
+        }
+
+        return message_out;
+    }
 
 
     export type page_backup_restore_data = Page_Data_Base & {
@@ -850,6 +949,12 @@ namespace MJS {
             case "page-course-view-onetopic":
             case "page-course-view-multitopic":
                 result = await page_course_view(message);
+                break;
+            case "page-backup-backup":
+                result = await page_backup_backup(message);
+                break;
+            case "page-backup-backupfilesedit":
+                result = await page_backup_backupfilesedit(message)
                 break;
             case "page-backup-restorefile":
                 result = await page_backup_restorefile(message);
