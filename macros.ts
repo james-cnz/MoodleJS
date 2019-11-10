@@ -1180,7 +1180,7 @@ namespace MJS {
                 );
                 */
 
-                // Download backup file
+                // Download backup file // TODO: Download specified file.
                 const backup_url: string = this.page_details.mdl_course.x_backup_url;
                 /*const backup_download_id =*/ await browser.downloads.download({url: backup_url, saveAs: false});
                 this.tabdata.page_load_count(1);
@@ -1191,9 +1191,10 @@ namespace MJS {
                 this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});
 
                 //alert("before click");
+                await sleep(1000); // TODO: Wait until files are loaded.
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: filename, click: true}]}});
                 await sleep(100);
-                /*
+                
                 //alert("after click");
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
                 await sleep(100);
@@ -1201,7 +1202,7 @@ namespace MJS {
                 await sleep(100);
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
                 this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
-                */
+                
 
             }
         }

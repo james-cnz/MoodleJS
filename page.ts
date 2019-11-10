@@ -236,10 +236,13 @@ namespace MJS {
                 //alert("clicking");
                 backup_file_link.click();
                 await sleep(100);
+                // TODO: remove backup file entry from message in
             }
             message_out.mdl_course.backups.push({filename: backup_filename});
 
         }
+        // TODO: Check no backup file entries left in message in
+
 
         if (message_in.backup && message_in.backup.click == "delete") {
             delete_button_dom.click();
