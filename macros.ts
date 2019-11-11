@@ -367,7 +367,7 @@ namespace MJS {
                 // Do nothing
             }
             */
-            await this.tabdata.init();
+            await this.tabdata.init(); // TODO: Menus sometimes don't display properly after cancel?
 
         }
 

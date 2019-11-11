@@ -49,11 +49,11 @@ namespace MJS {
 
 
     async function page_backup_backup(message: Page_Data_In_Base & DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
-        const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
-        const stage: 1|2|4|null = stage_dom ? parseInt(stage_dom.value) : null;
+        const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement|null;
+        const stage: number|null = stage_dom ? parseInt(stage_dom.value) : null;
 
         if (message.stage && message.stage !== stage) {
-            throw new Error("Page backup restore: Stage mismatch");
+            throw new Error("Page backup backup: Stage mismatch");
         }
 
         switch (stage) {
@@ -74,8 +74,11 @@ namespace MJS {
                     final_step_cont_dom.click();
                 }
                 // console.log("page backup restore case 2 end");
-                return {page: "backup-backup", stage: stage};
+                return {page: "backup-backup", stage: null};
                 break;
+
+            default:
+                throw new Error("Page backup backup: Stage unrecognised");
         }
     }
 
@@ -156,12 +159,12 @@ namespace MJS {
             }
             const subcategories_out: DeepPartial<MDL_Course_Categories>[] = [];
             category_out.mdl_course_categories = subcategories_out;
-            for (const subcategory_dom of category_dom.querySelectorAll(":scope > .content > .subcategories > div.category")) {
+            for (const subcategory_dom of Object.values(category_dom.querySelectorAll(":scope > .content > .subcategories > div.category") as NodeListOf<HTMLDivElement>)) {
                 subcategories_out.push(await category(subcategory_dom));
             }
             const courses_out: DeepPartial<MDL_Course>[] = [];
             category_out.mdl_course = courses_out;
-            for (const course_dom of category_dom.querySelectorAll(":scope > .content > .courses > div.coursebox")) {
+            for (const course_dom of Object.values(category_dom.querySelectorAll(":scope > .content > .courses > div.coursebox") as NodeListOf<HTMLDivElement>)) {
                 courses_out.push(await course(course_dom));
                 // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
             }
@@ -296,15 +299,14 @@ namespace MJS {
                 break;
 
             case 4:
-                // console.log("page backup restore case 4 start");
+
+                // Destination
+
                 const stage_4_new_cat_name_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']") as HTMLInputElement;
                 const stage_4_new_cat_search_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']") as HTMLInputElement;
                 const stage_4_new_continue_dom = document.querySelector("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']") as HTMLInputElement;
                 if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.name) {
                     stage_4_new_cat_name_dom.value = message.mdl_course_categories.name;
-                }
-                if (message.dom_submit && message.dom_submit == "stage 4 new cat search") {
-                    stage_4_new_cat_search_dom.click();
                 }
 
                 if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.id) {
@@ -312,9 +314,15 @@ namespace MJS {
                     stage_4_new_cat_id_dom.click();
                 }
 
+                if (message.dom_submit && message.dom_submit == "stage 4 new cat search") {
+                    stage_4_new_cat_search_dom.click();
+                }
                 if (message.dom_submit && message.dom_submit == "stage 4 new continue") {
                     stage_4_new_continue_dom.click();
                 }
+
+                
+                // Settings
 
                 const stage_4_settings_users_dom = document.querySelector("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']") as HTMLInputElement;
                 const stage_4_settings_submit_dom = document.querySelector("#region-main form#mform1.mform input[name='submitbutton'][type='submit']") as HTMLInputElement;
@@ -326,13 +334,14 @@ namespace MJS {
                         await sleep(100);
                     }
                 }
+                const message_out_restore_settings = stage_4_settings_users_dom ? { users: stage_4_settings_users_dom.checked } : null;
 
                 if (message.dom_submit && message.dom_submit == "stage 4 settings submit") {
                     stage_4_settings_submit_dom.click();
                 }
 
                 // console.log("page backup restore case 4 end");
-                return {page: "backup-restore", stage: stage};
+                return {page: "backup-restore", stage: stage, restore_settings: message_out_restore_settings};
                 break;
 
             case 8:
@@ -359,11 +368,21 @@ namespace MJS {
                     course_startdate_day_dom.value =  "" + startdate.getUTCDate();
                 }
 
+                const message_out_mdl_course = {
+                    fullname: course_name_dom.value,
+                    shortname: course_shortname_dom.value,
+                    startdate: Date.UTC(
+                                    parseInt(course_startdate_year_dom.value),
+                                    parseInt(course_startdate_month_dom.value) - 1,
+                                    parseInt(course_startdate_day_dom.value)
+                                ) / 1000
+                }
+
                 if (message.dom_submit && message.dom_submit == "stage 8 submit") {
                     submit_dom.click();
                 }
 
-                return {page: "backup-restore", stage: stage};
+                return {page: "backup-restore", stage: stage, mdl_course: message_out_mdl_course};
                 break;
 
             case 16:
@@ -385,9 +404,10 @@ namespace MJS {
                 }
                 return {page: "backup-restore", stage: null, mdl_course: {id: course_id}};
                 break;
-        } // TODO: Throw error?
+            default:
+                throw new Error("Page backup restore: stage not recognised.");
+        }
 
-        return {page: "backup-restore", stage: stage};
     }
 
 
