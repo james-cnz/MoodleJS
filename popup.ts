@@ -295,37 +295,33 @@ namespace MJS {
                 const backup_list: string[] = this.backup_list_dom.value.trim().split(/[\r\n]+/);
 
                 // Read headings
-                //let backup_headings: string[] = backup_list.shift().split(",");
-                let backup_headings_txt: string = backup_list.shift() + ",";
                 let id_col: number|null = null;
-
-                //for (let backup_heading of backup_headings) {
-                let line_regexp = /\s*("[^"]*"|'[^']*'|[^,'"]*)\s*,/y;
-                let col: number = 0;
-                //let backup_heading: string;
-                while (line_regexp.lastIndex < backup_headings_txt.length) {
-                    let backup_heading = line_regexp.exec(backup_headings_txt)[1];
-                    if (backup_heading.trim().match(/^['"]?id['"]?$/) && id_col === null) {
-                        id_col = col;
+                {
+                    const backup_headings_txt: string = backup_list.shift() + ",";
+                    const line_regexp = /\s*("[^"]*"|'[^']*'|[^,'"]*)\s*,/y;
+                    let col: number = 0;
+                    while (line_regexp.lastIndex < backup_headings_txt.length) {
+                        const backup_heading = line_regexp.exec(backup_headings_txt)[1];
+                        if (backup_heading.trim().match(/^['"]?id['"]?$/) && id_col === null) {
+                            id_col = col;
+                        }
+                        col++;
                     }
-                    col++;
+                    if (id_col === null) { throw new Error("ID not found"); }
                 }
-                if (id_col===null) {throw new Error("ID not found");}
 
                 // Read rows
                 this.backup_params = { mdl_course_categories: { mdl_course: []}};
 
-                for (let backup_row_unterminated of backup_list) {
+                for (const backup_row_unterminated of backup_list) {
                     const backup_row_txt = backup_row_unterminated + ",";
-                    //const id = parseInt(backup_row_text.split(",")[id_col].trim().match(/^['"]?([0-9]+)['"]?$/)[1]);
-                    //this.backup_params.mdl_course_categories.mdl_course.push({id: id});
-                    let line_regexp = /\s*("[^"]*"|'[^']*'|[^,'"]*)\s*,/y;
+                    const line_regexp = /\s*("[^"]*"|'[^']*'|[^,'"]*)\s*,/y;
                     let col: number = 0;
                     while (col < id_col) {
                         line_regexp.exec(backup_row_txt)[1];
-                        col++
+                        col++;
                     }
-                    let backup_cell = line_regexp.exec(backup_row_txt)[1];
+                    const backup_cell = line_regexp.exec(backup_row_txt)[1];
                     const id = parseInt(backup_cell.trim().match(/^['"]?([0-9]+)['"]?$/)[1]);
                     this.backup_params.mdl_course_categories.mdl_course.push({id: id});
                 }
@@ -339,12 +335,6 @@ namespace MJS {
         }
 
         private onClick() {
-            /*
-            let list_txt = "id\n";
-            for (const row of this.backup_params.mdl_course_categories.mdl_course) {
-                list_txt += row.id + "\n";
-            }
-            alert(list_txt);*/
             (this.popup.tabData.macros.backup as Backup_Macro).params = this.backup_params;
             void this.popup.tabData.macros.backup.run();
         }

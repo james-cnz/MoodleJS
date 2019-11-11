@@ -1157,11 +1157,11 @@ namespace MJS {
             for (const course of this.params.mdl_course_categories.mdl_course) {
 
                 // Look up course context
-                let course_id = course.id;
+                const course_id = course.id;
                 this.page_details = await this.tabdata.page_load({location: {pathname: "/course/view.php", search: {id: course_id}}});
                 const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                 || throwf(new Error("New course macro, get template:\nContext not found."));
-                //const course_context = parseInt(course_context_match[1]);
+                // const course_context = parseInt(course_context_match[1]);
 
                 // Create backup file
                 this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course_id}}, page: "backup-backup"});
@@ -1186,23 +1186,21 @@ namespace MJS {
                 this.tabdata.page_load_count(1);
 
                 // Delete backup file
-                const filename = backup_url.substring(backup_url.lastIndexOf("/")+1, backup_url.indexOf("?"));
+                const filename = backup_url.substring(backup_url.lastIndexOf("/") + 1, backup_url.indexOf("?"));
                 this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
                 this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});
 
-                //alert("before click");
                 await sleep(1000); // TODO: Wait until files are loaded.
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: filename, click: true}]}});
                 await sleep(100);
-                
-                //alert("after click");
+
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
                 await sleep(100);
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete_ok"}});
                 await sleep(100);
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
                 this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
-                
+
 
             }
         }

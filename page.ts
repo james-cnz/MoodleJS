@@ -218,22 +218,22 @@ namespace MJS {
 
         const message_out: page_backup_backupfilesedit_data = {page: "backup-backupfilesedit", mdl_course: { backups: []}};
 
-        //if (message_in && message_in.mdl_course && message_in.mdl_course.backups) {
+        // if (message_in && message_in.mdl_course && message_in.mdl_course.backups) {
         //    alert ("given filename to click: " + message_in.mdl_course.backups[0].filename);
-        //}
+        // }
 
-        for (let backup_dom of Object.values(backups_dom)) {
+        for (const backup_dom of Object.values(backups_dom)) {
             const backup_file_link = backup_dom.querySelector("a");
             const backup_filename = backup_file_link.querySelector(".fp-filename").textContent;
-            //alert("filename to check: " + backup_filename);
+            // alert("filename to check: " + backup_filename);
             const backup_file_in_index = (message_in && message_in.mdl_course && message_in.mdl_course.backups) ?
-                                            message_in.mdl_course.backups.findIndex(function (value) { return value.filename == backup_filename })
+                                            message_in.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; })
                                             : -1;
-            //if (backup_file_in_index != -1) {
+            // if (backup_file_in_index != -1) {
             //    alert("found file: " + backup_filename + " index: " + backup_file_in_index);
-            //}
+            // }
             if (backup_file_in_index > -1 && message_in.mdl_course.backups[backup_file_in_index].click) {
-                //alert("clicking");
+                // alert("clicking");
                 backup_file_link.click();
                 await sleep(100);
                 // TODO: remove backup file entry from message in
@@ -265,7 +265,7 @@ namespace MJS {
     export type page_backup_restore_data = Page_Data_Base & {
         page: "backup-restore",
         location?: {pathname: "/backup/restore.php"}
-        stage: number|null,
+        stage: 2|4|8|16|null,
         mdl_course?: {template_id?: number}
     } & (
         {stage: 2, dom_submit?: "stage 2 submit"}
@@ -277,7 +277,7 @@ namespace MJS {
 
     async function page_backup_restore(message: Page_Data_In_Base & DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector("#region-main div form input[name='stage']") as HTMLInputElement;
-        const stage: 2|4|8|16|null = stage_dom ? parseInt(stage_dom.value) : null;
+        const stage: number|null = stage_dom ? parseInt(stage_dom.value) : null;
 
         if (message.stage && message.stage !== stage) {
             throw new Error("Page backup restore: Stage mismatch");
@@ -385,7 +385,7 @@ namespace MJS {
                 }
                 return {page: "backup-restore", stage: null, mdl_course: {id: course_id}};
                 break;
-        }
+        } // TODO: Throw error?
 
         return {page: "backup-restore", stage: stage};
     }
@@ -957,7 +957,7 @@ namespace MJS {
                 result = await page_backup_backup(message);
                 break;
             case "page-backup-backupfilesedit":
-                result = await page_backup_backupfilesedit(message)
+                result = await page_backup_backupfilesedit(message);
                 break;
             case "page-backup-restorefile":
                 result = await page_backup_restorefile(message);
@@ -1020,7 +1020,7 @@ namespace MJS {
                 // error_message:      error_message_dom ? error_message_dom.textContent || "" : undefined,
 
         };
-        
+
 
         return result as Page_Data_Out;
     }
