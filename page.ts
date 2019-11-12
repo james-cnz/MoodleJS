@@ -176,9 +176,7 @@ namespace MJS {
                 const category_out_name = category_link_dom.text;
                 category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
                 if (message.dom_expand && category_dom.classList.contains("collapsed")) {
-                    // console.log("About to click");
                     (category_dom.querySelector(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname") as HTMLHeadingElement).click();
-                    // console.log("Clicked");
                     do {
                         await sleep(200);
                     } while (category_dom.classList.contains("notloaded"));
@@ -216,11 +214,11 @@ namespace MJS {
 
     async function page_backup_restorefile(message: Page_Data_In_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const course_backups_dom = document.querySelector("table.backup-files-table tbody") as HTMLTableElement;
-        //const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
+        // const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
         const restore_link = document.querySelector("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']") as HTMLAnchorElement;
         const manage_button_dom = document.querySelector("section#region-main div.singlebutton form button[type='submit']") as HTMLButtonElement;
 
-        const backups: {filename: string, download_url:string}[] = [];
+        const backups: {filename: string, download_url: string}[] = [];
         if (!course_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(course_backups_dom.querySelectorAll("tr") as NodeListOf<HTMLTableRowElement>)) {
                 backups.push({filename: backup_dom.querySelector("td.cell.c0").textContent, download_url: (backup_dom.querySelector("td.cell.c3 a") as HTMLAnchorElement).href});
@@ -254,8 +252,9 @@ namespace MJS {
         do {
             await sleep(100);
         } while (!backup_filemanager_dom.classList.contains("fm-loaded"));
+        await sleep(100);
         const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content");
-        //alert (backup_list_dom.innerHTML);
+        // alert (backup_list_dom.innerHTML);
         const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
         // a .fp-filename
         const save_button_dom = document.querySelector("input#id_submitbutton[type='submit']") as HTMLInputElement;
@@ -277,16 +276,22 @@ namespace MJS {
             // if (backup_file_in_index != -1) {
             //    alert("found file: " + backup_filename + " index: " + backup_file_in_index);
             // }
-            if (backup_file_in_index > -1 && message_in.mdl_course.backups[backup_file_in_index].click) {
-                // alert("clicking");
-                backup_file_link.click();
-                await sleep(100);
+            if (backup_file_in_index > -1) {
+                if (message_in.mdl_course.backups[backup_file_in_index].click) {
+                    // alert("clicking");
+                    backup_file_link.click();
+                    await sleep(100);
+                }
                 // TODO: remove backup file entry from message in
+                message_in.mdl_course.backups.splice(backup_file_in_index, 1);
             }
             message_out.mdl_course.backups.push({filename: backup_filename});
 
         }
         // TODO: Check no backup file entries left in message in
+        if (message_in.mdl_course && message_in.mdl_course.backups && message_in.mdl_course.backups.length > 0) {
+            throw new Error("Backup file not found: " + message_in.mdl_course.backups[0].filename);
+        }
 
 
         if (message_in.backup && message_in.backup.click == "delete") {
@@ -300,7 +305,7 @@ namespace MJS {
 
         if (message_in.dom_submit == "save") {
             save_button_dom.click();
-            //await sleep(100);
+            // await sleep(100);
         }
 
         return message_out;
@@ -331,12 +336,10 @@ namespace MJS {
         switch (stage) {
 
             case 2:
-                // console.log("page backup restore case 2 start");
                 const stage_2_submit_dom = document.querySelector("#region-main div.backup-restore form [type='submit']") as HTMLButtonElement;
                 if (message.dom_submit && message.dom_submit == "stage 2 submit") {
                     stage_2_submit_dom.click();
                 }
-                // console.log("page backup restore case 2 end");
                 return {page: "backup-restore", stage: stage};
                 break;
 
@@ -382,7 +385,6 @@ namespace MJS {
                     stage_4_settings_submit_dom.click();
                 }
 
-                // console.log("page backup restore case 4 end");
                 return {page: "backup-restore", stage: stage, restore_settings: message_out_restore_settings};
                 break;
 
@@ -404,10 +406,10 @@ namespace MJS {
 
                 if (message.stage == 8 && message.mdl_course && message.mdl_course.startdate) {
                     const startdate = new Date(message.mdl_course.startdate * 1000);
-                    course_startdate_day_dom.value = "1";  // Set the day low initially, to avoid overflow when changing the year or month.
+                    course_startdate_day_dom.value  = "1";  // Set the day low initially, to avoid overflow when changing the year or month.
                     course_startdate_year_dom.value =  "" + startdate.getUTCFullYear();
                     course_startdate_month_dom.value =  "" + (startdate.getUTCMonth() + 1); // TODO: Check
-                    course_startdate_day_dom.value =  "" + startdate.getUTCDate();
+                    course_startdate_day_dom.value  =  "" + startdate.getUTCDate();
                 }
 
                 const message_out_mdl_course = {
@@ -418,7 +420,7 @@ namespace MJS {
                                     parseInt(course_startdate_month_dom.value) - 1,
                                     parseInt(course_startdate_day_dom.value)
                                 ) / 1000
-                }
+                };
 
                 if (message.dom_submit && message.dom_submit == "stage 8 submit") {
                     submit_dom.click();
@@ -460,22 +462,24 @@ namespace MJS {
         mdl_course: page_course_view_course;
         mdl_course_sections: page_course_view_course_sections;
     };
-    type page_course_view_course = DeepPartial<MDL_Course> & {
+    type page_course_view_course = {
         id:         number; // Needs editing on.
         fullname:   string;
         format:     string
         mdl_course_sections: page_course_view_course_sections[]
     };
-    type page_course_view_course_sections = DeepPartial<MDL_Course_Sections> & {
-        id?:         number;
+    type page_course_view_course_sections = {
+        id?:        number;
         section:    number;
         name:       string;
-        visible?:    number;
-        summary?:    string;
+        visible?:   number;
+        summary?:   string;
         mdl_course_modules?: page_course_view_course_modules[]
+        x_options?: {level?: number};
     };
-    type page_course_view_course_modules = DeepPartial<MDL_Course_Modules> & {
+    export type page_course_view_course_modules = {
         id:         number;
+        mdl_modules_name: string;
         mdl_course_module_instance: {
             name:       string;
             intro:      string;
@@ -712,7 +716,7 @@ namespace MJS {
         mdl_course?: {id: number},
         mdl_course_sections: page_course_editsection_section;
     };
-    type page_course_editsection_section = DeepPartial<MDL_Course_Sections> & {
+    type page_course_editsection_section = {
         id:         number;
         name:       string;
         summary:    string;
@@ -992,9 +996,7 @@ namespace MJS {
 
 
     async function page_onMessage(message: Page_Data_In, sender?: browser.runtime.MessageSender): Promise<Page_Data_Out> {
-        // console.log("page_onmessage starting");
         if (sender && sender.tab !== undefined) { throw new Error("Unexpected message"); }
-        // console.log("page onmessage ending");
         return await page_get_set(message);
     }
 

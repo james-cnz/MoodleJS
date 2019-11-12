@@ -46,19 +46,19 @@ namespace MJS {
         // public page_wwwroot:       string;
         // public page_sesskey:       string;
 
-        public macro_state:        number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
+        public macro_state:         number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
         // macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
-        public macro_error:        Errorlike|null = null;
-        public macro_progress:     number = 1;
-        public macro_progress_max: number = 1;
-        public macro_cancel:       boolean = false;
+        public macro_error:         Errorlike|null = null;
+        public macro_progress:      number = 1;
+        public macro_progress_max:  number = 1;
+        public macro_cancel:        boolean = false;
 
         public macros: {[index: string] : Macro} = {
-            new_course: new New_Course_Macro(this),
-            index_rebuild: new Index_Rebuild_Macro(this),
-            new_section: new New_Section_Macro(this),
-            new_topic: new New_Topic_Macro(this),
-            backup: new Backup_Macro(this)
+            new_course:     new New_Course_Macro(this),
+            index_rebuild:  new Index_Rebuild_Macro(this),
+            new_section:    new New_Section_Macro(this),
+            new_topic:      new New_Topic_Macro(this),
+            backup:         new Backup_Macro(this)
         };
 
         private page_details:       Page_Data_Out|null = null;
@@ -105,7 +105,6 @@ namespace MJS {
             this.macros_init(this.page_details);
             this.macro_state = 0;
             this.update_ui();
-            // console.log("init finished.");
         }
 
 
@@ -221,14 +220,12 @@ namespace MJS {
                     // this.page_sesskey = null;
                 } else {
                     this.page_details = message;
-                    // console.log("updated page details");
                     // this.page_wwwroot = this.page_details.moodle_page.wwwroot;
                     // this.page_sesskey = this.page_details.moodle_page.sesskey;
                 }
 
                 if (this.page_is_loaded ) {
 
-                    // console.log("*** late page message ***");
                     if (this.macro_state == 0) { this.macros_init(this.page_details); }
                     this.update_ui();
                 }
@@ -256,7 +253,6 @@ namespace MJS {
                         if (!this.page_message) {
                             if (this.macro_state == 0) { this.page_details = null; this.macros_init(this.page_details); }
                             else if (this.macro_state == 2) {
-                                // console.log("*** missing page message ***");
                             }
                         } else {
                             if (this.macro_state == 0) { this.macros_init(this.page_details); }
@@ -451,7 +447,6 @@ namespace MJS {
 
         public init(page_details: Page_Data_Out) {
 
-            // console.log("new course pre starting");
             this.prereq = false;
 
             this.page_details = page_details;
@@ -599,7 +594,6 @@ namespace MJS {
 
             // Check editing on
             if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
-                // console.log("index rebuild pre: editing not on");
                 return;
             }
 
@@ -615,7 +609,7 @@ namespace MJS {
                     last_module_tab_num = section.section;
                 }
             }
-            if (modules_tab_num) {  } else                                        {  return; }
+            if (modules_tab_num && last_module_tab_num) {  } else                                        {  return; }
             if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
             { } else { return; }
             // this.modules_tab_num = modules_tab_num;
@@ -661,9 +655,9 @@ namespace MJS {
                 index_html = index_html
                             + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.data.mdl_course.id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
-                for (const mod of section_full.mdl_course_modules as DeepPartial<MDL_Course_Modules>[]) {
+                for (const mod of section_full.mdl_course_modules) {
                     // parse description
-                    const mod_desc = parser.parseFromString((mod.mdl_course_module_instance as DeepPartial<MDL_Course_Module_Instance>).intro || "", "text/html");
+                    const mod_desc = parser.parseFromString((mod.mdl_course_module_instance).intro || "", "text/html");
                     const part_name = mod_desc.querySelector(".header2, .header2gradient");
                     if (part_name) {
                         index_html = index_html
@@ -716,7 +710,6 @@ namespace MJS {
 
         public init(page_details: Page_Data_Out) {
 
-            // console.log("new section pre starting");
             this.prereq = false;
             // Get site details
             // TODO: Also customise image link per site
@@ -725,7 +718,6 @@ namespace MJS {
 
             // Check page type
             if (!this.page_details || this.page_details.page != "course-view-[a-z]+") {
-                // console.log("new section pre: wrong page type");
                 return;
             }
 
@@ -738,14 +730,12 @@ namespace MJS {
 
             // Check editing on
             if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
-                // console.log("new section pre: editing not on");
                 return;
             }
 
             // Get course details
-            // console.log("get course details");
             const course = (this.page_details as page_course_view_data).mdl_course; // (await this.tabdata.page_call({})).mdl_course;
-            if (!course) { /*console.log("new section pre: couldn't get course details");*/ return; }
+            if (!course) { return; }
             // this.course_id = course.id;
 
             if (course.format == "onetopic") {  } else                            { return; }
@@ -762,7 +752,7 @@ namespace MJS {
                     last_module_tab_num = section.section;
                 }
             }
-            if (modules_tab_num) {  } else                                        { return; }
+            if (modules_tab_num && last_module_tab_num) {  } else                                        { return; }
             if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
             { } else { return; }
             // this.new_section_pos = last_module_tab_num + 1;
@@ -771,7 +761,6 @@ namespace MJS {
 
             this.progress_max = 17 + 1;
             this.prereq = true;
-            // console.log("new section pre success");
         }
 
 
@@ -790,7 +779,6 @@ namespace MJS {
             let new_section = this.page_details.mdl_course_sections;
 
             // Move new tab (1 load)
-            // console.log("Move new tab");
             this.page_details = await this.tabdata.page_load(
                 {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.id, section: new_section.section, sesskey: this.page_details.moodle_page.sesskey, move: this.data.mdl_course_sections.section - new_section.section},
                                                                                     /*|| throwf(new Error("WS course section edit, no amount specified."))*/},
@@ -882,9 +870,9 @@ namespace MJS {
                 <p>Please help us improve this learning module by answering five questions about your experience.
                 This survey is anonymous.</p>
                 </div>`.replace(/^        /gm, "")}, }, dom_submit: true});
-            this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
-            new_section = (this.page_details as page_course_view_data).mdl_course_sections;
-            let feedback_act: DeepPartial<MDL_Course_Modules>|null = null;
+            this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
+            new_section = this.page_details.mdl_course_sections;
+            let feedback_act: page_course_view_course_modules|null = null;
                 for (const module of new_section.mdl_course_modules) {
                     if (!feedback_act || module.id > feedback_act.id) {
                         feedback_act = module;
@@ -926,20 +914,12 @@ namespace MJS {
     export class New_Topic_Macro extends Macro {
 
 
-        // prereq:         boolean;
-
-        // public new_topic_name: string;
         public params: {mdl_course_modules: {fullname: string}}|null = null;
 
-        // private course_id:      number;
-        // private section_num:    number;
-        // private mod_move_to:    number;
-        // private topic_first:    boolean;
         protected data: {mdl_course: {id: number}, mdl_course_sections: {section: number}, mdl_course_modules: {next_id: number, first_topic: boolean}}|null = null;
 
         public init(page_details: Page_Data_Out) {
 
-            // console.log("new topic pre starting");
             this.prereq = false;
 
             this.page_details = page_details;
@@ -953,7 +933,6 @@ namespace MJS {
 
             // Check editing on
             if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
-                // console.log("new topic pre: editing not on");
                 return;
             }
 
@@ -1005,7 +984,6 @@ namespace MJS {
 
             this.progress_max = 12 + 1;
             this.prereq = true;
-            // console.log("new topic pre success");
         }
 
 
@@ -1131,7 +1109,7 @@ namespace MJS {
 
     export class Backup_Macro extends Macro {
 
-        public params: { mdl_course_categories: { mdl_course: {id: number}[]} }
+        public params: { mdl_course_categories: { mdl_course: {id: number}[]} };
 
         public init(page_details: Page_Data_Out) {
             this.progress_max = 100;

@@ -53,9 +53,7 @@ namespace MJS {
                 macro_ui.update();
             }
 
-            // console.log("before status display set");
             this.status_dom.setAttribute("style", "display: " + (this.tabData.macro_state == 0 ? "none" : "block") + ";");
-            // console.log("after status display set");
             if (this.tabData.macro_state != 0) {
                 this.progress_bar_dom.value = this.tabData.macro_progress;
                 this.progress_bar_dom.max   = this.tabData.macro_progress_max;
