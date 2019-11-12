@@ -43,8 +43,6 @@ namespace MJS {
 
 
 
-        // public page_wwwroot:       string;
-        // public page_sesskey:       string;
 
         public macro_state:         number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
         // macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
@@ -93,14 +91,10 @@ namespace MJS {
             try {
                 this.macro_state = 1;
                 this.page_details = await this.page_call({});
-                // this.page_wwwroot = this.page_details.moodle_page.wwwroot;
-                // this.page_sesskey = this.page_details.moodle_page.sesskey;
                 this.macro_state = 0;
             } catch (e) {
                 this.macro_state = 0;
                 this.page_details = null;
-                // this.page_wwwroot = null;
-                // this.page_sesskey = null;
             }
             this.macros_init(this.page_details);
             this.macro_state = 0;
@@ -179,7 +173,6 @@ namespace MJS {
 
             this.page_load_wait  = 0;
             do {
-                // (this.page_load_wait < 600)                                     || throwf(new Error("MJS page loaded: Timed out."));
                 await sleep(100);
                 if (this.macro_cancel)                                          { throw new Error("Cancelled"); }
                 this.page_load_wait += 1;
@@ -216,12 +209,8 @@ namespace MJS {
                 this.page_message = message;
                 if (is_Errorlike(message)) {
                     this.page_details = null;
-                    // this.page_wwwroot = null;
-                    // this.page_sesskey = null;
                 } else {
                     this.page_details = message;
-                    // this.page_wwwroot = this.page_details.moodle_page.wwwroot;
-                    // this.page_sesskey = this.page_details.moodle_page.sesskey;
                 }
 
                 if (this.page_is_loaded ) {
@@ -260,7 +249,6 @@ namespace MJS {
                         }
                     }
                 } else if (!this.page_message || !is_Errorlike(this.page_message)) {
-                    // this.m_state = -1;
                     this.page_message = new Error("Unexpected tab update");
 
                 }
@@ -304,15 +292,15 @@ namespace MJS {
     abstract class Macro {
 
 
-        public prereq: boolean = false;
+        public prereq:      boolean     = false;
 
-        public params: {}|null = null;
+        public params:      {}|null     = null;
 
-        protected tabdata: TabData;
+        protected tabdata:  TabData;
 
-        protected data: {}|null = null;
+        protected data:     {}|null     = null;
 
-        protected progress_max: number = 1;
+        protected progress_max: number  = 1;
 
         protected page_details: Page_Data_Out;
 
@@ -333,14 +321,10 @@ namespace MJS {
                 return;
             }
 
-            // this.init();
-
-            this.tabdata.macro_cancel = false;
-            this.tabdata.macro_state = 1;
+            this.tabdata.macro_cancel   = false;
+            this.tabdata.macro_state    = 1;
             this.tabdata.macro_progress = 0;
-            this.tabdata.macro_progress_max =  this.progress_max;
-
-
+            this.tabdata.macro_progress_max = this.progress_max;
 
             try {
                 await this.content();
@@ -368,44 +352,6 @@ namespace MJS {
         }
 
 
-
-
-        /*
-        protected get page_details(): Page_Data_Out {
-            return this.tabdata.page_details;
-        }
-
-
-        protected set page_details(page_details_in: Page_Data_Out) {
-            (page_details_in == this.tabdata.page_details)                      || throwf(new Error("Page details:\nPage details mismatch."));
-        }
-        */
-
-        /*
-        protected async page_call<T extends Page_Data>(message: DeepPartial<T> & Page_Data_In_Base): Promise<T & Page_Data_Out_Base> {
-            return await this.tabdata.page_call(message);
-        }
-
-
-        protected async page_load<T extends Page_Data>(
-            page_data: DeepPartial<T> & {location: {pathname: string, search: {[index: string]: number|string}}},
-            count: number = 1): Promise<T & Page_Data_Out_Base> {
-            return await this.tabdata.page_load(page_data, count);
-        }
-
-        protected async page_load2<T extends Page_Data>(
-            page_data1: DeepPartial<Page_Data> & {location: {pathname: string, search: {[index: string]: number|string}}},
-            page_data2: DeepPartial<T>,
-            count: number = 1): Promise<T & Page_Data_Out_Base> {
-            return await this.tabdata.page_load2(page_data1, page_data2, count);
-        }
-
-        protected async page_loaded<T extends Page_Data>(page_data: DeepPartial<T>,
-            count: number = 1): Promise<T & Page_Data_Out_Base> {
-            return await this.tabdata.page_loaded(page_data, count);
-        }
-        */
-
         protected abstract async content(): Promise<void>;
 
 
@@ -424,25 +370,8 @@ namespace MJS {
     export class New_Course_Macro extends Macro {
 
 
-
-
-        // public prereq:             boolean;
-
-        /*public new_course: DeepPartial<MDL_Course> & { // TODO: need to split up?
-            fullname: string;
-            shortname: string;
-            startdate: number;
-        };*/
-
-        // public new_course_fullname: string;
-        // public new_course_shortname: string;
-        // public new_course_startdate: number;
         public params: New_Course_Params|null = null;
         protected data: New_Course_Data|null = null;
-
-        // private course_template_id: number;
-        // private category_id:        number;
-        // private category_name:      string;
 
 
         public init(page_details: Page_Data_Out) {
@@ -478,9 +407,6 @@ namespace MJS {
         protected async content() {  // TODO: Set properties.
 
             if (!this.data || !this.params)                                     throw new Error("New course macro, prereq:\ndata not set.");
-            // const name = this.new_course_fullname;
-            // const shortname = this.new_course_shortname;
-            // const startdate = this.new_course_startdate;
 
             // Get template course context (1 load)
             this.page_details = await this.tabdata.page_load(
@@ -555,7 +481,6 @@ namespace MJS {
                 {location: {pathname: "/course/editsection.php", search: {id: section_0_id}}, // TODO: Needs editing on.
                 page: "course-editsection", mdl_course: {id: course_id}},
             );
-            // TODO: Crashes around here with "can't access dead object"?
             const desc = this.page_details.mdl_course_sections.summary.replace(/\[Course Name\]/g, this.params.mdl_course.fullname);
             this.page_details = await this.tabdata.page_call({page: "course-editsection", mdl_course_sections: {summary: desc}, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {id: course_id}});
@@ -571,12 +496,6 @@ namespace MJS {
     export class Index_Rebuild_Macro extends Macro {
 
 
-        // prereq: boolean;
-
-        // private course_id: number;
-        // private modules_tab_num: number;
-        // private last_module_tab_num: number;
-
         protected data: {mdl_course: {id: number}; mdl_course_sections: {section: number}; last_section_num: number} | null = null;
 
 
@@ -590,7 +509,6 @@ namespace MJS {
             if (!this.page_details || this.page_details.page != "course-view-[a-z]+")                      { return; }
             const course = this.page_details.mdl_course;
             if (!course || course.format != "onetopic" || !course.id) {  return; }
-            // this.course_id = course.id;
 
             // Check editing on
             if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
@@ -612,8 +530,6 @@ namespace MJS {
             if (modules_tab_num && last_module_tab_num) {  } else                                        {  return; }
             if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
             { } else { return; }
-            // this.modules_tab_num = modules_tab_num;
-            // this.last_module_tab_num = last_module_tab_num;
 
             this.data = {mdl_course: {id: course.id}, mdl_course_sections: {section: modules_tab_num}, last_section_num: last_module_tab_num};
 
@@ -693,18 +609,7 @@ namespace MJS {
     export class New_Section_Macro extends Macro {
 
 
-        // prereq:                 boolean;
-
-
-        // public new_section: DeepPartial<MDL_Course_Sections> & {
-        //    fullname: string;
-        //    name: string;
-        // };
-
         public params: {mdl_course_sections: {name: string, fullname: string}}|null = null;
-        // private feedback_template_id:   number;
-        // private course_id:              number;
-        // private new_section_pos:        number|null;
         protected data: {mdl_course: {id: number}, mdl_course_sections: {section: number}, mdl_course_modules: {feedback_template_id: number}}|null = null;
 
 
@@ -734,9 +639,8 @@ namespace MJS {
             }
 
             // Get course details
-            const course = (this.page_details as page_course_view_data).mdl_course; // (await this.tabdata.page_call({})).mdl_course;
+            const course = this.page_details.mdl_course;
             if (!course) { return; }
-            // this.course_id = course.id;
 
             if (course.format == "onetopic") {  } else                            { return; }
 
@@ -767,9 +671,6 @@ namespace MJS {
         protected async content() {
 
             if (!this.data || !this.params)                                     throw new Error("New section macro, prereq:\ndata not set.");
-
-            // const name = this.new_section.fullname;
-            // const short_name = this.new_section.name;
 
             // Add new tab (1 load)
             this.page_details = await this.tabdata.page_load2<page_course_view_data>(  // TODO: Fix for flexsections?
@@ -924,11 +825,9 @@ namespace MJS {
 
             this.page_details = page_details;
 
-            // var doc_details = ws_page_call({wsfunction: "x_doc_get_details"});
             if (!this.page_details || this.page_details.page != "course-view-[a-z]+")                      { return; }
             const course = this.page_details.mdl_course;
             if (course && course.hasOwnProperty("format") && course.format == "onetopic" && course.id) {  } else { return; }
-            // this.course_id = course.id;
 
 
             // Check editing on
@@ -936,22 +835,12 @@ namespace MJS {
                 return;
             }
 
-            // const section_url = await this.tabdata.page_call({id_act: "* get_element_attribute", selector: "#page-navbar a[href*='section=']", attribute: "href"})
-            //                                                                            || throwf(new Error("Section breadcrumb not found."));
-            // const section_match = section_url.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)$/)
-            //                                                                            || throwf(new Error("Section number not found."));
-            // const section_num = parseInt(section_match[3]);
-
-            // let section = (await ws_call({wsfunction: "core_course_get_contents", courseid: course.id, options: [{name: "sectionnumber", value: section_num}]}))[0];
             const section = this.page_details.mdl_course_sections;
-            // const section_num = section.section;
-            // this.section_num = section.section;
 
             let mod_pos = section.mdl_course_modules.length - 1;
             let mod_match_pos = 3;
-            // let match_ok = true;
 
-            while (mod_pos > -1 && mod_match_pos > -1) { // } && match_ok) {
+            while (mod_pos > -1 && mod_match_pos > -1) {
                 if (mod_match_pos == 3 && section.mdl_course_modules[mod_pos].mdl_modules_name == "label" && section.mdl_course_modules[mod_pos].mdl_course_module_instance.name.toUpperCase().match(/\bIMAGE\b/)) {
                     mod_match_pos -= 1;
                     mod_pos -= 1;
@@ -970,7 +859,6 @@ namespace MJS {
                     mod_pos -= 1;
                 } else {
                     break;
-                    // match_ok = false;
                 }
             }
 
@@ -1037,7 +925,6 @@ namespace MJS {
             }, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
 
-            // section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
             let section = this.page_details.mdl_course_sections;
 
             // Move new module.
@@ -1063,7 +950,6 @@ namespace MJS {
                     }, dom_submit: true});
                 this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
 
-                // section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
                 section = this.page_details.mdl_course_sections;
 
                 // Move new module.
@@ -1088,7 +974,6 @@ namespace MJS {
                 }, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
 
-            // section = (await ws_call({wsfunction: "core_course_get_contents", courseid: this.course_id, options: [{name: "sectionnumber", value: section_num}]}))[0];
             section = this.page_details.mdl_course_sections;
 
             // Move new module.
@@ -1124,12 +1009,6 @@ namespace MJS {
             this.progress_max = this.params.mdl_course_categories.mdl_course.length * 12 + 1;
             this.tabdata.macro_progress_max = this.progress_max;
 
-            /*
-            this.page_details = await this.tabdata.page_load(
-                {location: {pathname: "/course/index.php", search: {}},
-                page: "course-index(-category)?", mdl_course: {id: 1}},
-            );
-            */
             // const site_map = await this.tabdata.page_call({page: "course-index(-category)?", dom_expand: true});
 
             for (const course of this.params.mdl_course_categories.mdl_course) {

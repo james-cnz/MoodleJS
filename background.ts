@@ -34,7 +34,6 @@ namespace MJS {
         public onMessage(message: Page_Data_Out, sender: browser.runtime.MessageSender) {
             if (sender.tab && sender.tab.id) {
                 this.getTabData(sender.tab.id).onMessage(message, sender);
-                // browser.pageAction.show(sender.tab.id);
             }
         }
 

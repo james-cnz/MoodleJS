@@ -153,9 +153,6 @@ namespace MJS {
 
         private onClick() {
 
-            // (this.popup.tabData.macros.new_course as New_Course_Macro).new_course_fullname = this.new_course_name_dom.value;
-            // (this.popup.tabData.macros.new_course as New_Course_Macro).new_course_shortname = this.new_course_shortname_dom.value;
-            // (this.popup.tabData.macros.new_course as New_Course_Macro).new_course_startdate = (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000;
             (this.popup.tabData.macros.new_course as New_Course_Macro).params = {mdl_course: {
                 fullname:   this.new_course_name_dom.value,
                 shortname:  this.new_course_shortname_dom.value,

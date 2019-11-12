@@ -254,41 +254,28 @@ namespace MJS {
         } while (!backup_filemanager_dom.classList.contains("fm-loaded"));
         await sleep(100);
         const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content");
-        // alert (backup_list_dom.innerHTML);
         const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
-        // a .fp-filename
         const save_button_dom = document.querySelector("input#id_submitbutton[type='submit']") as HTMLInputElement;
         const delete_button_dom = document.querySelector("button.fp-file-delete") as HTMLButtonElement;
 
         const message_out: page_backup_backupfilesedit_data = {page: "backup-backupfilesedit", mdl_course: { backups: []}};
 
-        // if (message_in && message_in.mdl_course && message_in.mdl_course.backups) {
-        //    alert ("given filename to click: " + message_in.mdl_course.backups[0].filename);
-        // }
-
         for (const backup_dom of Object.values(backups_dom)) {
             const backup_file_link = backup_dom.querySelector("a");
             const backup_filename = backup_file_link.querySelector(".fp-filename").textContent;
-            // alert("filename to check: " + backup_filename);
             const backup_file_in_index = (message_in && message_in.mdl_course && message_in.mdl_course.backups) ?
                                             message_in.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; })
                                             : -1;
-            // if (backup_file_in_index != -1) {
-            //    alert("found file: " + backup_filename + " index: " + backup_file_in_index);
-            // }
             if (backup_file_in_index > -1) {
                 if (message_in.mdl_course.backups[backup_file_in_index].click) {
-                    // alert("clicking");
                     backup_file_link.click();
                     await sleep(100);
                 }
-                // TODO: remove backup file entry from message in
                 message_in.mdl_course.backups.splice(backup_file_in_index, 1);
             }
             message_out.mdl_course.backups.push({filename: backup_filename});
 
         }
-        // TODO: Check no backup file entries left in message in
         if (message_in.mdl_course && message_in.mdl_course.backups && message_in.mdl_course.backups.length > 0) {
             throw new Error("Backup file not found: " + message_in.mdl_course.backups[0].filename);
         }
