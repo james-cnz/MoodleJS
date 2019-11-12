@@ -528,7 +528,7 @@ namespace MJS {
 
             // Course settings (1 load)
             (this.page_details.stage == 8)                                      || throwf(new Error("New course macro, course settings:\nStage unexpected."));
-            const course: DeepPartial<MDL_Course> = {fullname: this.params.mdl_course.fullname, shortname: this.params.mdl_course.shortname, startdate: this.params.mdl_course.startdate};
+            const course = {fullname: this.params.mdl_course.fullname, shortname: this.params.mdl_course.shortname, startdate: this.params.mdl_course.startdate};
             this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 8, mdl_course: course, dom_submit: "stage 8 submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data>({page: "backup-restore", mdl_course: {template_id: this.data.mdl_course.template_id}});
 
@@ -539,7 +539,7 @@ namespace MJS {
 
             // Complete--Go to new course (1 load)
             (this.page_details.stage == null)                                   || throwf(new Error("New course macro, complete:\nStage unexpected."));
-            const course_id = (this.page_details.mdl_course as DeepPartial<MDL_Course>).id as number;
+            const course_id = this.page_details.mdl_course.id as number;
             this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: null, dom_submit: "stage complete submit"});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: course_id}});
 
@@ -1137,14 +1137,14 @@ namespace MJS {
             this.progress_max = 100;
             this.page_details = page_details;
             this.data = {};
-            this.prereq = true;
+            this.prereq = this.page_details.page == "course-index(-category)?";
         }
 
 
         protected async content() {
 
-            this.progress_max = this.params.mdl_course_categories.mdl_course.length * 3 + 1;
-            // TODO: write progress max to tab data
+            this.progress_max = this.params.mdl_course_categories.mdl_course.length * 12 + 1;
+            this.tabdata.macro_progress_max = this.progress_max;
 
             /*
             this.page_details = await this.tabdata.page_load(
@@ -1156,23 +1156,25 @@ namespace MJS {
 
             for (const course of this.params.mdl_course_categories.mdl_course) {
 
-                // Look up course context
-                const course_id = course.id;
-                this.page_details = await this.tabdata.page_load({location: {pathname: "/course/view.php", search: {id: course_id}}});
+                // Create backup file (9 loads)
+                this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.id}}, page: "backup-backup"});
                 const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
-                                                                                || throwf(new Error("New course macro, get template:\nContext not found."));
-                // const course_context = parseInt(course_context_match[1]);
+                                                                                || throwf(new Error("Backup macro, create backup:\nContext not found."));
+                const course_context = parseInt(course_context_match[1]);
 
-                // Create backup file
-                this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course_id}}, page: "backup-backup"});
-
-                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "final step"});
+                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
                 this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
-                this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
+                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
+                this.page_details = await this.tabdata.page_loaded<page_backup_backup_data>({page: "backup-backup"});
+                const backup_filename = this.page_details.backup.filename;
 
-                // TODO: Get backup file URL
+                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
+                this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
+
+                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
+                this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
+
                 /*
                 this.page_details = await this.tabdata.page_load(
                     {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
@@ -1180,24 +1182,26 @@ namespace MJS {
                 );
                 */
 
-                // Download backup file // TODO: Download specified file.
-                const backup_url: string = this.page_details.mdl_course.x_backup_url;
-                /*const backup_download_id =*/ await browser.downloads.download({url: backup_url, saveAs: false});
+                // Download backup file (1 load?)
+                const backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                const backup_url: string = this.page_details.mdl_course.backups[backup_index].download_url;
+                const backup_download_id = await browser.downloads.download({url: backup_url, saveAs: false});
+                let backup_download_state: string;
+                do {
+                    await sleep(100);
+                    backup_download_state = (await browser.downloads.search({id: backup_download_id}))[0].state;
+                } while (backup_download_state == "in_progress");
+                if (backup_download_state != "complete") { throw new Error("Download error"); }
                 this.tabdata.page_load_count(1);
 
-                // Delete backup file
-                const filename = backup_url.substring(backup_url.lastIndexOf("/") + 1, backup_url.indexOf("?"));
+                // Delete backup file (2 loads?)
                 this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
                 this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});
 
-                await sleep(1000); // TODO: Wait until files are loaded.
-                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: filename, click: true}]}});
-                await sleep(100);
+                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: backup_filename, click: true}]}});
 
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
-                await sleep(100);
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete_ok"}});
-                await sleep(100);
                 this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
                 this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
 

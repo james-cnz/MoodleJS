@@ -45,6 +45,8 @@ namespace MJS {
         page: "backup-backup",
         location?: {pathname: "/backup/backup.php", search: {id: number}}
         stage: 1|2|4|null
+        backup?: {filename: string}
+        dom_submit?: "final step"|"next"|"perform backup"|"continue"
     };
 
 
@@ -59,13 +61,31 @@ namespace MJS {
         switch (stage) {
 
             case 1:
-                // console.log("page backup restore case 2 start");
-                const step1_to_final_step_dom = document.querySelector("#region-main form input#id_oneclickbackup[type='submit']") as HTMLButtonElement;
+                const step1_to_final_step_dom   = document.querySelector("#region-main form input#id_oneclickbackup[type='submit']")    as HTMLButtonElement;
+                const step1_next_dom            = document.querySelector("#region-main form input#id_submitbutton[type='submit']")      as HTMLButtonElement;
                 if (message.dom_submit && message.dom_submit == "final step") {
                     step1_to_final_step_dom.click();
+                } else if (message.dom_submit && message.dom_submit == "next") {
+                    step1_next_dom.click();
                 }
-                // console.log("page backup restore case 2 end");
                 return {page: "backup-backup", stage: stage};
+                break;
+
+            case 2:
+                const step2_next_dom = document.querySelector("#region-main form input#id_submitbutton[type='submit']") as HTMLButtonElement;
+                if (message.dom_submit && message.dom_submit == "next") {
+                    step2_next_dom.click();
+                }
+                return {page: "backup-backup", stage: stage};
+                break;
+
+            case 4:
+                const step4_filename = (document.querySelector("#region-main form input#id_setting_root_filename[type='text']") as HTMLInputElement).value;
+                const step4_next_dom = document.querySelector("#region-main form input#id_submitbutton[type='submit']") as HTMLButtonElement;
+                if (message.dom_submit && message.dom_submit == "perform backup") {
+                    step4_next_dom.click();
+                }
+                return {page: "backup-backup", stage: stage, backup: {filename: step4_filename}};
                 break;
 
             case null:
@@ -73,7 +93,6 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
-                // console.log("page backup restore case 2 end");
                 return {page: "backup-backup", stage: null};
                 break;
 
@@ -87,31 +106,34 @@ namespace MJS {
         page: "course-index(-category)?",
         location?: {pathname: "/course/index.php", search: {categoryid?: number}}
         mdl_course?: {id: number},
-        mdl_course_categories: {
-            id:         number;
-            name:       string;
-             }
+        mdl_course_categories: page_course_index_category;
         dom_expand?: boolean;
+    };
+    type page_course_index_category = {
+        id:         number;
+        name:       string;
+        description?: string;
+        mdl_course_categories: page_course_index_category[];
+        mdl_course: page_course_index_course[];
+        more:       boolean;
+    };
+    type page_course_index_course = {
+        id:         number;
+        fullname:   string;
     };
 
     async function page_course_index(message: Page_Data_In_Base & DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
 
-        async function category(category_dom?: HTMLDivElement): Promise<DeepPartial<MDL_Course_Categories> & {
-            id:         number;
-            name:       string;
-        }> {
+        async function category(category_dom?: HTMLDivElement): Promise<page_course_index_category> {
 
 
-            async function course(course_dom: HTMLDivElement): Promise<DeepPartial<MDL_Course>> {
+            async function course(course_dom: HTMLDivElement): Promise<{id: number, fullname: string}> {
                 const course_id_out = parseInt(course_dom.getAttribute("data-courseid") as string);
                 const course_name_out = (course_dom.querySelector(":scope .coursename a") as HTMLAnchorElement).text;
                 return {id: course_id_out, fullname: course_name_out};
             }
 
-            let category_out: DeepPartial<MDL_Course_Categories> & {
-                id:         number;
-                name:       string;
-            };
+            let category_out: page_course_index_category;
 
             if (!category_dom) {
                 // Category ID
@@ -133,21 +155,26 @@ namespace MJS {
                     // Category Description
                     const category_out_description = (window.document.querySelector(":root #region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
 
-                    category_out = {                id:         category_out_id,
+                    category_out = {
+                        id:         category_out_id,
                         name:       category_out_name,
-                        description: category_out_description};
+                        description: category_out_description,
+                        mdl_course_categories: [],
+                        mdl_course: [],
+                        more:       false
+                    };
 
                 } else {
                     // category_out_name = "";
                     // category_out_description = "";
-                    category_out = { id: 0, name: "", description: ""};
+                    category_out = { id: 0, name: "", description: "", mdl_course_categories: [], mdl_course: [], more: false};
                 }
                 category_dom = document.querySelector(".course_category_tree") as HTMLDivElement;
             } else {
                 const category_link_dom = category_dom.querySelector(":scope > .info > .categoryname > a") as HTMLAnchorElement;
                 const category_out_id = parseInt(category_dom.getAttribute("data-categoryid") as string);
                 const category_out_name = category_link_dom.text;
-                category_out = {id: category_out_id, name: category_out_name};
+                category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
                 if (message.dom_expand && category_dom.classList.contains("collapsed")) {
                     // console.log("About to click");
                     (category_dom.querySelector(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname") as HTMLHeadingElement).click();
@@ -157,17 +184,18 @@ namespace MJS {
                     } while (category_dom.classList.contains("notloaded"));
                 }
             }
-            const subcategories_out: DeepPartial<MDL_Course_Categories>[] = [];
+            const subcategories_out: page_course_index_category[] = [];
             category_out.mdl_course_categories = subcategories_out;
             for (const subcategory_dom of Object.values(category_dom.querySelectorAll(":scope > .content > .subcategories > div.category") as NodeListOf<HTMLDivElement>)) {
                 subcategories_out.push(await category(subcategory_dom));
             }
-            const courses_out: DeepPartial<MDL_Course>[] = [];
+            const courses_out: page_course_index_course[] = [];
             category_out.mdl_course = courses_out;
             for (const course_dom of Object.values(category_dom.querySelectorAll(":scope > .content > .courses > div.coursebox") as NodeListOf<HTMLDivElement>)) {
                 courses_out.push(await course(course_dom));
-                // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
             }
+            // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
+            category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
             return category_out;
         }
 
@@ -183,13 +211,22 @@ namespace MJS {
     export type page_backup_restorefile_data = Page_Data_Base & {
         page: "backup-restorefile",
         location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
-        mdl_course: {id?: number, x_backup_url: string}
+        mdl_course: {id?: number, backups: {filename: string, download_url: string}[]}
     };
 
     async function page_backup_restorefile(message: Page_Data_In_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
-        const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
+        const course_backups_dom = document.querySelector("table.backup-files-table tbody") as HTMLTableElement;
+        //const download_link = document.querySelector(".backup-files-table .c3 a") as HTMLAnchorElement;
         const restore_link = document.querySelector("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']") as HTMLAnchorElement;
         const manage_button_dom = document.querySelector("section#region-main div.singlebutton form button[type='submit']") as HTMLButtonElement;
+
+        const backups: {filename: string, download_url:string}[] = [];
+        if (!course_backups_dom.classList.contains("empty")) {
+            for (const backup_dom of Object.values(course_backups_dom.querySelectorAll("tr") as NodeListOf<HTMLTableRowElement>)) {
+                backups.push({filename: backup_dom.querySelector("td.cell.c0").textContent, download_url: (backup_dom.querySelector("td.cell.c3 a") as HTMLAnchorElement).href});
+            }
+        }
+
         // if (message.dom_submit && message.dom_submit == "download") {
         //    await browser.downloads.download({url: download_link.href, saveAs: false});
         // }
@@ -198,7 +235,7 @@ namespace MJS {
         } else if (message.dom_submit && message.dom_submit == "manage") {
             manage_button_dom.click();
         }
-        return {page: "backup-restorefile", mdl_course: {x_backup_url: download_link.href}};
+        return {page: "backup-restorefile", mdl_course: {backups: backups}};
     }
 
 
@@ -213,7 +250,12 @@ namespace MJS {
 
     async function page_backup_backupfilesedit(message_in: Page_Data_In_Base & DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
 
+        const backup_filemanager_dom = document.querySelector("section#region-main form#mform1 div.filemanager");
+        do {
+            await sleep(100);
+        } while (!backup_filemanager_dom.classList.contains("fm-loaded"));
         const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content");
+        //alert (backup_list_dom.innerHTML);
         const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
         // a .fp-filename
         const save_button_dom = document.querySelector("input#id_submitbutton[type='submit']") as HTMLInputElement;
@@ -258,7 +300,7 @@ namespace MJS {
 
         if (message_in.dom_submit == "save") {
             save_button_dom.click();
-            await sleep(100);
+            //await sleep(100);
         }
 
         return message_out;
@@ -321,7 +363,7 @@ namespace MJS {
                     stage_4_new_continue_dom.click();
                 }
 
-                
+
                 // Settings
 
                 const stage_4_settings_users_dom = document.querySelector("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']") as HTMLInputElement;
