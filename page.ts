@@ -6,7 +6,8 @@ namespace MJS {
     export type Page_Data_Base = {page: string};
 
     export type Page_Data =
-          page_backup_backup_data
+          page_course_management_data
+        | page_backup_backup_data
         | page_backup_restore_data
         | page_backup_backupfilesedit_data
         | page_backup_restorefile_data
@@ -39,6 +40,94 @@ namespace MJS {
         body_id:    string;
         body_class: string;
     };
+
+
+
+    export type page_course_management_data = Page_Data_Base & {
+        page:       "course-management",
+        location?:  { pathname: "/course/management.php", search: { categoryid: number, perpage?: number } },
+        mdl_course_categories: page_course_management_category
+        mdl_course: page_course_management_course[]
+    }
+
+    export type page_course_management_category = {
+        id:         number;
+        name:       string;
+        coursecount: number;
+        mdl_course_categories: page_course_management_category[];
+        // mdl_course: page_course_management_course[];
+        checked:    boolean;
+        expandable: boolean;
+        expanded:   boolean;
+    }
+
+    export type page_course_management_course = {
+        id:         number;
+        fullname:   string;
+    }
+
+    async function page_course_management(message_in: Page_Data_In_Base & DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
+        async function category(message_in: DeepPartial<page_course_management_category>, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
+
+            let result: page_course_management_category;
+            if (top) {
+                result = {
+                    id:         0,
+                    name:       "",
+                    coursecount: 0,
+                    checked:    false,
+                    expandable: true,
+                    expanded:   true,
+                    mdl_course_categories: [],
+                    //mdl_course: []
+                }
+            } else {
+                if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
+                    (dom.querySelector(":scope > div > a") as HTMLAnchorElement).click();
+                    // alert(dom.querySelector(":scope > ul").innerHTML);
+                    // await sleep(1000);  // TODO: Check properly if loaded
+                    do {
+                        await sleep(100);
+                    } while (!dom.querySelector(":scope > ul"));
+                }
+                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != (dom.querySelector(":scope > div > div.ba-checkbox > input.bulk-action-checkbox") as HTMLInputElement).checked)) {
+                    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox").click();
+                    // TODO: pause?
+                }
+                result = {
+                    id:         parseInt(dom.getAttribute("data-id")),
+                    name:       dom.querySelector(":scope > div > a.categoryname").textContent,
+                    coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count").textContent),
+                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox").checked, // broken?
+                    expanded:   dom.getAttribute("aria-expanded") == "true",
+                    expandable:   dom.getAttribute("data-expandable") == "1",
+                    mdl_course_categories: [],
+                    //mdl_course: []
+                }
+            }
+            const subcategories_dom = dom.querySelectorAll<HTMLLIElement>(":scope > ul > li");
+            const subcategories_out: page_course_management_category[] = [];
+            for (const subcategory_dom of Object.values(subcategories_dom)) {
+                const subcategory_id = parseInt(subcategory_dom.getAttribute("data-id"));
+                const subcategory_in = message_in ? message_in.mdl_course_categories.find(function (value) {return value.id == subcategory_id}) : null;
+                subcategories_out.push(await category(subcategory_in, subcategory_dom));
+            }
+            result.mdl_course_categories = subcategories_out;
+            return result;
+        }
+
+        const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
+        const course_list: page_course_management_course[] = [];
+        for (const course_dom of Object.values(course_list_dom)) {
+            course_list.push({id: parseInt(course_dom.getAttribute("data-id")), fullname: course_dom.querySelector("a").textContent});
+        }
+
+        return {
+            page:       "course-management",
+            mdl_course_categories: await category(message_in.mdl_course_categories, document.querySelector(".category-listing > .card-body"), true),
+            mdl_course: course_list
+        };
+    }
 
 
     export type page_backup_backup_data = Page_Data_Base & {
@@ -996,6 +1085,9 @@ namespace MJS {
         let result: Page_Data;
 
         switch (window.document.body.id) {
+            case "page-course-management":
+                result = await page_course_management(message);
+                break;
             case "page-course-index":
             case "page-course-index-category":
                 result = await page_course_index(message);

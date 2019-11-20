@@ -277,7 +277,7 @@ namespace MJS {
             this.backup_button_dom = document.querySelector("button#backup_button") as HTMLButtonElement;
             const this_ui = this;
             this.backup_button_dom.addEventListener("click", function() { this_ui.onClick(); });
-            this.backup_list_dom.addEventListener("input", function() { this_ui.onInput(); });
+            //this.backup_list_dom.addEventListener("input", function() { this_ui.onInput(); });
         }
 
         public update() {
@@ -330,7 +330,7 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.backup as Backup_Macro).params = this.backup_params;
+            (this.popup.tabData.macros.backup as Backup_Macro).params = {} //this.backup_params;
             void this.popup.tabData.macros.backup.run();
         }
 
