@@ -34,13 +34,13 @@ namespace MJS {
                 new Backup_UI(this)
             ];
 
-            this.status_dom         = document.querySelector("fieldset#status")         as HTMLFieldSetElement;
-            this.progress_bar_dom   = document.querySelector("progress#progress_bar")   as HTMLProgressElement;
-            this.status_running_dom = document.querySelector("div#status_running")      as HTMLDivElement;
-            this.cancel_button_dom  = document.querySelector("button#cancel_button")    as HTMLButtonElement;
-            this.status_error_dom   = document.querySelector("div#status_error")        as HTMLDivElement;
-            this.error_message_dom  = document.querySelector("textarea#error_message")  as HTMLTextAreaElement;
-            this.reset_button_dom   = document.querySelector("button#reset_button")     as HTMLButtonElement;
+            this.status_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#status");
+            this.progress_bar_dom   = document.querySelector<HTMLProgressElement>("progress#progress_bar");
+            this.status_running_dom = document.querySelector<HTMLDivElement>("div#status_running");
+            this.cancel_button_dom  = document.querySelector<HTMLButtonElement>("button#cancel_button");
+            this.status_error_dom   = document.querySelector<HTMLDivElement>("div#status_error");
+            this.error_message_dom  = document.querySelector<HTMLTextAreaElement>("textarea#error_message");
+            this.reset_button_dom   = document.querySelector<HTMLButtonElement>("button#reset_button");
 
             void this.init();
 
@@ -132,11 +132,11 @@ namespace MJS {
 
         constructor(new_popup: Popup) {
             super(new_popup);
-            this.new_course_dom             = document.querySelector("fieldset#new_course")         as HTMLFieldSetElement;
-            this.new_course_name_dom        = document.querySelector("input#new_course_name")       as HTMLInputElement;
-            this.new_course_shortname_dom   = document.querySelector("input#new_course_shortname")  as HTMLInputElement;
-            this.new_course_start_dom       = document.querySelector("input#new_course_start")      as HTMLInputElement;
-            this.new_course_button_dom      = document.querySelector("button#new_course_button")    as HTMLButtonElement;
+            this.new_course_dom             = document.querySelector<HTMLFieldSetElement>("fieldset#new_course");
+            this.new_course_name_dom        = document.querySelector<HTMLInputElement>("input#new_course_name");
+            this.new_course_shortname_dom   = document.querySelector<HTMLInputElement>("input#new_course_shortname");
+            this.new_course_start_dom       = document.querySelector<HTMLInputElement>("input#new_course_start");
+            this.new_course_button_dom      = document.querySelector<HTMLButtonElement>("button#new_course_button");
             const this_ui = this;
             this.new_course_name_dom.addEventListener("input", function() { this_ui.onInput(); });
             this.new_course_shortname_dom.addEventListener("input", function() { this_ui.onInput(); });
@@ -173,8 +173,8 @@ namespace MJS {
 
         constructor(new_popup: Popup) {
             super(new_popup);
-            this.index_rebuild_dom          = document.querySelector("fieldset#index_rebuild")      as HTMLFieldSetElement;
-            this.index_rebuild_button_dom   = document.querySelector("button#index_rebuild_button") as HTMLButtonElement;
+            this.index_rebuild_dom          = document.querySelector<HTMLFieldSetElement>("fieldset#index_rebuild");
+            this.index_rebuild_button_dom   = document.querySelector<HTMLButtonElement>("button#index_rebuild_button");
             const this_ui = this;
             this.index_rebuild_button_dom.addEventListener("click", function() { this_ui.onClick(); });
         }
@@ -201,10 +201,10 @@ namespace MJS {
 
         constructor(new_popup: Popup) {
             super(new_popup);
-            this.new_section_dom            = document.querySelector("fieldset#new_section")        as HTMLFieldSetElement;
-            this.new_section_name_dom       = document.querySelector("input#new_section_name")      as HTMLInputElement;
-            this.new_section_shortname_dom  = document.querySelector("input#new_section_shortname") as HTMLInputElement;
-            this.new_section_button_dom     = document.querySelector("button#new_section_button")   as HTMLButtonElement;
+            this.new_section_dom            = document.querySelector<HTMLFieldSetElement>("fieldset#new_section");
+            this.new_section_name_dom       = document.querySelector<HTMLInputElement>("input#new_section_name");
+            this.new_section_shortname_dom  = document.querySelector<HTMLInputElement>("input#new_section_shortname");
+            this.new_section_button_dom     = document.querySelector<HTMLButtonElement>("button#new_section_button");
             const this_ui = this;
             this.new_section_name_dom.addEventListener("input", function() { this_ui.onInput(); });
             this.new_section_shortname_dom.addEventListener("input", function() { this_ui.onInput(); });
@@ -239,9 +239,9 @@ namespace MJS {
 
         constructor(new_popup: Popup) {
             super(new_popup);
-            this.new_topic_dom          = document.querySelector("fieldset#new_topic")      as HTMLFieldSetElement;
-            this.new_topic_name_dom     = document.querySelector("input#new_topic_name")    as HTMLInputElement;
-            this.new_topic_button_dom   = document.querySelector("button#new_topic_button") as HTMLButtonElement;
+            this.new_topic_dom          = document.querySelector<HTMLFieldSetElement>("fieldset#new_topic");
+            this.new_topic_name_dom     = document.querySelector<HTMLInputElement>("input#new_topic_name");
+            this.new_topic_button_dom   = document.querySelector<HTMLButtonElement>("button#new_topic_button");
             const this_ui = this;
             this.new_topic_name_dom.addEventListener("input", function() { this_ui.onInput(); });
             this.new_topic_button_dom.addEventListener("click", function() { this_ui.onClick(); });
@@ -272,9 +272,9 @@ namespace MJS {
 
         constructor(new_popup: Popup) {
             super(new_popup);
-            this.backup_dom = document.querySelector("fieldset#backup") as HTMLFieldSetElement;
-            this.backup_list_dom = document.querySelector("textarea#backup_list") as HTMLTextAreaElement;
-            this.backup_button_dom = document.querySelector("button#backup_button") as HTMLButtonElement;
+            this.backup_dom = document.querySelector<HTMLFieldSetElement>("fieldset#backup");
+            this.backup_list_dom = document.querySelector<HTMLTextAreaElement>("textarea#backup_list");
+            this.backup_button_dom = document.querySelector<HTMLButtonElement>("button#backup_button");
             const this_ui = this;
             this.backup_button_dom.addEventListener("click", function() { this_ui.onClick(); });
             //this.backup_list_dom.addEventListener("input", function() { this_ui.onInput(); });

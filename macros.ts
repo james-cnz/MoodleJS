@@ -551,7 +551,7 @@ namespace MJS {
                 {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.id, section: this.data.mdl_course_sections.section}},
                 page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}},
             );
-            const modules_list = this.page_details.mdl_course_sections.mdl_course_modules as MDL_Course_Modules[];
+            const modules_list = this.page_details.mdl_course_sections.mdl_course_modules;
             (modules_list.length == 1)                                          || throwf(new Error("Index rebuild macro, get list:\nExpected exactly one resource in Modules tab."));
             const modules_index = modules_list[0];
 
