@@ -3,7 +3,7 @@ namespace MJS {
 
 
 
-    export type Page_Data_Base = {page: string; dom_submit?:         boolean|string;};
+    export type Page_Data_Base = { page: string; dom_submit?:         boolean|string; };
 
     export type Page_Data =
           page_course_management_data
@@ -22,7 +22,7 @@ namespace MJS {
 
 
 
-    //export type Page_Data_In = DeepPartial<Page_Data>;
+    // export type Page_Data_In = DeepPartial<Page_Data>;
 
 
     export type Page_Data_Out_Base = {
@@ -46,7 +46,7 @@ namespace MJS {
         location?:  { pathname: "/course/management.php", search: { categoryid: number, perpage?: number } },
         mdl_course_categories: page_course_management_category
         mdl_course: page_course_management_course[]
-    }
+    };
 
     export type page_course_management_category = {
         id:         number;
@@ -56,12 +56,12 @@ namespace MJS {
         checked:    boolean;
         expandable: boolean;
         expanded:   boolean;
-    }
+    };
 
     export type page_course_management_course = {
         id:         number;
         fullname:   string;
-    }
+    };
 
     async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
         async function category(message_in: DeepPartial<page_course_management_category>, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
@@ -76,33 +76,33 @@ namespace MJS {
                     expandable: true,
                     expanded:   true,
                     mdl_course_categories: [],
-                }
+                };
             } else {
                 if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
-                    dom.querySelector<HTMLAnchorElement>(":scope > div > a").click();
+                    dom.querySelector<HTMLAnchorElement>(":scope > div > a")!.click();
                     do {
                         await sleep(100);
                     } while (!dom.querySelector(":scope > ul"));
                 }
-                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox").checked)) {
-                    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox").click();
+                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
+                    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.click();
                     // TODO: pause?
                 }
                 result = {
-                    id:         parseInt(dom.getAttribute("data-id")),
-                    name:       dom.querySelector(":scope > div > a.categoryname").textContent,
-                    coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count").textContent),
-                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox").checked, // broken?
+                    id:         parseInt(dom.getAttribute("data-id")!),
+                    name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
+                    coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
+                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
                     expanded:   dom.getAttribute("aria-expanded") == "true",
                     expandable:   dom.getAttribute("data-expandable") == "1",
                     mdl_course_categories: [],
-                }
+                };
             }
             const subcategories_dom = dom.querySelectorAll<HTMLLIElement>(":scope > ul > li");
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
-                const subcategory_id = parseInt(subcategory_dom.getAttribute("data-id"));
-                const subcategory_in = message_in ? message_in.mdl_course_categories.find(function (value) {return value.id == subcategory_id}) : null;
+                const subcategory_id = parseInt(subcategory_dom.getAttribute("data-id")!);
+                const subcategory_in = message_in ? message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) : null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
             result.mdl_course_categories = subcategories_out;
@@ -112,7 +112,7 @@ namespace MJS {
         const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
         const course_list: page_course_management_course[] = [];
         for (const course_dom of Object.values(course_list_dom)) {
-            course_list.push({id: parseInt(course_dom.getAttribute("data-id")), fullname: course_dom.querySelector("a").textContent});
+            course_list.push({id: parseInt(course_dom.getAttribute("data-id")!), fullname: course_dom.querySelector("a")!.textContent!});
         }
 
         return {
@@ -143,8 +143,8 @@ namespace MJS {
         switch (stage) {
 
             case 1:
-                const step1_to_final_step_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_oneclickbackup[type='submit']");
-                const step1_next_dom            = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']");
+                const step1_to_final_step_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_oneclickbackup[type='submit']")!;
+                const step1_next_dom            = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "final step") {
                     step1_to_final_step_dom.click();
                 } else if (message.dom_submit && message.dom_submit == "next") {
@@ -154,7 +154,7 @@ namespace MJS {
                 break;
 
             case 2:
-                const step2_next_dom = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']");
+                const step2_next_dom = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "next") {
                     step2_next_dom.click();
                 }
@@ -162,8 +162,8 @@ namespace MJS {
                 break;
 
             case 4:
-                const step4_filename = document.querySelector<HTMLInputElement>("#region-main form input#id_setting_root_filename[type='text']").value;
-                const step4_next_dom = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']");
+                const step4_filename = document.querySelector<HTMLInputElement>("#region-main form input#id_setting_root_filename[type='text']")!.value;
+                const step4_next_dom = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "perform backup") {
                     step4_next_dom.click();
                 }
@@ -171,7 +171,7 @@ namespace MJS {
                 break;
 
             case null:
-                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form button[type='submit']");
+                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form button[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
@@ -210,8 +210,8 @@ namespace MJS {
 
 
             async function course(course_dom: HTMLDivElement): Promise<{id: number, fullname: string}> {
-                const course_id_out = parseInt(course_dom.getAttribute("data-courseid"));
-                const course_name_out = course_dom.querySelector<HTMLAnchorElement>(":scope .coursename a").text;
+                const course_id_out = parseInt(course_dom.getAttribute("data-courseid")!);
+                const course_name_out = course_dom.querySelector<HTMLAnchorElement>(":scope .coursename a")!.text;
                 return {id: course_id_out, fullname: course_name_out};
             }
 
@@ -220,8 +220,7 @@ namespace MJS {
             if (!category_dom) {
                 // Category ID
                 const category_out_match =
-                    (window.document.body.getAttribute("class")
-                    ).match(/(?:^|\s)category-(\d+)(?:\s|$)/);
+                    (window.document.body.getAttribute("class")!).match(/(?:^|\s)category-(\d+)(?:\s|$)/);
 
                 const category_out_id = category_out_match ? parseInt(category_out_match[1]) : 0;
 
@@ -231,8 +230,7 @@ namespace MJS {
                     const breadcrumbs_dom = window.document.querySelectorAll(":root div#page-navbar .breadcrumb li");  // :last-child or :last-of-type
                     if (breadcrumbs_dom.length > 0) { /*OK*/ } else                            { throw new Error("WSC category get displayed, breadcrumbs not found"); }
                     const breadcrumb_last_dom = breadcrumbs_dom.item(breadcrumbs_dom.length - 1);
-                    const category_out_name =  (breadcrumb_last_dom.querySelector(":scope a")
-                                            ).textContent;
+                    const category_out_name =  (breadcrumb_last_dom.querySelector(":scope a")!).textContent!;
 
                     // Category Description
                     const category_out_description = (window.document.querySelector(":root #region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
@@ -251,14 +249,14 @@ namespace MJS {
                     // category_out_description = "";
                     category_out = { id: 0, name: "", description: "", mdl_course_categories: [], mdl_course: [], more: false};
                 }
-                category_dom = document.querySelector<HTMLDivElement>("div.course_category_tree");
+                category_dom = document.querySelector<HTMLDivElement>("div.course_category_tree")!;
             } else {
-                const category_link_dom = category_dom.querySelector<HTMLAnchorElement>(":scope > .info > .categoryname > a");
-                const category_out_id = parseInt(category_dom.getAttribute("data-categoryid"));
+                const category_link_dom = category_dom.querySelector<HTMLAnchorElement>(":scope > .info > .categoryname > a")!;
+                const category_out_id = parseInt(category_dom.getAttribute("data-categoryid")!);
                 const category_out_name = category_link_dom.text;
                 category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
                 if (message.dom_expand && category_dom.classList.contains("collapsed")) {
-                    category_dom.querySelector<HTMLHeadingElement>(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname").click();
+                    category_dom.querySelector<HTMLHeadingElement>(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname")!.click();
                     do {
                         await sleep(200);
                     } while (category_dom.classList.contains("notloaded"));
@@ -295,15 +293,15 @@ namespace MJS {
     };
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
-        const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody");
+        const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody")!;
         // const download_link = document.querySelector<HTMLAnchorElement>(".backup-files-table .c3 a");
         const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']");
-        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']");
+        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']")!;
 
         const backups: {filename: string, download_url: string}[] = [];
         if (!course_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>("tr"))) {
-                backups.push({filename: backup_dom.querySelector("td.cell.c0").textContent, download_url: (backup_dom.querySelector<HTMLAnchorElement>("td.cell.c3 a")).href});
+                backups.push({filename: backup_dom.querySelector("td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>("td.cell.c3 a"))!.href});
             }
         }
 
@@ -330,21 +328,21 @@ namespace MJS {
 
     async function page_backup_backupfilesedit(message_in: DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
 
-        const backup_filemanager_dom = document.querySelector("section#region-main form#mform1 div.filemanager");
+        const backup_filemanager_dom = document.querySelector("section#region-main form#mform1 div.filemanager")!;
         do {
             await sleep(100);
         } while (!backup_filemanager_dom.classList.contains("fm-loaded"));
         await sleep(100);
-        const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content");
+        const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
         const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
-        const save_button_dom = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']");
-        const delete_button_dom = document.querySelector<HTMLButtonElement>("button.fp-file-delete");
+        const save_button_dom = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
+        const delete_button_dom = document.querySelector<HTMLButtonElement>("button.fp-file-delete")!;
 
         const message_out: page_backup_backupfilesedit_data = {page: "backup-backupfilesedit", mdl_course: { backups: []}};
 
         for (const backup_dom of Object.values(backups_dom)) {
-            const backup_file_link = backup_dom.querySelector("a");
-            const backup_filename = backup_file_link.querySelector(".fp-filename").textContent;
+            const backup_file_link = backup_dom.querySelector("a")!;
+            const backup_filename = backup_file_link.querySelector(".fp-filename")!.textContent!;
             const backup_file_in_index = (message_in && message_in.mdl_course && message_in.mdl_course.backups) ?
                                             message_in.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; })
                                             : -1;
@@ -367,7 +365,7 @@ namespace MJS {
             delete_button_dom.click();
             await sleep(100);
         } else if (message_in.backup && message_in.backup.click == "delete_ok") {
-            const delete_ok_button_dom = document.querySelector<HTMLButtonElement>("button.fp-dlg-butconfirm");
+            const delete_ok_button_dom = document.querySelector<HTMLButtonElement>("button.fp-dlg-butconfirm")!;
             delete_ok_button_dom.click();
             await sleep(100);
         }
@@ -405,7 +403,7 @@ namespace MJS {
         switch (stage) {
 
             case 2:
-                const stage_2_submit_dom = document.querySelector<HTMLButtonElement>("#region-main div.backup-restore form [type='submit']");
+                const stage_2_submit_dom = document.querySelector<HTMLButtonElement>("#region-main div.backup-restore form [type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "stage 2 submit") {
                     stage_2_submit_dom.click();
                 }
@@ -416,15 +414,15 @@ namespace MJS {
 
                 // Destination
 
-                const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']");
-                const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']");
-                const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']");
+                const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
+                const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
+                const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
                 if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.name) {
                     stage_4_new_cat_name_dom.value = message.mdl_course_categories.name;
                 }
 
                 if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.id) {
-                    const stage_4_new_cat_id_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_categories.id + "']");
+                    const stage_4_new_cat_id_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_categories.id + "']")!;
                     stage_4_new_cat_id_dom.click();
                 }
 
@@ -438,8 +436,8 @@ namespace MJS {
 
                 // Settings
 
-                const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']");
-                const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform input[name='submitbutton'][type='submit']");
+                const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
+                const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform input[name='submitbutton'][type='submit']")!;
 
                 if (message.stage == 4 && message.restore_settings) {
                     if (/*message.restore_settings.hasOwnProperty("users") &&*/ message.restore_settings.users != undefined) {
@@ -454,16 +452,16 @@ namespace MJS {
                     stage_4_settings_submit_dom.click();
                 }
 
-                return {page: "backup-restore", stage: stage, restore_settings: message_out_restore_settings};
+                return { page: "backup-restore", stage: stage, restore_settings: message_out_restore_settings };
                 break;
 
             case 8:
-                const course_name_dom           = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']");
-                const course_shortname_dom      = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']");
-                const course_startdate_day_dom  = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']");
-                const course_startdate_month_dom = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[month]']");
-                const course_startdate_year_dom = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[year]']");
-                const submit_dom                = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform input[name='submitbutton'][type='submit']");
+                const course_name_dom           = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']")!;
+                const course_shortname_dom      = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']")!;
+                const course_startdate_day_dom  = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']")!;
+                const course_startdate_month_dom = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[month]']")!;
+                const course_startdate_year_dom = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[year]']")!;
+                const submit_dom                = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform input[name='submitbutton'][type='submit']")!;
 
                 if (message.stage == 8 && message.mdl_course && message.mdl_course.fullname) {
                     course_name_dom.value = message.mdl_course.fullname;
@@ -499,7 +497,7 @@ namespace MJS {
                 break;
 
             case 16:
-                const submit16_dom = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform input[name='submitbutton'][type='submit']");
+                const submit16_dom = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform input[name='submitbutton'][type='submit']")!;
 
                 if (message.dom_submit && message.dom_submit == "stage 16 submit") {
                     submit16_dom.click();
@@ -509,9 +507,9 @@ namespace MJS {
                 break;
 
             case null:
-                const course_id_dom = document.querySelector<HTMLInputElement>("#region-main form input[name='id'][type='hidden']");
+                const course_id_dom = document.querySelector<HTMLInputElement>("#region-main form input[name='id'][type='hidden']")!;
                 const course_id = parseInt(course_id_dom.value);
-                const submitcomplete_dom = document.querySelector<HTMLButtonElement>("#region-main form [type='submit']");
+                const submitcomplete_dom = document.querySelector<HTMLButtonElement>("#region-main form [type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "stage complete submit") {
                     submitcomplete_dom.click();
                 }
@@ -558,13 +556,13 @@ namespace MJS {
     async function page_course_view(_message: DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
 
         // Course Start
-        const main_dom:        Element             = window.document.querySelector(":root #region-main");
+        const main_dom:        Element             = window.document.querySelector(":root #region-main")!;
         // const result: Partial<Page_Data> = {};
 
-        const course_out_id =    parseInt((window.document.body.getAttribute("class").match(/\bcourse-(\d+)\b/)
+        const course_out_id =    parseInt((window.document.body.getAttribute("class")!.match(/\bcourse-(\d+)\b/)!
                                  )[1]);
-        const course_out_fullname =  (window.document.querySelector<HTMLAnchorElement>(":root .breadcrumb a[title]")).getAttribute("title") || "";
-        const course_out_format =     (window.document.body.getAttribute("class").match(/\bformat-([a-z]+)\b/)
+        const course_out_fullname =  window.document.querySelector<HTMLAnchorElement>(":root .breadcrumb a[title]")!.getAttribute("title") || "";
+        const course_out_format =     (window.document.body.getAttribute("class")!.match(/\bformat-([a-z]+)\b/)!
                         )[1];
 
         // Sections
@@ -583,7 +581,7 @@ namespace MJS {
             // Note: Needs editing on.  Doesn't work for flexsections
             const section_edit_dom = section_dom.querySelector<HTMLAnchorElement>(":scope a.edit.menu-action");
             if (section_edit_dom) {
-                const section_id_str    = (section_edit_dom.search.match(/(?:^\?|&)id=(\d+)(?:&|$)/)
+                const section_id_str    = (section_edit_dom.search.match(/(?:^\?|&)id=(\d+)(?:&|$)/)!
                                         )[1]; // TODO: Use URLSearchParams
                 section_out_id = parseInt(section_id_str);
             }
@@ -595,21 +593,21 @@ namespace MJS {
                 // TODO: Try multiple methods?
 
             // Section Number
-            const section_num_str       = ((section_dom.getAttribute("id")
-                                           ).match(/^section-(\d+)$/)
+            const section_num_str       = (section_dom.getAttribute("id")!
+                                           .match(/^section-(\d+)$/)!
                                           )[1];
             const section_out_section =    parseInt(section_num_str);  // Note: can be 0
 
             // Section Name
-            const section_out_name =       (section_dom.querySelector(":scope > .content > .sectionname")
-                                          ).textContent;
+            const section_out_name =       (section_dom.querySelector(":scope > .content > .sectionname")!
+                                          ).textContent!;
                                           // TODO: Remove spurious whitespace.  Note: There may be hidden and visible section names?
 
             // Section Visible
             const section_out_visible = section_dom.classList.contains("hidden") ? 0 : 1;
 
             // Section Summary
-            const section_summary_container_dom = section_dom.querySelector(":scope > .content > .summary");
+            const section_summary_container_dom = section_dom.querySelector(":scope > .content > .summary")!;
             const section_summary_dom  = section_summary_container_dom.querySelector(":scope .no-overflow");
             const section_out_summary =    section_summary_dom ? section_summary_dom.innerHTML : "";
 
@@ -618,35 +616,35 @@ namespace MJS {
             let modules_out:      page_course_view_course_modules[]|undefined;
             if (section_dom.querySelector(":scope > .content > .section")) {
 
-                const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope > .content > .section")  // Note: flexsections can have nested sections.
+                const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope > .content > .section")!  // Note: flexsections can have nested sections.
                                                         ).querySelectorAll(":scope .activity");
                 modules_out = [];
 
                 for (const module_dom of Object.values(modules_dom)) {
 
                     // Module ID
-                    const module_id_str     = ((module_dom.getAttribute("id")
-                                            ).match(/^module-(\d+)$/)
+                    const module_id_str     = (module_dom.getAttribute("id")!
+                                            .match(/^module-(\d+)$/)!
                                             )[1];
                     const module_out_id = parseInt(module_id_str);
 
                     // Module Type?
-                    const module_modname    = (module_dom.className.match(/(?:^|\s)modtype_([a-z]+)(?:\s|$)/)
+                    const module_modname    = (module_dom.className.match(/(?:^|\s)modtype_([a-z]+)(?:\s|$)/)!
                                             )[1];
                     const module_out_modname =    module_modname;
 
                     // Module Name
                     const module_out_instance_name =       (module_modname == "label")
-                            ? (module_dom.querySelector(":scope .contentwithoutlink")
+                            ? (module_dom.querySelector(":scope .contentwithoutlink")!
                             ).textContent || ""
-                            : (module_dom.querySelector(":scope .instancename")
+                            : (module_dom.querySelector(":scope .instancename")!
                             ).textContent || "";  // TODO: Use innerText to avoid unwanted hidden text with Assignments?
                             // TODO: Check handling of empty strings?
                             // TODO: For folder (to handle inline) if no .instancename, use .fp-filename ???
 
                     // Module Intro
                     const module_out_instance_intro: string|undefined = (module_modname == "label")  // TODO: Test
-                                        ? (module_dom.querySelector(":scope .contentwithoutlink")
+                                        ? (module_dom.querySelector(":scope .contentwithoutlink")!
                                         ).innerHTML
                                         : (module_dom.querySelector(":scope .contentafterlink") || { innerHTML: undefined }
                                         ).innerHTML;
@@ -793,17 +791,17 @@ namespace MJS {
         // Start
         const section_in = message.mdl_course_sections;
 
-        const section_dom:         HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1");
+        const section_dom:         HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
         // let section: Partial<MDL_Course_Sections> = (message.mdl_course_sections||{});
 
         // ID
-        const section_id_dom:      HTMLInputElement  = section_dom.querySelector<HTMLInputElement>(":scope input[name='id']");
+        const section_id_dom:      HTMLInputElement  = section_dom.querySelector<HTMLInputElement>(":scope input[name='id']")!;
         // section.id = parseInt(section_id_dom.value);
         const section_out_id = parseInt(section_id_dom.value);
 
         // Name
         const section_name_dom:    HTMLInputElement  =    (section_dom.querySelector<HTMLInputElement>("input[name='name']")
-                                                            || section_dom.querySelector<HTMLInputElement>("input[name='name[value]']"));
+                                                            || section_dom.querySelector<HTMLInputElement>("input[name='name[value]']"))!;
         if (section_in && section_in.name != undefined) { // section_in.hasOwnProperty('name')) {
             const section_name_usedefault_dom:  HTMLInputElement|null = section_dom.querySelector("input[name='usedefaultname']");
             const section_name_customise_dom: HTMLInputElement|null = section_dom.querySelector("input#id_name_customize");
@@ -822,7 +820,7 @@ namespace MJS {
         const section_out_name = section_name_dom.value;
 
         // Summary
-        const section_summary_dom: HTMLTextAreaElement  = section_dom.querySelector("textarea[name='summary_editor[text]']");
+        const section_summary_dom: HTMLTextAreaElement  = section_dom.querySelector<HTMLTextAreaElement>("textarea[name='summary_editor[text]']")!;
         // const section_summary_item_id: string = ((section_dom.elements.namedItem("summary_editor[itemid]")
         //                                                                            || throwf(new Error("Summary ID not found."))) as HTMLInputElement).value;
         // const user_context = "807782";
@@ -835,7 +833,7 @@ namespace MJS {
         const section_out_x_options: {level?: number} = { };
 
         // Level
-        const section_level_dom = section_dom.querySelector<HTMLSelectElement>("select[name='level']");
+        const section_level_dom = section_dom.querySelector<HTMLSelectElement>("select[name='level']")!;
         if (section_in && section_in.x_options && section_in.x_options.level != undefined) {
             section_level_dom.value = "" + section_in.x_options.level;
         }
@@ -883,7 +881,7 @@ namespace MJS {
         // Module Start
         const module_in = message.mdl_course_modules;
         // const cmid = message.cmid;
-        const module_dom:              HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1");
+        const module_dom:              HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
 
         // Module ID
         const module_id_dom  = module_dom.elements.namedItem("coursemodule") as HTMLInputElement;
@@ -1021,7 +1019,7 @@ namespace MJS {
     };
 
     async function page_mod_feedback_edit(message: DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
-       const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid");
+       const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid")!;
        if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
             && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
             template_id_dom.value = "" + message.mdl_course_modules.mdl_course_module_instance.mdl_feedback_template_id;
@@ -1040,7 +1038,7 @@ namespace MJS {
     };
 
     async function page_mod_feedback_use_templ(message: DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
-       const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form#mform1.mform input#id_submitbutton");
+       const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form#mform1.mform input#id_submitbutton")!;
        if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
             submit_dom.click();
        }
@@ -1134,8 +1132,8 @@ namespace MJS {
                 wwwroot:    window.location.origin,
                 // location_pathname:  window.location.pathname,
                 // location_search:    window.location.search,
-                body_id:            window.document.body.getAttribute("id"),
-                body_class:         window.document.body.getAttribute("class"),
+                body_id:            window.document.body.getAttribute("id")!,
+                body_class:         window.document.body.getAttribute("class")!,
                 sesskey:       ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
                                     ).search.match(/^\?sesskey=(\w+)$/)
                                     )[1],

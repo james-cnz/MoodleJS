@@ -413,7 +413,7 @@ namespace MJS {
                 {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.template_id, section: 0}},
                 page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.template_id}}
             );
-            const source_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/);
+            const source_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)!;
             const source_context = parseInt(source_context_match[1]);
 
             // Load course restore page (1 load)
@@ -564,7 +564,7 @@ namespace MJS {
                     {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.id, section: section_num}},
                     page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
                 const section_full = this.page_details.mdl_course_sections;
-                const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")
+                const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")!
                                     ).textContent;
                 index_html = index_html
                             + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.data.mdl_course.id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
@@ -572,11 +572,11 @@ namespace MJS {
                 for (const mod of section_full.mdl_course_modules) {
                     // parse description
                     const mod_desc = parser.parseFromString((mod.mdl_course_module_instance).intro || "", "text/html");
-                    const part_name = mod_desc.querySelector(".header2, .header2gradient");
+                    const part_name = mod_desc.querySelector(".header2, .header2gradient")!;
                     if (part_name) {
                         index_html = index_html
                                     + "<li>"
-                                    + TabData.escapeHTML((part_name.textContent).trim())
+                                    + TabData.escapeHTML((part_name.textContent!).trim())
                                     + "</li>\n";
                     }
                 }
@@ -1031,24 +1031,24 @@ namespace MJS {
             }
             return result;
         }
-    
+
 
         protected async content() {
 
-            //this.progress_max = this.params.mdl_course_categories.mdl_course.length * 12 + 1;
-            //this.tabdata.macro_progress_max = this.progress_max;
+            // this.progress_max = this.params.mdl_course_categories.mdl_course.length * 12 + 1;
+            // this.tabdata.macro_progress_max = this.progress_max;
 
             // const site_map = await this.tabdata.page_call({page: "course-index(-category)?", dom_expand: true});
             let change: boolean;
             do {
                 this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
-                let site_map: page_course_management_category = this.page_details.mdl_course_categories;
+                const site_map: page_course_management_category = this.page_details.mdl_course_categories;
                 change = Backup_Macro.expand_ticked(site_map);
                 if (change) {
                     this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management", mdl_course_categories: site_map});
-                    //await sleep(1000);
+                    // await sleep(1000);
                 }
-            } while (change)
+            } while (change);
 
             const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_categories);
 
