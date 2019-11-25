@@ -1,6 +1,6 @@
 /**
  * Moodle JS Background Script
- * Stores data for each tab, and passes on messages from content scripts.
+ * Links to data for each tab, and passes on messages from content scripts.
  */
 
 
@@ -8,7 +8,7 @@ namespace MJS {
 
     export class Background {
 
-        private tabData:    { [index: number]: TabData } = { };
+        private tabData: { [index: number]: TabData } = { };
 
         public constructor() {
             const bg_this = this;
@@ -37,9 +37,9 @@ namespace MJS {
             }
         }
 
-        public onTabUpdated(tab_id: number, _update_info: Partial<browser.tabs.Tab>, _tab: browser.tabs.Tab) {
+        public onTabUpdated(tab_id: number, update_info: Partial<browser.tabs.Tab>, tab: browser.tabs.Tab) {
             if (this.tabData[tab_id]) {
-                this.tabData[tab_id].onTabUpdated(tab_id, _update_info, _tab);
+                this.tabData[tab_id].onTabUpdated(tab_id, update_info, tab);
             }
         }
 

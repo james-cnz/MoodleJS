@@ -123,7 +123,7 @@ namespace MJS {
         }
 
 
-        public async page_call<T extends Page_Data>(message: DeepPartial<T> & Page_Data_In_Base): Promise<T & Page_Data_Out_Base> {
+        public async page_call<T extends Page_Data>(message: DeepPartial<T>): Promise<T & Page_Data_Out_Base> {
 
             (this.macro_state == 1)                                             || throwf(new Error("Page call:\nUnexpected state."));
 
@@ -413,8 +413,7 @@ namespace MJS {
                 {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.template_id, section: 0}},
                 page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.template_id}}
             );
-            const source_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
-                                                                                        || throwf(new Error("New course macro, get template:\nContext not found."));
+            const source_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/);
             const source_context = parseInt(source_context_match[1]);
 
             // Load course restore page (1 load)
@@ -566,8 +565,7 @@ namespace MJS {
                     page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
                 const section_full = this.page_details.mdl_course_sections;
                 const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")
-                                                                                        || throwf(new Error("Index rebuild macro, get section:\nModule name not found."))
-                                    ).textContent                                      || throwf(new Error("Index rebuild macro, get section:\nModule name content not found."));
+                                    ).textContent;
                 index_html = index_html
                             + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.data.mdl_course.id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
@@ -578,8 +576,7 @@ namespace MJS {
                     if (part_name) {
                         index_html = index_html
                                     + "<li>"
-                                    + TabData.escapeHTML((part_name.textContent                 || throwf(new Error("Index rebuild macro, get section:\nCouldn't get text content."))
-                                    ).trim())
+                                    + TabData.escapeHTML((part_name.textContent).trim())
                                     + "</li>\n";
                     }
                 }

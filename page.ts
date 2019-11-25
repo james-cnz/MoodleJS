@@ -3,7 +3,7 @@ namespace MJS {
 
 
 
-    export type Page_Data_Base = {page: string};
+    export type Page_Data_Base = {page: string; dom_submit?:         boolean|string;};
 
     export type Page_Data =
           page_course_management_data
@@ -17,14 +17,12 @@ namespace MJS {
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
-        | {page: "*"};  // some other page
+        | {page: ".*"; dom_submit?: boolean|string};  // some other page
 
 
-    export type Page_Data_In_Base = {
-        dom_submit?:         boolean|string;
-    };
 
-    export type Page_Data_In = ({page: string} & DeepPartial<Page_Data> | {}) & Page_Data_In_Base;
+
+    //export type Page_Data_In = DeepPartial<Page_Data>;
 
 
     export type Page_Data_Out_Base = {
@@ -55,7 +53,6 @@ namespace MJS {
         name:       string;
         coursecount: number;
         mdl_course_categories: page_course_management_category[];
-        // mdl_course: page_course_management_course[];
         checked:    boolean;
         expandable: boolean;
         expanded:   boolean;
@@ -66,7 +63,7 @@ namespace MJS {
         fullname:   string;
     }
 
-    async function page_course_management(message_in: Page_Data_In_Base & DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
+    async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
         async function category(message_in: DeepPartial<page_course_management_category>, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
 
             let result: page_course_management_category;
@@ -79,13 +76,10 @@ namespace MJS {
                     expandable: true,
                     expanded:   true,
                     mdl_course_categories: [],
-                    //mdl_course: []
                 }
             } else {
                 if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
                     dom.querySelector<HTMLAnchorElement>(":scope > div > a").click();
-                    // alert(dom.querySelector(":scope > ul").innerHTML);
-                    // await sleep(1000);  // TODO: Check properly if loaded
                     do {
                         await sleep(100);
                     } while (!dom.querySelector(":scope > ul"));
@@ -102,7 +96,6 @@ namespace MJS {
                     expanded:   dom.getAttribute("aria-expanded") == "true",
                     expandable:   dom.getAttribute("data-expandable") == "1",
                     mdl_course_categories: [],
-                    //mdl_course: []
                 }
             }
             const subcategories_dom = dom.querySelectorAll<HTMLLIElement>(":scope > ul > li");
@@ -139,7 +132,7 @@ namespace MJS {
     };
 
 
-    async function page_backup_backup(message: Page_Data_In_Base & DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
+    async function page_backup_backup(message: DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
         const stage: number|null = stage_dom ? parseInt(stage_dom.value) : null;
 
@@ -211,7 +204,7 @@ namespace MJS {
         fullname:   string;
     };
 
-    async function page_course_index(message: Page_Data_In_Base & DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
+    async function page_course_index(message: DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
 
         async function category(category_dom?: HTMLDivElement): Promise<page_course_index_category> {
 
@@ -227,7 +220,7 @@ namespace MJS {
             if (!category_dom) {
                 // Category ID
                 const category_out_match =
-                    (window.document.body.getAttribute("class")   || throwf(new Error("WSC category get displayed, body class not found."))
+                    (window.document.body.getAttribute("class")
                     ).match(/(?:^|\s)category-(\d+)(?:\s|$)/);
 
                 const category_out_id = category_out_match ? parseInt(category_out_match[1]) : 0;
@@ -238,8 +231,8 @@ namespace MJS {
                     const breadcrumbs_dom = window.document.querySelectorAll(":root div#page-navbar .breadcrumb li");  // :last-child or :last-of-type
                     if (breadcrumbs_dom.length > 0) { /*OK*/ } else                            { throw new Error("WSC category get displayed, breadcrumbs not found"); }
                     const breadcrumb_last_dom = breadcrumbs_dom.item(breadcrumbs_dom.length - 1);
-                    const category_out_name =  (breadcrumb_last_dom.querySelector(":scope a")     || throwf(new Error("WSC category get displayed, breadcrumb link not found."))
-                                            ).textContent                                       || throwf(new Error("WSC category get displayed, name not found."));
+                    const category_out_name =  (breadcrumb_last_dom.querySelector(":scope a")
+                                            ).textContent;
 
                     // Category Description
                     const category_out_description = (window.document.querySelector(":root #region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
@@ -301,7 +294,7 @@ namespace MJS {
         mdl_course: {id?: number, backups: {filename: string, download_url: string}[]}
     };
 
-    async function page_backup_restorefile(message: Page_Data_In_Base & DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
+    async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody");
         // const download_link = document.querySelector<HTMLAnchorElement>(".backup-files-table .c3 a");
         const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']");
@@ -335,7 +328,7 @@ namespace MJS {
     };
 
 
-    async function page_backup_backupfilesedit(message_in: Page_Data_In_Base & DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
+    async function page_backup_backupfilesedit(message_in: DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
 
         const backup_filemanager_dom = document.querySelector("section#region-main form#mform1 div.filemanager");
         do {
@@ -401,7 +394,7 @@ namespace MJS {
         | { stage: null, mdl_course: {id: number}}
     );
 
-    async function page_backup_restore(message: Page_Data_In_Base & DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
+    async function page_backup_restore(message: DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
         const stage: number|null = stage_dom ? parseInt(stage_dom.value) : null;
 
@@ -562,17 +555,16 @@ namespace MJS {
         }
     };
 
-    async function page_course_view(_message: Page_Data_In_Base & DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
+    async function page_course_view(_message: DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
 
         // Course Start
-        const main_dom:        Element             = window.document.querySelector(":root #region-main")
-                                                                                    || throwf(new Error("WSC course get content, main region not found."));
+        const main_dom:        Element             = window.document.querySelector(":root #region-main");
         // const result: Partial<Page_Data> = {};
 
-        const course_out_id =    parseInt((window.document.body.getAttribute("class").match(/\bcourse-(\d+)\b/) || throwf(new Error("WS course get displayed, course id not found."))
+        const course_out_id =    parseInt((window.document.body.getAttribute("class").match(/\bcourse-(\d+)\b/)
                                  )[1]);
         const course_out_fullname =  (window.document.querySelector<HTMLAnchorElement>(":root .breadcrumb a[title]")).getAttribute("title") || "";
-        const course_out_format =     (window.document.body.getAttribute("class").match(/\bformat-([a-z]+)\b/)    || throwf(new Error("WS course get displayed, course format not found."))
+        const course_out_format =     (window.document.body.getAttribute("class").match(/\bformat-([a-z]+)\b/)
                         )[1];
 
         // Sections
@@ -591,8 +583,7 @@ namespace MJS {
             // Note: Needs editing on.  Doesn't work for flexsections
             const section_edit_dom = section_dom.querySelector<HTMLAnchorElement>(":scope a.edit.menu-action");
             if (section_edit_dom) {
-                const section_id_str    = ((section_edit_dom
-                                        ).search.match(/(?:^\?|&)id=(\d+)(?:&|$)/)   || throwf(new Error("WSC course get content, section id not found."))
+                const section_id_str    = (section_edit_dom.search.match(/(?:^\?|&)id=(\d+)(?:&|$)/)
                                         )[1]; // TODO: Use URLSearchParams
                 section_out_id = parseInt(section_id_str);
             }
@@ -604,22 +595,21 @@ namespace MJS {
                 // TODO: Try multiple methods?
 
             // Section Number
-            const section_num_str       = ((section_dom.getAttribute("id")         || throwf(new Error("WSC course get content, section num not found."))
-                                           ).match(/^section-(\d+)$/)               || throwf(new Error("WSC course get content, section num not recognised."))
+            const section_num_str       = ((section_dom.getAttribute("id")
+                                           ).match(/^section-(\d+)$/)
                                           )[1];
             const section_out_section =    parseInt(section_num_str);  // Note: can be 0
 
             // Section Name
-            const section_out_name =       (section_dom.querySelector(":scope > .content > .sectionname") || throwf(new Error("WSC course get content, section name not found."))
-                                          ).textContent                                           || throwf(new Error("WSC course get content, section name text not found."));
+            const section_out_name =       (section_dom.querySelector(":scope > .content > .sectionname")
+                                          ).textContent;
                                           // TODO: Remove spurious whitespace.  Note: There may be hidden and visible section names?
 
             // Section Visible
             const section_out_visible = section_dom.classList.contains("hidden") ? 0 : 1;
 
             // Section Summary
-            const section_summary_container_dom = section_dom.querySelector(":scope > .content > .summary")
-                                                                                    || throwf(new Error("WSC course get content, section summary container not found"));
+            const section_summary_container_dom = section_dom.querySelector(":scope > .content > .summary");
             const section_summary_dom  = section_summary_container_dom.querySelector(":scope .no-overflow");
             const section_out_summary =    section_summary_dom ? section_summary_dom.innerHTML : "";
 
@@ -629,36 +619,34 @@ namespace MJS {
             if (section_dom.querySelector(":scope > .content > .section")) {
 
                 const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope > .content > .section")  // Note: flexsections can have nested sections.
-                                                                                        || throwf(new Error("WSC course get content, section content not found."))
                                                         ).querySelectorAll(":scope .activity");
                 modules_out = [];
 
                 for (const module_dom of Object.values(modules_dom)) {
 
                     // Module ID
-                    const module_id_str     = ((module_dom.getAttribute("id")          || throwf(new Error("WSC course get content, mod ID not found."))
-                                            ).match(/^module-(\d+)$/)                || throwf(new Error("WSC course get content, mod ID not recognised."))
+                    const module_id_str     = ((module_dom.getAttribute("id")
+                                            ).match(/^module-(\d+)$/)
                                             )[1];
-                    const module_out_id = parseInt(module_id_str) || throwf(new Error("WSC course get content, mod ID 0"));
+                    const module_out_id = parseInt(module_id_str);
 
                     // Module Type?
                     const module_modname    = (module_dom.className.match(/(?:^|\s)modtype_([a-z]+)(?:\s|$)/)
-                                                                                        || throwf(new Error("WSC course get content, modname not found."))
                                             )[1];
                     const module_out_modname =    module_modname;
 
                     // Module Name
                     const module_out_instance_name =       (module_modname == "label")
-                            ? (module_dom.querySelector(":scope .contentwithoutlink") || throwf(new Error("WSC course get content, label name not found."))
+                            ? (module_dom.querySelector(":scope .contentwithoutlink")
                             ).textContent || ""
-                            : (module_dom.querySelector(":scope .instancename") || throwf(new Error("WSC course get content, name not found."))
+                            : (module_dom.querySelector(":scope .instancename")
                             ).textContent || "";  // TODO: Use innerText to avoid unwanted hidden text with Assignments?
                             // TODO: Check handling of empty strings?
                             // TODO: For folder (to handle inline) if no .instancename, use .fp-filename ???
 
                     // Module Intro
                     const module_out_instance_intro: string|undefined = (module_modname == "label")  // TODO: Test
-                                        ? (module_dom.querySelector(":scope .contentwithoutlink") || throwf(new Error("WSC course get content, label description not found."))
+                                        ? (module_dom.querySelector(":scope .contentwithoutlink")
                                         ).innerHTML
                                         : (module_dom.querySelector(":scope .contentafterlink") || { innerHTML: undefined }
                                         ).innerHTML;
@@ -800,7 +788,7 @@ namespace MJS {
     };
 
 
-    async function page_course_editsection(message: Page_Data_In_Base & DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
+    async function page_course_editsection(message: DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
         // const section_id    = message.sectionid;
         // Start
         const section_in = message.mdl_course_sections;
@@ -834,8 +822,7 @@ namespace MJS {
         const section_out_name = section_name_dom.value;
 
         // Summary
-        const section_summary_dom: HTMLTextAreaElement  = section_dom.querySelector("textarea[name='summary_editor[text]']")
-                                                                                    || throwf(new Error("WSC course get section, summary not found."));
+        const section_summary_dom: HTMLTextAreaElement  = section_dom.querySelector("textarea[name='summary_editor[text]']");
         // const section_summary_item_id: string = ((section_dom.elements.namedItem("summary_editor[itemid]")
         //                                                                            || throwf(new Error("Summary ID not found."))) as HTMLInputElement).value;
         // const user_context = "807782";
@@ -891,7 +878,7 @@ namespace MJS {
         }>
     };
 
-    async function page_module_edit(message: Page_Data_In_Base & DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
+    async function page_module_edit(message: DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
 
         // Module Start
         const module_in = message.mdl_course_modules;
@@ -899,33 +886,28 @@ namespace MJS {
         const module_dom:              HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1");
 
         // Module ID
-        const module_id_dom  = module_dom.elements.namedItem("coursemodule") as HTMLInputElement
-                                                                                    || throwf(new Error("WSC course get module, ID not found."));
+        const module_id_dom  = module_dom.elements.namedItem("coursemodule") as HTMLInputElement;
         const module_out_id =             parseInt(module_id_dom.value);
 
         // Module Instance ID
-        const module_instance_dom  = module_dom.elements.namedItem("instance") as HTMLInputElement
-                                                                                    || throwf(new Error("WSC course get module, instance ID not found."));
+        const module_instance_dom  = module_dom.elements.namedItem("instance") as HTMLInputElement;
         const module_out_instance = parseInt(module_instance_dom.value); //                    || throwf(new Error("WSC course get module, instance ID not recognised"));
         // const module_out__instance = {id: module_out.instance};
 
         // Module Course
-        const module_course_dom  = module_dom.elements.namedItem("course") as HTMLInputElement
-                                                                                    || throwf(new Error("WSC course get module, course ID not found."));
-        const module_out_course = parseInt(module_course_dom.value)                      || throwf(new Error("WSC course get module, course ID not recognised"));
+        const module_course_dom  = module_dom.elements.namedItem("course") as HTMLInputElement;
+        const module_out_course = parseInt(module_course_dom.value);
 
         // Module Section
         const module_out_section = parseInt((window.document.querySelector<HTMLInputElement>(":root form#mform1 input[name='section'][type='hidden']")
         || throwf(new Error("WSC course get module, section num not found.")) ).value);
 
         // Module ModName
-        const module_modname_dom  = module_dom.elements.namedItem("modulename") as HTMLInputElement
-                                                                                    || throwf(new Error("WSC course get module, modname not found."));
+        const module_modname_dom  = module_dom.elements.namedItem("modulename") as HTMLInputElement;
         const module_out_modname =        module_modname_dom.value;
 
         // Module Intro/Description
-        const module_description_dom = module_dom.elements.namedItem("introeditor[text]") as HTMLTextAreaElement
-                                                                                    || throwf(new Error("WSC course get module, description not found."));
+        const module_description_dom = module_dom.elements.namedItem("introeditor[text]") as HTMLTextAreaElement;
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.intro != undefined) {
             module_description_dom.value = module_in.mdl_course_module_instance.intro;
         }
@@ -1038,7 +1020,7 @@ namespace MJS {
         mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
     };
 
-    async function page_mod_feedback_edit(message: Page_Data_In_Base & DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
+    async function page_mod_feedback_edit(message: DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
        const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid");
        if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
             && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
@@ -1057,7 +1039,7 @@ namespace MJS {
         // dom_submit: boolean
     };
 
-    async function page_mod_feedback_use_templ(message: Page_Data_In_Base & DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
+    async function page_mod_feedback_use_templ(message: DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
        const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form#mform1.mform input#id_submitbutton");
        if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
             submit_dom.click();
@@ -1071,14 +1053,14 @@ namespace MJS {
 
 
 
-    async function page_onMessage(message: Page_Data_In, sender?: browser.runtime.MessageSender): Promise<Page_Data_Out> {
+    async function page_onMessage(message: DeepPartial<Page_Data>, sender?: browser.runtime.MessageSender): Promise<Page_Data_Out> {
         if (sender && sender.tab !== undefined) { throw new Error("Unexpected message"); }
         return await page_get_set(message);
     }
 
-    async function page_get_set(message_in: Page_Data_In): Promise<Page_Data_Out> {
+    async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data_Out> {
 
-        const message = message_in as Page_Data_In;
+        // const message = message_in;
 
 
 
@@ -1144,7 +1126,7 @@ namespace MJS {
                 result = await page_mod_feedback_use_templ(message);
                 break;
             default:
-                result = {page: "*"};
+                result = {page: ".*"};
                 break;
         }
 
@@ -1152,15 +1134,11 @@ namespace MJS {
                 wwwroot:    window.location.origin,
                 // location_pathname:  window.location.pathname,
                 // location_search:    window.location.search,
-                // location_hash:      window.location.hash,
-                body_id:            window.document.body.getAttribute("id")             || throwf(new Error("WSC doc details get, body ID not found.")),
-                body_class:         window.document.body.getAttribute("class")          || throwf(new Error("WSC doc details get, body class not found.")),
+                body_id:            window.document.body.getAttribute("id"),
+                body_class:         window.document.body.getAttribute("class"),
                 sesskey:       ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
-                                                                                        || throwf(new Error("WSC doc details get, couldn't get logout menu item.")) // Caught
-                                    
-                                    ).search.match(/^\?sesskey=(\w+)$/)                || throwf(new Error("WSC doc details get, session key not found."))
+                                    ).search.match(/^\?sesskey=(\w+)$/)
                                     )[1],
-                // error_message:      error_message_dom ? error_message_dom.textContent || "" : undefined,
 
         };
 
