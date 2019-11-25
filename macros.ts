@@ -433,16 +433,16 @@ namespace MJS {
 
             // Destination: Search for category (1 load)
             (this.page_details.stage == 4)                                      || throwf(new Error("New course macro, destination:\nStage unexpected."));
-            this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 4, mdl_course_categories: {name: this.data.mdl_course_categories.name}, dom_submit: "stage 4 new cat search"});
+            this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 4, displayed_stage: "Destination", mdl_course_categories: {name: this.data.mdl_course_categories.name}, dom_submit: "stage 4 new cat search"});
             this.page_details = await this.tabdata.page_loaded({page: "backup-restore"});  // TODO: Add details
 
             // Destination: Select category (1 load)
-            this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 4, mdl_course_categories: {id: this.data.mdl_course_categories.id}, dom_submit: "stage 4 new continue"});
+            this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 4, displayed_stage: "Destination", mdl_course_categories: {id: this.data.mdl_course_categories.id}, dom_submit: "stage 4 new continue"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data>({page: "backup-restore", stage: 4, mdl_course: {template_id: this.data.mdl_course.template_id}});
 
             // Restore settings (1 load)
             if (this.page_details.stage != 4)                                    { throw new Error("New course macro, restore settings:\nStage unexpected."); }
-            this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 4, restore_settings: {users: false}});
+            this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: 4, displayed_stage: "Settings", restore_settings: {users: false}});
             this.page_details = await this.tabdata.page_call({page: "backup-restore", dom_submit: "stage 4 settings submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data>({page: "backup-restore", mdl_course: {template_id: this.data.mdl_course.template_id}});
 

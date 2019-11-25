@@ -64,7 +64,7 @@ namespace MJS {
     };
 
     async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
-        async function category(message_in: DeepPartial<page_course_management_category>, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
+        async function category(message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
 
             let result: page_course_management_category;
             if (top) {
@@ -102,7 +102,7 @@ namespace MJS {
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
                 const subcategory_id = parseInt(subcategory_dom.getAttribute("data-id")!);
-                const subcategory_in = message_in ? message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) : null;
+                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) || null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
             result.mdl_course_categories = subcategories_out;
@@ -117,7 +117,7 @@ namespace MJS {
 
         return {
             page:       "course-management",
-            mdl_course_categories: await category(message_in.mdl_course_categories, document.querySelector(".category-listing > .card-body"), true),
+            mdl_course_categories: await category(message_in.mdl_course_categories || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
             mdl_course: course_list
         };
     }
@@ -295,7 +295,7 @@ namespace MJS {
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody")!;
         // const download_link = document.querySelector<HTMLAnchorElement>(".backup-files-table .c3 a");
-        const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']");
+        const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']")!;
         const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']")!;
 
         const backups: {filename: string, download_url: string}[] = [];
@@ -343,15 +343,15 @@ namespace MJS {
         for (const backup_dom of Object.values(backups_dom)) {
             const backup_file_link = backup_dom.querySelector("a")!;
             const backup_filename = backup_file_link.querySelector(".fp-filename")!.textContent!;
-            const backup_file_in_index = (message_in && message_in.mdl_course && message_in.mdl_course.backups) ?
-                                            message_in.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; })
-                                            : -1;
-            if (backup_file_in_index > -1) {
-                if (message_in.mdl_course.backups[backup_file_in_index].click) {
-                    backup_file_link.click();
-                    await sleep(100);
+            if (message_in && message_in.mdl_course && message_in.mdl_course.backups) {
+                const backup_file_in_index = message_in.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                if (backup_file_in_index > -1) {
+                    if (message_in.mdl_course.backups[backup_file_in_index].click) {
+                        backup_file_link.click();
+                        await sleep(100);
+                    }
+                    message_in.mdl_course.backups.splice(backup_file_in_index, 1);
                 }
-                message_in.mdl_course.backups.splice(backup_file_in_index, 1);
             }
             message_out.mdl_course.backups.push({filename: backup_filename});
 
@@ -385,8 +385,9 @@ namespace MJS {
         stage: 2|4|8|16|null,
         mdl_course?: {template_id?: number}
     } & (
-        {stage: 2, dom_submit?: "stage 2 submit"}
-        | { stage: 4, mdl_course_categories?: {id: number, name: string}, restore_settings: {users: boolean}, dom_submit?: "stage 4 new cat search"|"stage 4 new continue"|"stage 4 settings submit"}
+          { stage: 2, dom_submit?: "stage 2 submit" }
+        | { stage: 4, displayed_stage: "Destination", mdl_course_categories?: {id: number, name: string}, dom_submit?: "stage 4 new cat search"|"stage 4 new continue"}
+        | { stage: 4, displayed_stage: "Settings", restore_settings: {users: boolean}, dom_submit?: "stage 4 settings submit"}
         | { stage: 8, mdl_course: {fullname: string, shortname: string, startdate: number}, dom_submit?: "stage 8 submit"}
         | { stage: 16, dom_submit?: "stage 16 submit" }
         | { stage: null, mdl_course: {id: number}}
@@ -412,47 +413,59 @@ namespace MJS {
 
             case 4:
 
-                // Destination
 
-                const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
-                const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
-                const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
-                if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.name) {
-                    stage_4_new_cat_name_dom.value = message.mdl_course_categories.name;
-                }
+                const displayed_stage: "Destination"|"Settings" = document.querySelector<HTMLSpanElement>("span.backup_stage_current")!.textContent!.match(/Destination|Settings/)![0] as "Destination"|"Settings";
 
-                if (message.stage == 4 && message.mdl_course_categories && message.mdl_course_categories.id) {
-                    const stage_4_new_cat_id_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_categories.id + "']")!;
-                    stage_4_new_cat_id_dom.click();
-                }
+                if (displayed_stage == "Destination") {
 
-                if (message.dom_submit && message.dom_submit == "stage 4 new cat search") {
-                    stage_4_new_cat_search_dom.click();
-                }
-                if (message.dom_submit && message.dom_submit == "stage 4 new continue") {
-                    stage_4_new_continue_dom.click();
-                }
+                    // Destination
 
-
-                // Settings
-
-                const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
-                const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform input[name='submitbutton'][type='submit']")!;
-
-                if (message.stage == 4 && message.restore_settings) {
-                    if (/*message.restore_settings.hasOwnProperty("users") &&*/ message.restore_settings.users != undefined) {
-                        stage_4_settings_users_dom.checked = message.restore_settings.users;  // TODO: Check
-                        stage_4_settings_users_dom.dispatchEvent(new Event("change"));
-                        await sleep(100);
+                    const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
+                    const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
+                    const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
+                    if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_categories && message.mdl_course_categories.name) {
+                        stage_4_new_cat_name_dom.value = message.mdl_course_categories.name;
                     }
-                }
-                const message_out_restore_settings = stage_4_settings_users_dom ? { users: stage_4_settings_users_dom.checked } : null;
 
-                if (message.dom_submit && message.dom_submit == "stage 4 settings submit") {
-                    stage_4_settings_submit_dom.click();
+                    if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_categories && message.mdl_course_categories.id) {
+                        const stage_4_new_cat_id_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_categories.id + "']")!;
+                        stage_4_new_cat_id_dom.click();
+                    }
+
+                    if (message.dom_submit && message.dom_submit == "stage 4 new cat search") {
+                        stage_4_new_cat_search_dom.click();
+                    }
+                    if (message.dom_submit && message.dom_submit == "stage 4 new continue") {
+                        stage_4_new_continue_dom.click();
+                    }
+
+                    return { page: "backup-restore", stage: stage, displayed_stage: displayed_stage };
+
+                } else {
+
+                    // Settings
+
+                    const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
+                    const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform input[name='submitbutton'][type='submit']")!;
+
+                    if (message.stage == 4 && message.displayed_stage == "Settings" && message.restore_settings) {
+                        if (/*message.restore_settings.hasOwnProperty("users") &&*/ message.restore_settings.users != undefined) {
+                            stage_4_settings_users_dom.checked = message.restore_settings.users;  // TODO: Check
+                            stage_4_settings_users_dom.dispatchEvent(new Event("change"));
+                            await sleep(100);
+                        }
+                    }
+                    const message_out_restore_settings = { users: stage_4_settings_users_dom.checked };
+
+                    if (message.dom_submit && message.dom_submit == "stage 4 settings submit") {
+                        stage_4_settings_submit_dom.click();
+                    }
+
+                    return { page: "backup-restore", stage: stage, displayed_stage: displayed_stage, restore_settings: message_out_restore_settings };
+
                 }
 
-                return { page: "backup-restore", stage: stage, restore_settings: message_out_restore_settings };
+
                 break;
 
             case 8:
@@ -527,7 +540,7 @@ namespace MJS {
         page: "course-view-[a-z]+",
         location?: {pathname: "/course/view.php", search: {id: number}}
         mdl_course: page_course_view_course;
-        mdl_course_sections: page_course_view_course_sections;
+        mdl_course_sections?: page_course_view_course_sections;
     };
     type page_course_view_course = {
         id:         number; // Needs editing on.
@@ -549,7 +562,7 @@ namespace MJS {
         mdl_modules_name: string;
         mdl_course_module_instance: {
             name:       string;
-            intro:      string;
+            intro?:      string;
         }
     };
 
@@ -705,9 +718,9 @@ namespace MJS {
                             x_options: {level:    is_index ? 0 : 1},
                         });
                     } else {
-                        single_section_out.x_options = single_section_out.x_options || {};
-                        single_section_out.x_options.level = is_index ? 0 : 1;
-                        subsections_out.push(single_section_out);
+                        single_section_out!.x_options = single_section_out!.x_options || {};
+                        single_section_out!.x_options.level = is_index ? 0 : 1;
+                        subsections_out.push(single_section_out!);
                     }
                     is_index = false;
                 }
@@ -740,9 +753,9 @@ namespace MJS {
                         subsections_out = [];
 
                     } else {
-                        single_section_out.x_options = single_section_out.x_options || {};
-                        single_section_out.x_options.level = 0;
-                        course_out_sections.push(single_section_out);
+                        single_section_out!.x_options = single_section_out!.x_options || {};
+                        single_section_out!.x_options.level = 0;
+                        course_out_sections.push(single_section_out!);
                     }
                 }
             // }
