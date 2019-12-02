@@ -66,7 +66,7 @@ namespace MJS {
         private page_message:       Page_Data_Out|Errorlike|null = null;
         private page_is_loaded:     boolean = false;
 
-        private popup:              Popup|null = null;
+        public popup:              Popup|null = null;
 
 
         constructor(tab_id: number) {
@@ -181,13 +181,13 @@ namespace MJS {
                 }
             } while (!(this.page_is_loaded && this.page_message) && !(this.page_message && is_Errorlike(this.page_message)));
             this.macro_state = 1;
-            if (is_Errorlike(this.page_message))                                 { throw new Error(this.page_message.message, this.page_message.fileName, this.page_message.lineNumber); }
+            if (is_Errorlike(this.page_message))                                { throw new Error(this.page_message.message, this.page_message.fileName, this.page_message.lineNumber); }
             this.page_details = this.page_message;
             this.page_message = null;
             if (this.page_load_wait <= count * 10) {
                 this.page_load_count(count - this.page_load_wait / 10);
             }
-            if (!this.page_load_match<T>(this.page_details, page_data))                   { throw new Error("Page loaded:\nBody ID or class unexpected."); }
+            if (!this.page_load_match<T>(this.page_details, page_data))         { throw new Error("Page loaded:\nBody ID or class unexpected."); }
             this.macro_state = 1;
             return this.page_details;
         }
@@ -272,7 +272,7 @@ namespace MJS {
         private page_load_match<T extends Page_Data_Base>(page_details: Page_Data_Base & Page_Data_Out_Base, page_data: DeepPartial<T & Page_Data_Out_Base>):
             page_details is T & Page_Data_Out_Base {
             let result = true;
-            if (!page_data.page || page_details.moodle_page.body_id.match(RegExp("^page-" + page_data.page + "$"))) { /* OK */ } else    { result = false; }
+            //if (!page_data.page || page_details.moodle_page.body_id.match(RegExp("^page-" + page_data.page + "$"))) { /* OK */ } else    { result = false; }
             /*for (const prop in body_class) if (body_class.hasOwnProperty(prop)) {
                 if ((" " + this.page_details.moodle_page.body_class + " ").match(" " + prop + (body_class[prop] ? ("-" + body_class[prop]) : "") + " "))
                     {  OK  }
@@ -382,7 +382,7 @@ namespace MJS {
 
             if (!this.page_details || !this.page_details.hasOwnProperty("page") || this.page_details.page != "course-index(-category)?")     { return; }
 
-            if (this.page_details.moodle_page.body_id != "page-course-index-category") { return; }
+            if (!this.page_details.mdl_course_categories.id) { return; }
 
             let template_id: number;
             if (page_details.moodle_page.wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
@@ -674,7 +674,7 @@ namespace MJS {
                 {location: {pathname: "/course/changenumsections.php", search: {courseid: this.data.mdl_course.id, increase: 1, sesskey: this.page_details.moodle_page.sesskey, insertsection: 0}}},
                 {page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}},
             );
-            let new_section = this.page_details.mdl_course_sections;
+            let new_section = this.page_details.mdl_course_sections!;
 
             // Move new tab (1 load)
             this.page_details = await this.tabdata.page_load(
@@ -692,7 +692,7 @@ namespace MJS {
                                                                                     );
             this.page_details = await this.tabdata.page_call({page: "course-editsection", mdl_course_sections: {id: new_section.id, name: this.params.mdl_course_sections.name, x_options: {level: 1},
                 summary:
-                `<div class="header1"> <i class="fa fa-list" aria-hidden="true"></i> ${name}</div>
+                `<div class="header1"> <i class="fa fa-list" aria-hidden="true"></i> ${this.params.mdl_course_sections.fullname}</div>
 
                 <p></p>
 
@@ -769,7 +769,7 @@ namespace MJS {
                 This survey is anonymous.</p>
                 </div>`.replace(/^        /gm, "")}, }, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
-            new_section = this.page_details.mdl_course_sections;
+            new_section = this.page_details.mdl_course_sections!;
             let feedback_act: page_course_view_course_modules|null = null;
                 for (const module of new_section.mdl_course_modules) {
                     if (!feedback_act || module.id > feedback_act.id) {
@@ -832,7 +832,7 @@ namespace MJS {
                 return;
             }
 
-            const section = this.page_details.mdl_course_sections;
+            const section = this.page_details.mdl_course_sections!;
 
             let mod_pos = section.mdl_course_modules.length - 1;
             let mod_match_pos = 3;
@@ -991,7 +991,7 @@ namespace MJS {
 
     export class Backup_Macro extends Macro {
 
-        public params: { }; // mdl_course_categories: { mdl_course: {id: number}[]} };
+        public params: { }|null = null; // mdl_course_categories: { mdl_course: {id: number}[]} };
 
         public init(page_details: Page_Data_Out) {
             this.prereq     = false;

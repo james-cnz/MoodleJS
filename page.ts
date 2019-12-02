@@ -3,7 +3,7 @@ namespace MJS {
 
 
 
-    export type Page_Data_Base = { page: string; dom_submit?:         boolean|string; };
+    export type Page_Data_Base = { page: string; dom_submit?: boolean|string; };
 
     export type Page_Data =
           page_course_management_data
@@ -17,7 +17,7 @@ namespace MJS {
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
-        | {page: ".*"; dom_submit?: boolean|string};  // some other page
+        | { page: ".*"; dom_submit?: boolean|string; };  // some other page
 
 
 
@@ -35,7 +35,7 @@ namespace MJS {
     export type Moodle_Page = {
         wwwroot:    string;
         sesskey:    string;
-        body_id:    string;
+        //body_id:    string;
         body_class: string;
     };
 
@@ -89,19 +89,19 @@ namespace MJS {
                     // TODO: pause?
                 }
                 result = {
-                    id:         parseInt(dom.getAttribute("data-id")!),
+                    id:         parseInt(dom.dataset.id!),
                     name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
                     coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
                     checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
                     expanded:   dom.getAttribute("aria-expanded") == "true",
-                    expandable:   dom.getAttribute("data-expandable") == "1",
+                    expandable:   (dom.dataset.expandable == "1"),
                     mdl_course_categories: [],
                 };
             }
             const subcategories_dom = dom.querySelectorAll<HTMLLIElement>(":scope > ul > li");
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
-                const subcategory_id = parseInt(subcategory_dom.getAttribute("data-id")!);
+                const subcategory_id = parseInt(subcategory_dom.dataset.id!);
                 const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) || null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
@@ -112,7 +112,7 @@ namespace MJS {
         const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
         const course_list: page_course_management_course[] = [];
         for (const course_dom of Object.values(course_list_dom)) {
-            course_list.push({id: parseInt(course_dom.getAttribute("data-id")!), fullname: course_dom.querySelector("a")!.textContent!});
+            course_list.push({id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector("a")!.textContent!});
         }
 
         return {
@@ -210,7 +210,7 @@ namespace MJS {
 
 
             async function course(course_dom: HTMLDivElement): Promise<{id: number, fullname: string}> {
-                const course_id_out = parseInt(course_dom.getAttribute("data-courseid")!);
+                const course_id_out = parseInt(course_dom.dataset.courseid!);
                 const course_name_out = course_dom.querySelector<HTMLAnchorElement>(":scope .coursename a")!.text;
                 return {id: course_id_out, fullname: course_name_out};
             }
@@ -220,7 +220,7 @@ namespace MJS {
             if (!category_dom) {
                 // Category ID
                 const category_out_match =
-                    (window.document.body.getAttribute("class")!).match(/(?:^|\s)category-(\d+)(?:\s|$)/);
+                    window.document.body.className!.match(/(?:^|\s)category-(\d+)(?:\s|$)/);
 
                 const category_out_id = category_out_match ? parseInt(category_out_match[1]) : 0;
 
@@ -252,7 +252,7 @@ namespace MJS {
                 category_dom = document.querySelector<HTMLDivElement>("div.course_category_tree")!;
             } else {
                 const category_link_dom = category_dom.querySelector<HTMLAnchorElement>(":scope > .info > .categoryname > a")!;
-                const category_out_id = parseInt(category_dom.getAttribute("data-categoryid")!);
+                const category_out_id = parseInt(category_dom.dataset.categoryid!);
                 const category_out_name = category_link_dom.text;
                 category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
                 if (message.dom_expand && category_dom.classList.contains("collapsed")) {
@@ -332,7 +332,7 @@ namespace MJS {
         do {
             await sleep(100);
         } while (!backup_filemanager_dom.classList.contains("fm-loaded"));
-        await sleep(100);
+        await sleep(200);   // TODO: Check actually loaded?
         const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
         const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
         const save_button_dom = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
@@ -572,10 +572,10 @@ namespace MJS {
         const main_dom:        Element             = window.document.querySelector(":root #region-main")!;
         // const result: Partial<Page_Data> = {};
 
-        const course_out_id =    parseInt((window.document.body.getAttribute("class")!.match(/\bcourse-(\d+)\b/)!
+        const course_out_id =    parseInt((window.document.body.className!.match(/\bcourse-(\d+)\b/)!
                                  )[1]);
-        const course_out_fullname =  window.document.querySelector<HTMLAnchorElement>(":root .breadcrumb a[title]")!.getAttribute("title") || "";
-        const course_out_format =     (window.document.body.getAttribute("class")!.match(/\bformat-([a-z]+)\b/)!
+        const course_out_fullname =  window.document.querySelector<HTMLAnchorElement>(":root .breadcrumb a[title]")!.title || "";
+        const course_out_format =     (window.document.body.className!.match(/\bformat-([a-z]+)\b/)!
                         )[1];
 
         // Sections
@@ -606,7 +606,7 @@ namespace MJS {
                 // TODO: Try multiple methods?
 
             // Section Number
-            const section_num_str       = (section_dom.getAttribute("id")!
+            const section_num_str       = (section_dom.id!
                                            .match(/^section-(\d+)$/)!
                                           )[1];
             const section_out_section =    parseInt(section_num_str);  // Note: can be 0
@@ -636,7 +636,7 @@ namespace MJS {
                 for (const module_dom of Object.values(modules_dom)) {
 
                     // Module ID
-                    const module_id_str     = (module_dom.getAttribute("id")!
+                    const module_id_str     = (module_dom.id!
                                             .match(/^module-(\d+)$/)!
                                             )[1];
                     const module_out_id = parseInt(module_id_str);
@@ -1073,11 +1073,12 @@ namespace MJS {
 
         // const message = message_in;
 
-
+        const body_id = window.document.body.id;
+        if (message.page && !body_id.match(RegExp("^page-" + message.page + "$"))) { throw new Error("Unexpected page"); }
 
         let result: Page_Data;
 
-        switch (window.document.body.id) {
+        switch (body_id) {
             case "page-course-management":
                 result = await page_course_management(message);
                 break;
@@ -1145,8 +1146,8 @@ namespace MJS {
                 wwwroot:    window.location.origin,
                 // location_pathname:  window.location.pathname,
                 // location_search:    window.location.search,
-                body_id:            window.document.body.getAttribute("id")!,
-                body_class:         window.document.body.getAttribute("class")!,
+                //body_id:            body_id,
+                body_class:         window.document.body.className!,
                 sesskey:       ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
                                     ).search.match(/^\?sesskey=(\w+)$/)
                                     )[1],

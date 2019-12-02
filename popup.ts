@@ -53,17 +53,17 @@ namespace MJS {
                 macro_ui.update();
             }
 
-            this.status_dom.setAttribute("style", "display: " + (this.tabData.macro_state == 0 ? "none" : "block") + ";");
+            this.status_dom.style.display = (this.tabData.macro_state == 0) ? "none" : "block";
             if (this.tabData.macro_state != 0) {
                 this.progress_bar_dom.value = this.tabData.macro_progress;
                 this.progress_bar_dom.max   = this.tabData.macro_progress_max;
-                this.status_running_dom.setAttribute("style", "display: " + (this.tabData.macro_state > 0 ? "block" : "none") + ";");
+                this.status_running_dom.style.display = (this.tabData.macro_state > 0) ? "block" : "none";
                 if (this.tabData.macro_state < 0) {
                     this.error_message_dom.value = /*"Error type:" + this.tabData.macro_error.name + "\n"
-                                                +*/ this.tabData.macro_error.message + "\n"
-                                                + (this.tabData.macro_error.fileName ? ("file: " + this.tabData.macro_error.fileName + " line: " + this.tabData.macro_error.lineNumber + "\n") : "");
+                                                +*/ this.tabData.macro_error!.message + "\n"
+                                                + (this.tabData.macro_error!.fileName ? ("file: " + this.tabData.macro_error!.fileName + " line: " + this.tabData.macro_error!.lineNumber + "\n") : "");
                 }
-                this.status_error_dom.setAttribute("style", "display: " + (this.tabData.macro_state < 0 ? "block" : "none") + ";");
+                this.status_error_dom.style.display = (this.tabData.macro_state < 0) ? "block" : "none";
             }
 
         }
@@ -144,7 +144,7 @@ namespace MJS {
         }
 
         public update() {
-            this.new_course_dom.setAttribute("style", "display: " + ((this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.new_course.prereq) ? "block" : "none") + ";");
+            this.new_course_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.new_course.prereq) ? "block" : "none";
         }
 
         private onInput() {
@@ -180,7 +180,7 @@ namespace MJS {
         }
 
         public update() {
-            this.index_rebuild_dom.setAttribute("style", "display: " + ((this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.index_rebuild.prereq) ? "block" : "none") + ";");
+            this.index_rebuild_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.index_rebuild.prereq) ? "block" : "none";
         }
 
         private onClick() {
@@ -212,7 +212,7 @@ namespace MJS {
         }
 
         public update() {
-            this.new_section_dom.setAttribute("style", "display: " + ((this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.new_section.prereq) ? "block" : "none") + ";");
+            this.new_section_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.new_section.prereq) ? "block" : "none";
         }
 
         private onInput() {
@@ -248,7 +248,7 @@ namespace MJS {
         }
 
         public update() {
-            this.new_topic_dom.setAttribute("style", "display: " + ((this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.new_topic.prereq) ? "block" : "none") + ";");
+            this.new_topic_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.new_topic.prereq) ? "block" : "none";
         }
 
         private onInput() {
@@ -272,16 +272,16 @@ namespace MJS {
 
         constructor(new_popup: Popup) {
             super(new_popup);
-            this.backup_dom = document.querySelector<HTMLFieldSetElement>("fieldset#backup")!;
-            this.backup_list_dom = document.querySelector<HTMLTextAreaElement>("textarea#backup_list")!;
-            this.backup_button_dom = document.querySelector<HTMLButtonElement>("button#backup_button")!;
+            this.backup_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#backup")!;
+            this.backup_list_dom    = document.querySelector<HTMLTextAreaElement>("textarea#backup_list")!;
+            this.backup_button_dom  = document.querySelector<HTMLButtonElement>("button#backup_button")!;
             const this_ui = this;
             this.backup_button_dom.addEventListener("click", function() { this_ui.onClick(); });
             // this.backup_list_dom.addEventListener("input", function() { this_ui.onInput(); });
         }
 
         public update() {
-            this.backup_dom.setAttribute("style", "display: " + ((this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.backup.prereq) ? "block" : "none") + ";");
+            this.backup_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.backup.prereq) ? "block" : "none";
         }
 
         private onInput() {
@@ -296,7 +296,7 @@ namespace MJS {
                     const line_regexp = /\s*("[^"]*"|'[^']*'|[^,'"]*)\s*,/y;
                     let col: number = 0;
                     while (line_regexp.lastIndex < backup_headings_txt.length) {
-                        const backup_heading = line_regexp.exec(backup_headings_txt)[1];
+                        const backup_heading = line_regexp.exec(backup_headings_txt)![1];
                         if (backup_heading.trim().match(/^['"]?id['"]?$/) && id_col === null) {
                             id_col = col;
                         }
@@ -313,11 +313,11 @@ namespace MJS {
                     const line_regexp = /\s*("[^"]*"|'[^']*'|[^,'"]*)\s*,/y;
                     let col: number = 0;
                     while (col < id_col) {
-                        line_regexp.exec(backup_row_txt)[1];
+                        line_regexp.exec(backup_row_txt)![1];
                         col++;
                     }
-                    const backup_cell = line_regexp.exec(backup_row_txt)[1];
-                    const id = parseInt(backup_cell.trim().match(/^['"]?([0-9]+)['"]?$/)[1]);
+                    const backup_cell = line_regexp.exec(backup_row_txt)![1];
+                    const id = parseInt(backup_cell.trim().match(/^['"]?([0-9]+)['"]?$/)![1]);
                     this.backup_params.mdl_course_categories.mdl_course.push({id: id});
                 }
                 this.backup_button_dom.disabled = false;
