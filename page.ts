@@ -6,13 +6,13 @@ namespace MJS {
     export type Page_Data_Base = { moodle_page: Moodle_Page_Data; page: string; dom_submit?: boolean|string; };
 
     export type Page_Data =
-          page_course_management_data
-        | page_backup_backup_data
-        | page_backup_restore_data
+          page_backup_backup_data
         | page_backup_backupfilesedit_data
+        | page_backup_restore_data
         | page_backup_restorefile_data
         | page_course_editsection_data
         | page_course_index_data
+        | page_course_management_data
         | page_course_view_data
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
@@ -22,14 +22,9 @@ namespace MJS {
 
 
 
-    // export type Page_Data_In = DeepPartial<Page_Data>;
-
-
-
     export type Moodle_Page_Data = {
         wwwroot:    string;
         sesskey:    string;
-        //body_id:    string;
         body_class: string;
     };
 
@@ -37,107 +32,21 @@ namespace MJS {
     function moodle_page(): Moodle_Page_Data {
         return {
             wwwroot:    window.location.origin,
-            // location_pathname:  window.location.pathname,
-            // location_search:    window.location.search,
-            //body_id:            body_id,
-            body_class:         window.document.body.className!,
-            sesskey:       ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
-                                ).search.match(/^\?sesskey=(\w+)$/)
-                                )[1],
-
+            body_class: window.document.body.className!,
+            sesskey:    ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
+                         ).search.match(/^\?sesskey=(\w+)$/)
+                        )[1],
         };
     }
 
 
-
-    export type page_course_management_data = Page_Data_Base & {
-        page:       "course-management",
-        location?:  { pathname: "/course/management.php", search: { categoryid: number, perpage?: number } },
-        mdl_course_categories: page_course_management_category
-        mdl_course: page_course_management_course[]
-    };
-
-    export type page_course_management_category = {
-        id:         number;
-        name:       string;
-        coursecount: number;
-        mdl_course_categories: page_course_management_category[];
-        checked:    boolean;
-        expandable: boolean;
-        expanded:   boolean;
-    };
-
-    export type page_course_management_course = {
-        id:         number;
-        fullname:   string;
-    };
-
-    async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
-        async function category(message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
-
-            let result: page_course_management_category;
-            if (top) {
-                result = {
-                    id:         0,
-                    name:       "",
-                    coursecount: 0,
-                    checked:    false,
-                    expandable: true,
-                    expanded:   true,
-                    mdl_course_categories: [],
-                };
-            } else {
-                if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
-                    dom.querySelector<HTMLAnchorElement>(":scope > div > a")!.click();
-                    do {
-                        await sleep(100);
-                    } while (!dom.querySelector(":scope > ul"));
-                }
-                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
-                    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.click();
-                    // TODO: pause?
-                }
-                result = {
-                    id:         parseInt(dom.dataset.id!),
-                    name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
-                    coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
-                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
-                    expanded:   dom.getAttribute("aria-expanded") == "true",
-                    expandable:   (dom.dataset.expandable == "1"),
-                    mdl_course_categories: [],
-                };
-            }
-            const subcategories_dom = dom.querySelectorAll<HTMLLIElement>(":scope > ul > li");
-            const subcategories_out: page_course_management_category[] = [];
-            for (const subcategory_dom of Object.values(subcategories_dom)) {
-                const subcategory_id = parseInt(subcategory_dom.dataset.id!);
-                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) || null;
-                subcategories_out.push(await category(subcategory_in, subcategory_dom));
-            }
-            result.mdl_course_categories = subcategories_out;
-            return result;
-        }
-
-        const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
-        const course_list: page_course_management_course[] = [];
-        for (const course_dom of Object.values(course_list_dom)) {
-            course_list.push({id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector("a")!.textContent!});
-        }
-
-        return {
-            moodle_page: moodle_page(),
-            page:       "course-management",
-            mdl_course_categories: await category(message_in.mdl_course_categories || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
-            mdl_course: course_list
-        };
-    }
 
 
     export type page_backup_backup_data = Page_Data_Base & {
-        page: "backup-backup",
-        location?: {pathname: "/backup/backup.php", search: {id: number}}
-        stage: 1|2|4|null
-        backup?: {filename: string}
+        page:       "backup-backup",
+        location?:  { pathname: "/backup/backup.php", search: { id: number } },
+        stage:      1|2|4|null,
+        backup?:    { filename: string },
         dom_submit?: "final step"|"next"|"perform backup"|"continue"
     };
 
@@ -194,145 +103,13 @@ namespace MJS {
     }
 
 
-    export type page_course_index_data = Page_Data_Base & {
-        page: "course-index(-category)?",
-        location?: {pathname: "/course/index.php", search: {categoryid?: number}}
-        mdl_course?: {id: number},
-        mdl_course_categories: page_course_index_category;
-        dom_expand?: boolean;
-    };
-    type page_course_index_category = {
-        id:         number;
-        name:       string;
-        description?: string;
-        mdl_course_categories: page_course_index_category[];
-        mdl_course: page_course_index_course[];
-        more:       boolean;
-    };
-    type page_course_index_course = {
-        id:         number;
-        fullname:   string;
-    };
 
-    async function page_course_index(message: DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
-
-        async function category(category_dom?: HTMLDivElement): Promise<page_course_index_category> {
-
-
-            async function course(course_dom: HTMLDivElement): Promise<{id: number, fullname: string}> {
-                const course_id_out = parseInt(course_dom.dataset.courseid!);
-                const course_name_out = course_dom.querySelector<HTMLAnchorElement>(":scope .coursename a")!.text;
-                return {id: course_id_out, fullname: course_name_out};
-            }
-
-            let category_out: page_course_index_category;
-
-            if (!category_dom) {
-                // Category ID
-                const category_out_match =
-                    window.document.body.className!.match(/(?:^|\s)category-(\d+)(?:\s|$)/);
-
-                const category_out_id = category_out_match ? parseInt(category_out_match[1]) : 0;
-
-                if (category_out_id) { // Check properties individually?
-
-                    // Category Name
-                    const breadcrumbs_dom = window.document.querySelectorAll(":root div#page-navbar .breadcrumb li");  // :last-child or :last-of-type
-                    if (breadcrumbs_dom.length > 0) { /*OK*/ } else                            { throw new Error("WSC category get displayed, breadcrumbs not found"); }
-                    const breadcrumb_last_dom = breadcrumbs_dom.item(breadcrumbs_dom.length - 1);
-                    const category_out_name =  (breadcrumb_last_dom.querySelector(":scope a")!).textContent!;
-
-                    // Category Description
-                    const category_out_description = (window.document.querySelector(":root #region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
-
-                    category_out = {
-                        id:         category_out_id,
-                        name:       category_out_name,
-                        description: category_out_description,
-                        mdl_course_categories: [],
-                        mdl_course: [],
-                        more:       false
-                    };
-
-                } else {
-                    // category_out_name = "";
-                    // category_out_description = "";
-                    category_out = { id: 0, name: "", description: "", mdl_course_categories: [], mdl_course: [], more: false};
-                }
-                category_dom = document.querySelector<HTMLDivElement>("div.course_category_tree")!;
-            } else {
-                const category_link_dom = category_dom.querySelector<HTMLAnchorElement>(":scope > .info > .categoryname > a")!;
-                const category_out_id = parseInt(category_dom.dataset.categoryid!);
-                const category_out_name = category_link_dom.text;
-                category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
-                if (message.dom_expand && category_dom.classList.contains("collapsed")) {
-                    category_dom.querySelector<HTMLHeadingElement>(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname")!.click();
-                    do {
-                        await sleep(200);
-                    } while (category_dom.classList.contains("notloaded"));
-                }
-            }
-            const subcategories_out: page_course_index_category[] = [];
-            category_out.mdl_course_categories = subcategories_out;
-            for (const subcategory_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .subcategories > div.category"))) {
-                subcategories_out.push(await category(subcategory_dom));
-            }
-            const courses_out: page_course_index_course[] = [];
-            category_out.mdl_course = courses_out;
-            for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
-                courses_out.push(await course(course_dom));
-            }
-            // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
-            category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
-            return category_out;
-        }
-
-        return {
-            moodle_page: moodle_page(), 
-            page: "course-index(-category)?",
-            mdl_course_categories: await category()
-        };
-
-    }
-
-
-
-    export type page_backup_restorefile_data = Page_Data_Base & {
-        page: "backup-restorefile",
-        location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
-        mdl_course: {id?: number, backups: {filename: string, download_url: string}[]}
-    };
-
-    async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
-        const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody")!;
-        // const download_link = document.querySelector<HTMLAnchorElement>(".backup-files-table .c3 a");
-        const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']")!;
-        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']")!;
-
-        const backups: {filename: string, download_url: string}[] = [];
-        if (!course_backups_dom.classList.contains("empty")) {
-            for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>("tr"))) {
-                backups.push({filename: backup_dom.querySelector("td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>("td.cell.c3 a"))!.href});
-            }
-        }
-
-        // if (message.dom_submit && message.dom_submit == "download") {
-        //    await browser.downloads.download({url: download_link.href, saveAs: false});
-        // }
-        if (message.dom_submit && message.dom_submit == "restore") {
-            restore_link.click();
-        } else if (message.dom_submit && message.dom_submit == "manage") {
-            manage_button_dom.click();
-        }
-        return {moodle_page: moodle_page(), page: "backup-restorefile", mdl_course: {backups: backups}};
-    }
-
-
+    
     export type page_backup_backupfilesedit_data = Page_Data_Base & {
-        page: "backup-backupfilesedit",
-        location?: {pathname: "/backup/backupfilesedit.php"},
-        mdl_course: { backups: {filename: string, click?: boolean}[] },
-        backup?: { click?: "delete"|"delete_ok"},
+        page:       "backup-backupfilesedit",
+        location?:  { pathname: "/backup/backupfilesedit.php" },
+        mdl_course: { backups: { filename: string, click?: boolean }[] },
+        backup?:    { click?: "delete"|"delete_ok" },
         dom_submit?: "save"|"cancel"
     };
 
@@ -340,13 +117,14 @@ namespace MJS {
     async function page_backup_backupfilesedit(message_in: DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
 
         const backup_filemanager_dom = document.querySelector("section#region-main form#mform1 div.filemanager")!;
+        // alert (backup_filemanager_dom.outerHTML);  // TODO: Remove.
         do {
             await sleep(100);
-        } while (!backup_filemanager_dom.classList.contains("fm-loaded"));
-        await sleep(200);   // TODO: Check actually loaded?
-        const backup_list_dom = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
-        const backups_dom = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
-        const save_button_dom = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
+        } while (!backup_filemanager_dom.classList.contains("fm-loaded") || backup_filemanager_dom.querySelector("div.fp-content").children.length <= 0);
+        //await sleep(200);   // TODO: Check actually loaded?
+        const backup_list_dom   = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
+        const backups_dom       = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
+        const save_button_dom   = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
         const delete_button_dom = document.querySelector<HTMLButtonElement>("button.fp-file-delete")!;
 
         const message_out: page_backup_backupfilesedit_data = {moodle_page: moodle_page(), page: "backup-backupfilesedit", mdl_course: { backups: []}};
@@ -391,17 +169,17 @@ namespace MJS {
 
 
     export type page_backup_restore_data = Page_Data_Base & {
-        page: "backup-restore",
-        location?: {pathname: "/backup/restore.php"}
-        stage: 2|4|8|16|null,
-        mdl_course?: {template_id?: number}
+        page:       "backup-restore",
+        location?:  { pathname: "/backup/restore.php" }
+        stage:      2|4|8|16|null,
+        mdl_course?: { template_id?: number }
     } & (
           { stage: 2, dom_submit?: "stage 2 submit" }
-        | { stage: 4, displayed_stage: "Destination", mdl_course_categories?: {id: number, name: string}, dom_submit?: "stage 4 new cat search"|"stage 4 new continue"}
-        | { stage: 4, displayed_stage: "Settings", restore_settings: {users: boolean}, dom_submit?: "stage 4 settings submit"}
-        | { stage: 8, mdl_course: {fullname: string, shortname: string, startdate: number}, dom_submit?: "stage 8 submit"}
+        | { stage: 4, displayed_stage: "Destination", mdl_course_categories?: { id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" }
+        | { stage: 4, displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" }
+        | { stage: 8, mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" }
         | { stage: 16, dom_submit?: "stage 16 submit" }
-        | { stage: null, mdl_course: {id: number}}
+        | { stage: null, mdl_course: { id: number } }
     );
 
     async function page_backup_restore(message: DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
@@ -423,7 +201,6 @@ namespace MJS {
                 break;
 
             case 4:
-
 
                 const displayed_stage: "Destination"|"Settings" = document.querySelector<HTMLSpanElement>("span.backup_stage_current")!.textContent!.match(/Destination|Settings/)![0] as "Destination"|"Settings";
 
@@ -547,6 +324,310 @@ namespace MJS {
 
 
 
+    export type page_backup_restorefile_data = Page_Data_Base & {
+        page: "backup-restorefile",
+        location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
+        mdl_course: {id?: number, backups: {filename: string, download_url: string}[]}
+    };
+
+    async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
+        const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody")!;
+        const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']")!;
+        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']")!;
+
+        const backups: {filename: string, download_url: string}[] = [];
+        if (!course_backups_dom.classList.contains("empty")) {
+            for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>("tr"))) {
+                backups.push({filename: backup_dom.querySelector("td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>("td.cell.c3 a"))!.href});
+            }
+        }
+
+        if (message.dom_submit && message.dom_submit == "restore") {
+            restore_link.click();
+        } else if (message.dom_submit && message.dom_submit == "manage") {
+            manage_button_dom.click();
+        }
+        return {moodle_page: moodle_page(), page: "backup-restorefile", mdl_course: {backups: backups}};
+    }
+
+
+
+
+
+    export type page_course_editsection_data = Page_Data_Base & {
+        page:       "course-editsection";
+        location?:  { pathname: "/course/editsection.php", search: { id: number } },
+        mdl_course?: { id: number },
+        mdl_course_sections: page_course_editsection_section;
+    };
+    type page_course_editsection_section = {
+        id:         number;
+        name:       string;
+        summary:    string;
+        x_options:  { level?: number; }
+    };
+
+
+    async function page_course_editsection(message: DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
+        // const section_id    = message.sectionid;
+        // Start
+        const section_in = message.mdl_course_sections;
+
+        const section_dom: HTMLFormElement      = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
+        // let section: Partial<MDL_Course_Sections> = (message.mdl_course_sections||{});
+
+        // ID
+        const section_id_dom: HTMLInputElement  = section_dom.querySelector<HTMLInputElement>(":scope input[name='id']")!;
+        const section_out_id = parseInt(section_id_dom.value);
+
+        // Name
+        const section_name_dom: HTMLInputElement =    (section_dom.querySelector<HTMLInputElement>("input[name='name']")
+                                                            || section_dom.querySelector<HTMLInputElement>("input[name='name[value]']"))!;
+        if (section_in && section_in.name != undefined) { // section_in.hasOwnProperty('name')) {
+            const section_name_usedefault_dom: HTMLInputElement|null = section_dom.querySelector("input[name='usedefaultname']");
+            const section_name_customise_dom: HTMLInputElement|null  = section_dom.querySelector("input#id_name_customize");
+            if (section_name_usedefault_dom) {
+                section_name_usedefault_dom.checked = false;
+                section_name_usedefault_dom.dispatchEvent(new Event("change"));
+                await sleep(100);
+            }
+            if (section_name_customise_dom) {
+                section_name_customise_dom.checked = true;
+                section_name_customise_dom.dispatchEvent(new Event("change"));
+                await sleep(100);
+            }
+            section_name_dom.value = "" + section_in.name;
+        }
+        const section_out_name = section_name_dom.value;
+
+        // Summary
+        const section_summary_dom: HTMLTextAreaElement  = section_dom.querySelector<HTMLTextAreaElement>("textarea[name='summary_editor[text]']")!;
+        // const section_summary_item_id: string = ((section_dom.elements.namedItem("summary_editor[itemid]")
+        //                                                                            || throwf(new Error("Summary ID not found."))) as HTMLInputElement).value;
+        // const user_context = "807782";
+        if (section_in && section_in.summary != undefined) {
+            section_summary_dom.value = section_in.summary;
+        }
+        const section_out_summary = section_summary_dom.value;
+        // section_out.summary = section_summary_dom.value.replace("https://moodle.op.ac.nz/draftfile.php/"+user_context+"/user/draft/"+section_summary_item_id, "@@PLUGINFILE@@");
+
+        const section_out_x_options: {level?: number} = { };
+
+        // Level
+        const section_level_dom = section_dom.querySelector<HTMLSelectElement>("select[name='level']")!;
+        if (section_in && section_in.x_options && section_in.x_options.level != undefined) {
+            section_level_dom.value = "" + section_in.x_options.level;
+        }
+        if (section_level_dom) {
+            section_out_x_options.level = parseInt(section_level_dom.value);
+        }
+
+        // End
+        if (section_in && message.dom_submit) { // section_in.x_submit) {
+            await sleep(100);
+            section_dom.submit();
+        }
+
+        const section_out = {
+            id:         section_out_id,
+            name:       section_out_name,
+            summary:    section_out_summary,
+            x_options:  section_out_x_options
+        };
+
+        return {moodle_page: moodle_page(), page: "course-editsection", mdl_course_sections: section_out};
+    }
+
+
+
+
+    export type page_course_index_data = Page_Data_Base & {
+        page:       "course-index(-category)?",
+        location?:  {pathname: "/course/index.php", search: {categoryid?: number}}
+        mdl_course?: {id: number},
+        mdl_course_categories: page_course_index_category;
+        dom_expand?: boolean;
+    };
+    type page_course_index_category = {
+        id:         number;
+        name:       string;
+        description?: string;
+        mdl_course_categories: page_course_index_category[];
+        mdl_course: page_course_index_course[];
+        more:       boolean;
+    };
+    type page_course_index_course = {
+        id:         number;
+        fullname:   string;
+    };
+
+    async function page_course_index(message: DeepPartial<page_course_index_data>): Promise<page_course_index_data> {
+
+        async function category(category_dom?: HTMLDivElement): Promise<page_course_index_category> {
+
+
+            async function course(course_dom: HTMLDivElement): Promise<{id: number, fullname: string}> {
+                const course_id_out = parseInt(course_dom.dataset.courseid!);
+                const course_name_out = course_dom.querySelector<HTMLAnchorElement>(":scope .coursename a")!.text;
+                return {id: course_id_out, fullname: course_name_out};
+            }
+
+            let category_out: page_course_index_category;
+
+            if (!category_dom) {
+                // Category ID
+                const category_out_match =
+                    window.document.body.className!.match(/(?:^|\s)category-(\d+)(?:\s|$)/);
+
+                const category_out_id = category_out_match ? parseInt(category_out_match[1]) : 0;
+
+                if (category_out_id) { // Check properties individually?
+
+                    // Category Name
+                    const breadcrumbs_dom = window.document.querySelectorAll(":root div#page-navbar .breadcrumb li");  // :last-child or :last-of-type
+                    if (breadcrumbs_dom.length > 0) { /*OK*/ } else                            { throw new Error("WSC category get displayed, breadcrumbs not found"); }
+                    const breadcrumb_last_dom = breadcrumbs_dom.item(breadcrumbs_dom.length - 1);
+                    const category_out_name =  (breadcrumb_last_dom.querySelector(":scope a")!).textContent!;
+
+                    // Category Description
+                    const category_out_description = (window.document.querySelector(":root #region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
+
+                    category_out = {
+                        id:         category_out_id,
+                        name:       category_out_name,
+                        description: category_out_description,
+                        mdl_course_categories: [],
+                        mdl_course: [],
+                        more:       false
+                    };
+
+                } else {
+                    category_out = { id: 0, name: "", description: "", mdl_course_categories: [], mdl_course: [], more: false};
+                }
+                category_dom = document.querySelector<HTMLDivElement>("div.course_category_tree")!;
+            } else {
+                const category_link_dom = category_dom.querySelector<HTMLAnchorElement>(":scope > .info > .categoryname > a")!;
+                const category_out_id = parseInt(category_dom.dataset.categoryid!);
+                const category_out_name = category_link_dom.text;
+                category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
+                if (message.dom_expand && category_dom.classList.contains("collapsed")) {
+                    category_dom.querySelector<HTMLHeadingElement>(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname")!.click();
+                    do {
+                        await sleep(200);
+                    } while (category_dom.classList.contains("notloaded"));
+                }
+            }
+            const subcategories_out: page_course_index_category[] = [];
+            category_out.mdl_course_categories = subcategories_out;
+            for (const subcategory_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .subcategories > div.category"))) {
+                subcategories_out.push(await category(subcategory_dom));
+            }
+            const courses_out: page_course_index_course[] = [];
+            category_out.mdl_course = courses_out;
+            for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
+                courses_out.push(await course(course_dom));
+            }
+            // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
+            category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
+            return category_out;
+        }
+
+        return {
+            moodle_page: moodle_page(), 
+            page: "course-index(-category)?",
+            mdl_course_categories: await category()
+        };
+
+    }
+
+
+
+    export type page_course_management_data = Page_Data_Base & {
+        page:       "course-management",
+        location?:  { pathname: "/course/management.php", search: { categoryid: number, perpage?: number } },
+        mdl_course_categories: page_course_management_category
+        mdl_course: page_course_management_course[]
+    };
+
+    export type page_course_management_category = {
+        id:         number;
+        name:       string;
+        coursecount: number;
+        mdl_course_categories: page_course_management_category[];
+        checked:    boolean;
+        expandable: boolean;
+        expanded:   boolean;
+    };
+
+    export type page_course_management_course = {
+        id:         number;
+        fullname:   string;
+    };
+
+    async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
+        async function category(message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
+
+            let result: page_course_management_category;
+            if (top) {
+                result = {
+                    id:         0,
+                    name:       "",
+                    coursecount: 0,
+                    checked:    false,
+                    expandable: true,
+                    expanded:   true,
+                    mdl_course_categories: [],
+                };
+            } else {
+                if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
+                    dom.querySelector<HTMLAnchorElement>(":scope > div > a")!.click();
+                    do {
+                        await sleep(100);
+                    } while (!dom.querySelector(":scope > ul"));
+                }
+                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
+                    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.click();
+                    // TODO: pause?
+                }
+                result = {
+                    id:         parseInt(dom.dataset.id!),
+                    name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
+                    coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
+                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
+                    expanded:   dom.getAttribute("aria-expanded") == "true",
+                    expandable: (dom.dataset.expandable == "1"),
+                    mdl_course_categories: [],
+                };
+            }
+            const subcategories_dom = dom.querySelectorAll<HTMLLIElement>(":scope > ul > li");
+            const subcategories_out: page_course_management_category[] = [];
+            for (const subcategory_dom of Object.values(subcategories_dom)) {
+                const subcategory_id = parseInt(subcategory_dom.dataset.id!);
+                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) || null;
+                subcategories_out.push(await category(subcategory_in, subcategory_dom));
+            }
+            result.mdl_course_categories = subcategories_out;
+            return result;
+        }
+
+        const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
+        const course_list: page_course_management_course[] = [];
+        for (const course_dom of Object.values(course_list_dom)) {
+            course_list.push({id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector("a")!.textContent!});
+        }
+
+        return {
+            moodle_page: moodle_page(),
+            page:       "course-management",
+            mdl_course_categories: await category(message_in.mdl_course_categories || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
+            mdl_course: course_list
+        };
+    }
+
+
+
+
+
     export type page_course_view_data = Page_Data_Base & {
         page: "course-view-[a-z]+",
         location?: {pathname: "/course/view.php", search: {id: number}}
@@ -573,7 +654,7 @@ namespace MJS {
         mdl_modules_name: string;
         mdl_course_module_instance: {
             name:       string;
-            intro?:      string;
+            intro?:     string;
         }
     };
 
@@ -620,10 +701,10 @@ namespace MJS {
             const section_num_str       = (section_dom.id!
                                            .match(/^section-(\d+)$/)!
                                           )[1];
-            const section_out_section =    parseInt(section_num_str);  // Note: can be 0
+            const section_out_section   = parseInt(section_num_str);  // Note: can be 0
 
             // Section Name
-            const section_out_name =       (section_dom.querySelector(":scope > .content > .sectionname")!
+            const section_out_name      = (section_dom.querySelector(":scope > .content > .sectionname")!
                                           ).textContent!;
                                           // TODO: Remove spurious whitespace.  Note: There may be hidden and visible section names?
 
@@ -784,108 +865,51 @@ namespace MJS {
     }
 
 
-    /*
-    export type page_backup_backup_data = Partial<Page_Data> & {
-        page: "backup-backup";
-
-    }
-
-    async function page_backup_backup(message: Partial<Page_Data>): Promise<page_backup_backup_data> {
-
-    }
-    */
 
 
-    export type page_course_editsection_data = Page_Data_Base & {
-        page: "course-editsection";
-        location?: {pathname: "/course/editsection.php", search: {id: number}},
-        mdl_course?: {id: number},
-        mdl_course_sections: page_course_editsection_section;
-    };
-    type page_course_editsection_section = {
-        id:         number;
-        name:       string;
-        summary:    string;
-        x_options:  { level?: number; }
+
+
+    export type page_mod_feedback_edit_data = Page_Data_Base & {
+        page: "mod-feedback-edit",
+        location?: {pathname: "/mod/feedback/edit.php", search: {id: number, do_show: "edit"|"templates"}},
+        mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
     };
 
+    async function page_mod_feedback_edit(message: DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
+       const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid")!;
+       if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
+            && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
+            template_id_dom.value = "" + message.mdl_course_modules.mdl_course_module_instance.mdl_feedback_template_id;
+            template_id_dom.dispatchEvent(new Event("change"));
 
-    async function page_course_editsection(message: DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
-        // const section_id    = message.sectionid;
-        // Start
-        const section_in = message.mdl_course_sections;
-
-        const section_dom:         HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
-        // let section: Partial<MDL_Course_Sections> = (message.mdl_course_sections||{});
-
-        // ID
-        const section_id_dom:      HTMLInputElement  = section_dom.querySelector<HTMLInputElement>(":scope input[name='id']")!;
-        // section.id = parseInt(section_id_dom.value);
-        const section_out_id = parseInt(section_id_dom.value);
-
-        // Name
-        const section_name_dom:    HTMLInputElement  =    (section_dom.querySelector<HTMLInputElement>("input[name='name']")
-                                                            || section_dom.querySelector<HTMLInputElement>("input[name='name[value]']"))!;
-        if (section_in && section_in.name != undefined) { // section_in.hasOwnProperty('name')) {
-            const section_name_usedefault_dom:  HTMLInputElement|null = section_dom.querySelector("input[name='usedefaultname']");
-            const section_name_customise_dom: HTMLInputElement|null = section_dom.querySelector("input#id_name_customize");
-            if (section_name_usedefault_dom) {
-                section_name_usedefault_dom.checked = false;
-                section_name_usedefault_dom.dispatchEvent(new Event("change"));
-                await sleep(100);
-            }
-            if (section_name_customise_dom) {
-                section_name_customise_dom.checked = true;
-                section_name_customise_dom.dispatchEvent(new Event("change"));
-                await sleep(100);
-            }
-            section_name_dom.value = "" + section_in.name;
-        }
-        const section_out_name = section_name_dom.value;
-
-        // Summary
-        const section_summary_dom: HTMLTextAreaElement  = section_dom.querySelector<HTMLTextAreaElement>("textarea[name='summary_editor[text]']")!;
-        // const section_summary_item_id: string = ((section_dom.elements.namedItem("summary_editor[itemid]")
-        //                                                                            || throwf(new Error("Summary ID not found."))) as HTMLInputElement).value;
-        // const user_context = "807782";
-        if (section_in && section_in.summary != undefined) {
-            section_summary_dom.value = section_in.summary;
-        }
-        const section_out_summary = section_summary_dom.value;
-        // section_out.summary = section_summary_dom.value.replace("https://moodle.op.ac.nz/draftfile.php/"+user_context+"/user/draft/"+section_summary_item_id, "@@PLUGINFILE@@");
-
-        const section_out_x_options: {level?: number} = { };
-
-        // Level
-        const section_level_dom = section_dom.querySelector<HTMLSelectElement>("select[name='level']")!;
-        if (section_in && section_in.x_options && section_in.x_options.level != undefined) {
-            section_level_dom.value = "" + section_in.x_options.level;
-        }
-        if (section_level_dom) {
-            section_out_x_options.level = parseInt(section_level_dom.value);
-        }
-
-        // End
-        if (section_in && message.dom_submit) { // section_in.x_submit) {
-            await sleep(100);
-            section_dom.submit();
-        }
-
-        const section_out = {
-            id:         section_out_id,
-            name:       section_out_name,
-            summary:    section_out_summary,
-            x_options:  section_out_x_options
-        };
-
-        return {moodle_page: moodle_page(), page: "course-editsection", mdl_course_sections: section_out};
+       }
+       return { moodle_page: moodle_page(), page: "mod-feedback-edit" };
     }
+
+
+    export type page_mod_feedback_use_templ_data = Page_Data_Base & {
+        page: "mod-feedback-use_templ";
+        location?: {pathname: "/mod/feedback/use_templ.php"}
+        // mdl_course_modules: {x_submit: boolean;};
+        // dom_submit: boolean
+    };
+
+    async function page_mod_feedback_use_templ(message: DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
+       const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form#mform1.mform input#id_submitbutton")!;
+       if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
+            submit_dom.click();
+       }
+       return {moodle_page: moodle_page(), page: "mod-feedback-use_templ"};
+    }
+
+
+
 
 
     export type page_module_edit_data = Page_Data_Base & {
-        page: "mod-[a-z]+-mod",
-        location?: {pathname: "/course/modedit.php", search: {update: number}},
-        mdl_course?: {id: number}
+        page:       "mod-[a-z]+-mod",
+        location?:  { pathname: "/course/modedit.php", search: { update: number } },
+        mdl_course?: { id: number }
         mdl_course_modules: page_module_edit_module
     };
     type page_module_edit_module = {
@@ -894,10 +918,10 @@ namespace MJS {
         course:     number;
         section:    number;
         mdl_modules_name: string;
-        mdl_course_module_instance: Partial<{
-            name: string;
-            intro: string;
-        }>
+        mdl_course_module_instance: {
+            name:   string;
+            intro:  string;
+        }
     };
 
     async function page_module_edit(message: DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
@@ -1036,41 +1060,6 @@ namespace MJS {
 
 
 
-    export type page_mod_feedback_edit_data = Page_Data_Base & {
-        page: "mod-feedback-edit",
-        location?: {pathname: "/mod/feedback/edit.php", search: {id: number, do_show: "edit"|"templates"}},
-        mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
-    };
-
-    async function page_mod_feedback_edit(message: DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
-       const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid")!;
-       if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
-            && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
-            template_id_dom.value = "" + message.mdl_course_modules.mdl_course_module_instance.mdl_feedback_template_id;
-            template_id_dom.dispatchEvent(new Event("change"));
-
-       }
-       return {moodle_page: moodle_page(), page: "mod-feedback-edit"};
-    }
-
-
-    export type page_mod_feedback_use_templ_data = Page_Data_Base & {
-        page: "mod-feedback-use_templ";
-        location?: {pathname: "/mod/feedback/use_templ.php"}
-        // mdl_course_modules: {x_submit: boolean;};
-        // dom_submit: boolean
-    };
-
-    async function page_mod_feedback_use_templ(message: DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
-       const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form#mform1.mform input#id_submitbutton")!;
-       if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
-            submit_dom.click();
-       }
-       return {moodle_page: moodle_page(), page: "mod-feedback-use_templ"};
-    }
-
-
-
 
 
 
@@ -1090,31 +1079,37 @@ namespace MJS {
         let result: Page_Data;
 
         switch (body_id) {
-            case "page-course-management":
-                result = await page_course_management(message);
-                break;
-            case "page-course-index":
-            case "page-course-index-category":
-                result = await page_course_index(message);
-                break;
-            case "page-course-view-onetopic":
-            case "page-course-view-multitopic":
-                result = await page_course_view(message);
-                break;
             case "page-backup-backup":
                 result = await page_backup_backup(message);
                 break;
             case "page-backup-backupfilesedit":
                 result = await page_backup_backupfilesedit(message);
                 break;
-            case "page-backup-restorefile":
-                result = await page_backup_restorefile(message);
-                break;
             case "page-backup-restore":
                 result = await page_backup_restore(message);
                 break;
+            case "page-backup-restorefile":
+                result = await page_backup_restorefile(message);
+                break;
             case "page-course-editsection":
                 result = await page_course_editsection(message);
+                break;
+            case "page-course-index":
+                case "page-course-index-category":
+                    result = await page_course_index(message);
+                    break;
+            case "page-course-management":
+                result = await page_course_management(message);
+                break;
+            case "page-course-view-onetopic":
+            case "page-course-view-multitopic":
+                result = await page_course_view(message);
+                break;
+            case "page-mod-feedback-edit":
+                result = await page_mod_feedback_edit(message);
+                break;
+            case "page-mod-feedback-use_templ":
+                result = await page_mod_feedback_use_templ(message);
                 break;
             case "page-mod-assign-mod":
             case "page-mod-assignment-mod":
@@ -1141,12 +1136,6 @@ namespace MJS {
             case "page-mod-wiki-mod":
             case "page-mod-workshop-mod":
                 result = await page_module_edit(message);
-                break;
-            case "page-mod-feedback-edit":
-                result = await page_mod_feedback_edit(message);
-                break;
-            case "page-mod-feedback-use_templ":
-                result = await page_mod_feedback_use_templ(message);
                 break;
             default:
                 result = {moodle_page: moodle_page(), page: ".*"};
