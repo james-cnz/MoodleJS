@@ -14,7 +14,7 @@ namespace MJS {
             const bg_this = this;
             browser.runtime.onMessage.addListener(
                 function(message: object, sender: browser.runtime.MessageSender) {
-                    bg_this.onMessage(message as Page_Data_Out, sender);
+                    bg_this.onMessage(message as Page_Data, sender);
                 }
             );
             browser.tabs.onUpdated.addListener(
@@ -31,7 +31,7 @@ namespace MJS {
             return this.tabData[index];
         }
 
-        public onMessage(message: Page_Data_Out, sender: browser.runtime.MessageSender) {
+        public onMessage(message: Page_Data, sender: browser.runtime.MessageSender) {
             if (sender.tab && sender.tab.id) {
                 this.getTabData(sender.tab.id).onMessage(message, sender);
             }

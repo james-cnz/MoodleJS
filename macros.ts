@@ -59,11 +59,11 @@ namespace MJS {
             backup:         new Backup_Macro(this)
         };
 
-        private page_details:       Page_Data_Out|null = null;
+        private page_details:       Page_Data|null = null;
         private page_tab_id:        number;
 
         private page_load_wait:     number = 0;
-        private page_message:       Page_Data_Out|Errorlike|null = null;
+        private page_message:       Page_Data|Errorlike|null = null;
         private page_is_loaded:     boolean = false;
 
         public popup:              Popup|null = null;
@@ -123,7 +123,7 @@ namespace MJS {
         }
 
 
-        public async page_call<T extends Page_Data>(message: DeepPartial<T>): Promise<T & Page_Data_Out_Base> {
+        public async page_call<T extends Page_Data>(message: DeepPartial<T>): Promise<T> {
 
             (this.macro_state == 1)                                             || throwf(new Error("Page call:\nUnexpected state."));
 
@@ -132,7 +132,7 @@ namespace MJS {
                 this.page_is_loaded = false;
                 this.page_message = null;
             }
-            const result = await browser.tabs.sendMessage(this.page_tab_id, message) as (T & Page_Data_Out_Base)|Errorlike;
+            const result = await browser.tabs.sendMessage(this.page_tab_id, message) as T|Errorlike;
             if (is_Errorlike(result))                                            { throw (new Error((result as Errorlike).message)); }
 
             return result;
@@ -140,17 +140,17 @@ namespace MJS {
 
 
         public async page_load<T extends Page_Data>(
-                                page_data: DeepPartial<T & Page_Data_Out_Base> & {location: {pathname: string, search: {[index: string]: number|string}}},
-                                count: number = 1): Promise<T & Page_Data_Out_Base> {
+                                page_data: DeepPartial<T> & {location: {pathname: string, search: {[index: string]: number|string}}},
+                                count: number = 1): Promise<T> {
             return await this.page_load2<T>(page_data, page_data, count);
         }
 
 
         public async page_load2<T extends Page_Data>(
             page_data1: DeepPartial<Page_Data> & {location: {pathname: string, search: {[index: string]: number|string}}},
-            page_data2: DeepPartial<T & Page_Data_Out_Base>,
+            page_data2: DeepPartial<T>,
             count: number = 1
-        ): Promise<T & Page_Data_Out_Base> {
+        ): Promise<T> {
             const pathname = page_data1.location.pathname;
             const search = page_data1.location.search;
 
@@ -166,8 +166,8 @@ namespace MJS {
         }
 
 
-        public async page_loaded<T extends Page_Data>(page_data: DeepPartial<T & Page_Data_Out_Base>,
-            count: number = 1): Promise<T & Page_Data_Out_Base> {
+        public async page_loaded<T extends Page_Data>(page_data: DeepPartial<T>,
+            count: number = 1): Promise<T> {
 
             (this.macro_state == 2)                                             || throwf(new Error("Page loaded:\nUnexpected state."));
 
@@ -203,7 +203,7 @@ namespace MJS {
         }
 
 
-        public onMessage(message: Page_Data_Out|Errorlike, _sender: browser.runtime.MessageSender) {
+        public onMessage(message: Page_Data|Errorlike, _sender: browser.runtime.MessageSender) {
 
             if (!this.page_message || this.macro_state == 0) {
                 this.page_message = message;
@@ -260,7 +260,7 @@ namespace MJS {
         }
 
 
-        private macros_init(page_details: Page_Data_Out|null) {
+        private macros_init(page_details: Page_Data|null) {
             this.macros.new_course.init(page_details);
             this.macros.index_rebuild.init(page_details);
             this.macros.new_section.init(page_details);
@@ -269,8 +269,8 @@ namespace MJS {
         }
 
 
-        private page_load_match<T extends Page_Data_Base>(page_details: Page_Data_Base & Page_Data_Out_Base, page_data: DeepPartial<T & Page_Data_Out_Base>):
-            page_details is T & Page_Data_Out_Base {
+        private page_load_match<T extends Page_Data_Base>(page_details: Page_Data_Base, page_data: DeepPartial<T>):
+            page_details is T {
             let result = true;
             //if (!page_data.page || page_details.moodle_page.body_id.match(RegExp("^page-" + page_data.page + "$"))) { /* OK */ } else    { result = false; }
             /*for (const prop in body_class) if (body_class.hasOwnProperty(prop)) {
@@ -302,7 +302,7 @@ namespace MJS {
 
         protected progress_max: number  = 1;
 
-        protected page_details: Page_Data_Out;
+        protected page_details: Page_Data;
 
         constructor(new_tabdata: TabData) {
             this.tabdata = new_tabdata;
@@ -310,7 +310,7 @@ namespace MJS {
         }
 
 
-        public abstract init(page_details: Page_Data_Out|null): void;
+        public abstract init(page_details: Page_Data|null): void;
 
 
         public async run(): Promise<void> {
@@ -374,7 +374,7 @@ namespace MJS {
         protected data: New_Course_Data|null = null;
 
 
-        public init(page_details: Page_Data_Out) {
+        public init(page_details: Page_Data) {
 
             this.prereq = false;
 
@@ -498,7 +498,7 @@ namespace MJS {
         protected data: {mdl_course: {id: number}; mdl_course_sections: {section: number}; last_section_num: number} | null = null;
 
 
-        public init(page_details: Page_Data_Out) {
+        public init(page_details: Page_Data) {
 
             this.prereq = false;
 
@@ -610,7 +610,7 @@ namespace MJS {
         protected data: {mdl_course: {id: number}, mdl_course_sections: {section: number}, mdl_course_modules: {feedback_template_id: number}}|null = null;
 
 
-        public init(page_details: Page_Data_Out) {
+        public init(page_details: Page_Data) {
 
             this.prereq = false;
             // Get site details
@@ -816,7 +816,7 @@ namespace MJS {
 
         protected data: {mdl_course: {id: number}, mdl_course_sections: {section: number}, mdl_course_modules: {next_id: number, first_topic: boolean}}|null = null;
 
-        public init(page_details: Page_Data_Out) {
+        public init(page_details: Page_Data) {
 
             this.prereq = false;
 
@@ -993,7 +993,7 @@ namespace MJS {
 
         public params: { }|null = null; // mdl_course_categories: { mdl_course: {id: number}[]} };
 
-        public init(page_details: Page_Data_Out) {
+        public init(page_details: Page_Data) {
             this.prereq     = false;
             if (!page_details || page_details.page != "course-management") { return; }
             this.progress_max = 1000;

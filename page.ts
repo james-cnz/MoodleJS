@@ -3,7 +3,7 @@ namespace MJS {
 
 
 
-    export type Page_Data_Base = { page: string; dom_submit?: boolean|string; };
+    export type Page_Data_Base = { moodle_page: Moodle_Page_Data; page: string; dom_submit?: boolean|string; };
 
     export type Page_Data =
           page_course_management_data
@@ -17,7 +17,7 @@ namespace MJS {
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
-        | { page: ".*"; dom_submit?: boolean|string; };  // some other page
+        | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; };  // some other page
 
 
 
@@ -25,19 +25,28 @@ namespace MJS {
     // export type Page_Data_In = DeepPartial<Page_Data>;
 
 
-    export type Page_Data_Out_Base = {
-        moodle_page:        Moodle_Page;
-    };
 
-    export type Page_Data_Out = Page_Data & Page_Data_Out_Base;
-
-
-    export type Moodle_Page = {
+    export type Moodle_Page_Data = {
         wwwroot:    string;
         sesskey:    string;
         //body_id:    string;
         body_class: string;
     };
+
+
+    function moodle_page(): Moodle_Page_Data {
+        return {
+            wwwroot:    window.location.origin,
+            // location_pathname:  window.location.pathname,
+            // location_search:    window.location.search,
+            //body_id:            body_id,
+            body_class:         window.document.body.className!,
+            sesskey:       ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
+                                ).search.match(/^\?sesskey=(\w+)$/)
+                                )[1],
+
+        };
+    }
 
 
 
@@ -116,6 +125,7 @@ namespace MJS {
         }
 
         return {
+            moodle_page: moodle_page(),
             page:       "course-management",
             mdl_course_categories: await category(message_in.mdl_course_categories || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
             mdl_course: course_list
@@ -150,7 +160,7 @@ namespace MJS {
                 } else if (message.dom_submit && message.dom_submit == "next") {
                     step1_next_dom.click();
                 }
-                return {page: "backup-backup", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage};
                 break;
 
             case 2:
@@ -158,7 +168,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "next") {
                     step2_next_dom.click();
                 }
-                return {page: "backup-backup", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage};
                 break;
 
             case 4:
@@ -167,7 +177,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "perform backup") {
                     step4_next_dom.click();
                 }
-                return {page: "backup-backup", stage: stage, backup: {filename: step4_filename}};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, backup: {filename: step4_filename}};
                 break;
 
             case null:
@@ -175,7 +185,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
-                return {page: "backup-backup", stage: null};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: null};
                 break;
 
             default:
@@ -278,6 +288,7 @@ namespace MJS {
         }
 
         return {
+            moodle_page: moodle_page(), 
             page: "course-index(-category)?",
             mdl_course_categories: await category()
         };
@@ -313,7 +324,7 @@ namespace MJS {
         } else if (message.dom_submit && message.dom_submit == "manage") {
             manage_button_dom.click();
         }
-        return {page: "backup-restorefile", mdl_course: {backups: backups}};
+        return {moodle_page: moodle_page(), page: "backup-restorefile", mdl_course: {backups: backups}};
     }
 
 
@@ -338,7 +349,7 @@ namespace MJS {
         const save_button_dom = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
         const delete_button_dom = document.querySelector<HTMLButtonElement>("button.fp-file-delete")!;
 
-        const message_out: page_backup_backupfilesedit_data = {page: "backup-backupfilesedit", mdl_course: { backups: []}};
+        const message_out: page_backup_backupfilesedit_data = {moodle_page: moodle_page(), page: "backup-backupfilesedit", mdl_course: { backups: []}};
 
         for (const backup_dom of Object.values(backups_dom)) {
             const backup_file_link = backup_dom.querySelector("a")!;
@@ -408,7 +419,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "stage 2 submit") {
                     stage_2_submit_dom.click();
                 }
-                return {page: "backup-restore", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage};
                 break;
 
             case 4:
@@ -439,7 +450,7 @@ namespace MJS {
                         stage_4_new_continue_dom.click();
                     }
 
-                    return { page: "backup-restore", stage: stage, displayed_stage: displayed_stage };
+                    return { moodle_page: moodle_page(), page: "backup-restore", stage: stage, displayed_stage: displayed_stage };
 
                 } else {
 
@@ -461,7 +472,7 @@ namespace MJS {
                         stage_4_settings_submit_dom.click();
                     }
 
-                    return { page: "backup-restore", stage: stage, displayed_stage: displayed_stage, restore_settings: message_out_restore_settings };
+                    return { moodle_page: moodle_page(), page: "backup-restore", stage: stage, displayed_stage: displayed_stage, restore_settings: message_out_restore_settings };
 
                 }
 
@@ -506,7 +517,7 @@ namespace MJS {
                     submit_dom.click();
                 }
 
-                return {page: "backup-restore", stage: stage, mdl_course: message_out_mdl_course};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage, mdl_course: message_out_mdl_course};
                 break;
 
             case 16:
@@ -516,7 +527,7 @@ namespace MJS {
                     submit16_dom.click();
                 }
 
-                return {page: "backup-restore", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage};
                 break;
 
             case null:
@@ -526,7 +537,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "stage complete submit") {
                     submitcomplete_dom.click();
                 }
-                return {page: "backup-restore", stage: null, mdl_course: {id: course_id}};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: null, mdl_course: {id: course_id}};
                 break;
             default:
                 throw new Error("Page backup restore: stage not recognised.");
@@ -769,7 +780,7 @@ namespace MJS {
             mdl_course_sections: course_out_sections
         };
 
-        return {page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_sections: single_section_out};
+        return {moodle_page: moodle_page(), page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_sections: single_section_out};
     }
 
 
@@ -867,7 +878,7 @@ namespace MJS {
             x_options:  section_out_x_options
         };
 
-        return {page: "course-editsection", mdl_course_sections: section_out};
+        return {moodle_page: moodle_page(), page: "course-editsection", mdl_course_sections: section_out};
     }
 
 
@@ -1020,7 +1031,7 @@ namespace MJS {
             }
         };
 
-        return {page: "mod-[a-z]+-mod", mdl_course_modules: module_out};
+        return {moodle_page: moodle_page(), page: "mod-[a-z]+-mod", mdl_course_modules: module_out};
     }
 
 
@@ -1039,7 +1050,7 @@ namespace MJS {
             template_id_dom.dispatchEvent(new Event("change"));
 
        }
-       return {page: "mod-feedback-edit"};
+       return {moodle_page: moodle_page(), page: "mod-feedback-edit"};
     }
 
 
@@ -1055,7 +1066,7 @@ namespace MJS {
        if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
             submit_dom.click();
        }
-       return {page: "mod-feedback-use_templ"};
+       return {moodle_page: moodle_page(), page: "mod-feedback-use_templ"};
     }
 
 
@@ -1064,12 +1075,12 @@ namespace MJS {
 
 
 
-    async function page_onMessage(message: DeepPartial<Page_Data>, sender?: browser.runtime.MessageSender): Promise<Page_Data_Out> {
+    async function page_onMessage(message: DeepPartial<Page_Data>, sender?: browser.runtime.MessageSender): Promise<Page_Data> {
         if (sender && sender.tab !== undefined) { throw new Error("Unexpected message"); }
         return await page_get_set(message);
     }
 
-    async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data_Out> {
+    async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data> {
 
         // const message = message_in;
 
@@ -1138,24 +1149,12 @@ namespace MJS {
                 result = await page_mod_feedback_use_templ(message);
                 break;
             default:
-                result = {page: ".*"};
+                result = {moodle_page: moodle_page(), page: ".*"};
                 break;
         }
 
-        (result as Page_Data_Out).moodle_page = {
-                wwwroot:    window.location.origin,
-                // location_pathname:  window.location.pathname,
-                // location_search:    window.location.search,
-                //body_id:            body_id,
-                body_class:         window.document.body.className!,
-                sesskey:       ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
-                                    ).search.match(/^\?sesskey=(\w+)$/)
-                                    )[1],
 
-        };
-
-
-        return result as Page_Data_Out;
+        return result as Page_Data;
     }
 
 
@@ -1164,7 +1163,7 @@ namespace MJS {
         browser.runtime.onMessage.addListener(page_onMessage);
         // return {status: true};
         // return c_on_call({});
-        let message: Page_Data_Out|Errorlike;
+        let message: Page_Data|Errorlike;
         try {
             message = await page_onMessage({});
         } catch (e) {
