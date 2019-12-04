@@ -58,12 +58,13 @@ namespace MJS {
                 this.progress_bar_dom.value = this.tabData.macro_progress;
                 this.progress_bar_dom.max   = this.tabData.macro_progress_max;
                 this.status_running_dom.style.display = (this.tabData.macro_state > 0) ? "block" : "none";
-                if (this.tabData.macro_state < 0) {
-                    this.error_message_dom.value = /*"Error type:" + this.tabData.macro_error.name + "\n"
-                                                +*/ this.tabData.macro_error!.message + "\n"
-                                                + (this.tabData.macro_error!.fileName ? ("file: " + this.tabData.macro_error!.fileName + " line: " + this.tabData.macro_error!.lineNumber + "\n") : "");
-                }
-                this.status_error_dom.style.display = (this.tabData.macro_state < 0) ? "block" : "none";
+                //if (this.tabData.macro_state < 0) {
+                    this.error_message_dom.value = this.tabData.macro_log; /*"Error type:" + this.tabData.macro_error.name + "\n"
+                                                +*/ //this.tabData.macro_error!.message + "\n"
+                                                //+ (this.tabData.macro_error!.fileName ? ("file: " + this.tabData.macro_error!.fileName + " line: " + this.tabData.macro_error!.lineNumber + "\n") : "");
+                //}
+                this.status_error_dom.style.display = (this.tabData.macro_state < 0 || this.tabData.macro_log) ? "block" : "none";
+                this.reset_button_dom.style.display = (this.tabData.macro_state < 0) ? "inline-block" : "none";
             }
 
         }

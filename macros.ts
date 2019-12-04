@@ -46,7 +46,7 @@ namespace MJS {
 
         public macro_state:         number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
         // macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
-        public macro_error:         Errorlike|null = null;
+        public macro_log:           string = "";
         public macro_progress:      number = 1;
         public macro_progress_max:  number = 1;
         public macro_cancel:        boolean = false;
@@ -59,14 +59,14 @@ namespace MJS {
             backup:         new Backup_Macro(this)
         };
 
-        private page_details:       Page_Data|null = null;
-        private page_tab_id:        number;
+        private page_details:   Page_Data|null = null;
+        private page_tab_id:    number;
 
-        private page_load_wait:     number = 0;
-        private page_message:       Page_Data|Errorlike|null = null;
-        private page_is_loaded:     boolean = false;
+        private page_load_wait: number = 0;
+        private page_message:   Page_Data|Errorlike|null = null;
+        private page_is_loaded: boolean = false;
 
-        public popup:              Popup|null = null;
+        public popup:           Popup|null = null;
 
 
         constructor(tab_id: number) {
@@ -84,7 +84,7 @@ namespace MJS {
             this.page_load_wait = 0;
             this.page_message = null;
             this.page_is_loaded = true;
-            this.macro_error = null;
+            this.macro_log = "";
             this.macro_progress = 1;
             this.macro_progress_max = 1;
             this.macro_cancel = false;
@@ -329,9 +329,18 @@ namespace MJS {
             try {
                 await this.content();
             } catch (e) {
-                if (e.message != "Cancelled") {
+                //if (e.message != "Cancelled") {
                     this.tabdata.macro_state = -1;
-                    this.tabdata.macro_error = e;
+                    //this.tabdata.macro_error = e;
+                    this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n"
+                    +*/ e.message + "\n"
+                    + ((e.message != "Cancelled" && e.fileName) ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                    + "\n";
+
+                //}
+            } finally {
+                if (this.tabdata.macro_log) {
+                    this.tabdata.macro_state = -1
                     this.tabdata.update_ui();
                     return;
                 }
@@ -438,59 +447,112 @@ namespace MJS {
                 course_list = course_list.concat(this.page_details.mdl_course);
             }
 
+            //const error_list: {course_id: number, err: Error}[] = [];
+            //let cancelled: boolean = false;
+
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
 
-                // Create backup file (9 loads)
-                this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.id}}, page: "backup-backup"});
-                // const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
-                //                                                                || throwf(new Error("Backup macro, create backup:\nContext not found."));
-                // const course_context = parseInt(course_context_match[1]);
+                let created: boolean = false;
+                let backup_filename: string;
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
-                this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
+                try {
+                    // Create backup file (9 loads)
+                    this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.id}}, page: "backup-backup"});
+                    // const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
+                    //                                                                || throwf(new Error("Backup macro, create backup:\nContext not found."));
+                    // const course_context = parseInt(course_context_match[1]);
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
-                this.page_details = await this.tabdata.page_loaded<page_backup_backup_data>({page: "backup-backup"});
-                const backup_filename = this.page_details.backup.filename;
+                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
+                    this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
-                this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
+                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
+                    this.page_details = await this.tabdata.page_loaded<page_backup_backup_data>({page: "backup-backup"});
+                    backup_filename = this.page_details.backup.filename;
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
-                this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
+                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
+                    this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
 
-                /*
-                this.page_details = await this.tabdata.page_load(
-                    {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
-                    page: "backup-restorefile", mdl_course: {id: course_id}},
-                );
-                */
+                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
+                    this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
 
-                // Download backup file (1 load?)
-                const backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
-                const backup_url: string = this.page_details.mdl_course.backups[backup_index].download_url;
-                const backup_download_id = await browser.downloads.download({url: backup_url, saveAs: false});
-                let backup_download_state: string;
-                do {
-                    await sleep(100);
-                    backup_download_state = (await browser.downloads.search({id: backup_download_id}))[0].state;
-                } while (backup_download_state == "in_progress");
-                if (backup_download_state != "complete") { throw new Error("Download error"); }
-                this.tabdata.page_load_count(1);
+                    /*
+                    this.page_details = await this.tabdata.page_load(
+                        {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
+                        page: "backup-restorefile", mdl_course: {id: course_id}},
+                    );
+                    */
+                   created = true;
 
-                // Delete backup file (2 loads?)
-                this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
-                this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});
+                } catch(e) {
+                    this.tabdata.macro_log += "In course: " + course.id + "\n";
+                    if (e.message == "Cancelled") { throw e; };
+                    // error_list.push({course_id: course.id, err: e});
+                    this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                    e.message + "\n"
+                    + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                    + "\n";
+                    this.tabdata.update_ui();
+                }
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: backup_filename, click: true}]}});
+                if (created) {
 
-                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
-                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete_ok"}});
-                this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
-                this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
+                    try {
 
+                        // Download backup file (1 load?)
+                        const backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                        const backup_url: string = this.page_details.mdl_course.backups[backup_index].download_url;
+                        const backup_download_id = await browser.downloads.download({url: backup_url, saveAs: false});
+                        let backup_download_state: string;
+                        do {
+                            await sleep(100);
+                            backup_download_state = (await browser.downloads.search({id: backup_download_id}))[0].state;
+                        } while (backup_download_state == "in_progress");
+                        if (backup_download_state != "complete") { throw new Error("Download error"); }
+                        this.tabdata.page_load_count(1);
+
+                        //throw new Error("Test error"); // TODO: Remove
+
+                    } catch(e) {
+                        this.tabdata.macro_log += "In course: " + course.id + "\n";
+                        if (e.message == "Cancelled") { throw e; };
+                        // error_list.push({course_id: course.id, err: e});
+                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                        e.message + "\n"
+                        + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                        + "\n";
+                        this.tabdata.update_ui();
+                    }
+
+                    try {
+
+                        // Delete backup file (2 loads?)
+                        this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
+                        this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});
+
+                        this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: backup_filename, click: true}]}});
+
+                        this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
+                        this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete_ok"}});
+                        this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
+                        this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
+
+                    } catch(e) {
+                        this.tabdata.macro_log += "In course: " + course.id + "\n";
+                        if (e.message == "Cancelled") { throw e; };
+                        // error_list.push({course_id: course.id, err: e});
+                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                        e.message + "\n"
+                        + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                        + "\n";
+                        this.tabdata.update_ui();
+                    }
+
+                }
 
             }
+
+
+
         }
 
 
