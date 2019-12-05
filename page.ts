@@ -3,7 +3,7 @@ namespace MJS {
 
 
 
-    export type Page_Data_Base = { moodle_page: Moodle_Page_Data; page: string; dom_submit?: boolean|string; };
+
 
     export type Page_Data =
           page_backup_backup_data
@@ -20,7 +20,7 @@ namespace MJS {
         | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; };  // some other page
 
 
-
+    export type Page_Data_Base = { moodle_page: Moodle_Page_Data; page: string; dom_submit?: boolean|string; };
 
     export type Moodle_Page_Data = {
         wwwroot:    string;
@@ -104,7 +104,7 @@ namespace MJS {
 
 
 
-    
+
     export type page_backup_backupfilesedit_data = Page_Data_Base & {
         page:       "backup-backupfilesedit",
         location?:  { pathname: "/backup/backupfilesedit.php" },
@@ -121,7 +121,7 @@ namespace MJS {
         do {
             await sleep(100);
         } while (!backup_filemanager_dom.classList.contains("fm-loaded") || backup_filemanager_dom.querySelector("div.fp-content").children.length <= 0);
-        //await sleep(200);   // TODO: Check actually loaded?
+        // await sleep(200);   // TODO: Check actually loaded?
         const backup_list_dom   = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
         const backups_dom       = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
         const save_button_dom   = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
@@ -168,19 +168,27 @@ namespace MJS {
     }
 
 
-    export type page_backup_restore_data = Page_Data_Base & {
+    export type page_backup_restore_data =
+          page_backup_restore_data_2
+        | page_backup_restore_data_4d
+        | page_backup_restore_data_4s
+        | page_backup_restore_data_8
+        | page_backup_restore_data_16
+        | page_backup_restore_data_final;
+
+    export type page_backup_restore_data_base = Page_Data_Base & {
         page:       "backup-restore",
         location?:  { pathname: "/backup/restore.php" }
-        stage:      2|4|8|16|null,
+        stage:      number|null,
         mdl_course?: { template_id?: number }
-    } & (
-          { stage: 2, dom_submit?: "stage 2 submit" }
-        | { stage: 4, displayed_stage: "Destination", mdl_course_categories?: { id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" }
-        | { stage: 4, displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" }
-        | { stage: 8, mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" }
-        | { stage: 16, dom_submit?: "stage 16 submit" }
-        | { stage: null, mdl_course: { id: number } }
-    );
+    };
+
+    export type page_backup_restore_data_2  = page_backup_restore_data_base & { stage: 2, dom_submit?: "stage 2 submit" };
+    export type page_backup_restore_data_4d = page_backup_restore_data_base & { stage: 4, displayed_stage: "Destination", mdl_course_categories?: { id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" };
+    export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" };
+    export type page_backup_restore_data_8  = page_backup_restore_data_base & { stage: 8, mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" };
+    export type page_backup_restore_data_16 = page_backup_restore_data_base & { stage: 16, dom_submit?: "stage 16 submit" };
+    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, mdl_course: { id: number } };
 
     async function page_backup_restore(message: DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
@@ -533,7 +541,7 @@ namespace MJS {
         }
 
         return {
-            moodle_page: moodle_page(), 
+            moodle_page: moodle_page(),
             page: "course-index(-category)?",
             mdl_course_categories: await category()
         };
@@ -603,7 +611,7 @@ namespace MJS {
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
                 const subcategory_id = parseInt(subcategory_dom.dataset.id!);
-                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) {return value.id == subcategory_id;}) || null;
+                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) { return value.id == subcategory_id; }) || null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
             result.mdl_course_categories = subcategories_out;
@@ -929,38 +937,36 @@ namespace MJS {
         // Module Start
         const module_in = message.mdl_course_modules;
         // const cmid = message.cmid;
-        const module_dom:              HTMLFormElement         = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
+        const module_dom: HTMLFormElement = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
 
         // Module ID
-        const module_id_dom  = module_dom.elements.namedItem("coursemodule") as HTMLInputElement;
-        const module_out_id =             parseInt(module_id_dom.value);
+        const module_id_dom         = module_dom.querySelector<HTMLInputElement>("input[name='coursemodule']");
+        const module_out_id         = parseInt(module_id_dom.value);
 
         // Module Instance ID
-        const module_instance_dom  = module_dom.elements.namedItem("instance") as HTMLInputElement;
-        const module_out_instance = parseInt(module_instance_dom.value); //                    || throwf(new Error("WSC course get module, instance ID not recognised"));
-        // const module_out__instance = {id: module_out.instance};
+        const module_instance_dom   = module_dom.querySelector<HTMLInputElement>("input[name='instance']");
+        const module_out_instance   = parseInt(module_instance_dom.value);
 
         // Module Course
-        const module_course_dom  = module_dom.elements.namedItem("course") as HTMLInputElement;
-        const module_out_course = parseInt(module_course_dom.value);
+        const module_course_dom     = module_dom.querySelector<HTMLInputElement>("input[name='course']");
+        const module_out_course     = parseInt(module_course_dom.value);
 
         // Module Section
-        const module_out_section = parseInt((window.document.querySelector<HTMLInputElement>(":root form#mform1 input[name='section'][type='hidden']")
-        || throwf(new Error("WSC course get module, section num not found.")) ).value);
+        const module_out_section    = parseInt(window.document.querySelector<HTMLInputElement>(":root form#mform1 input[name='section'][type='hidden']").value);
 
         // Module ModName
-        const module_modname_dom  = module_dom.elements.namedItem("modulename") as HTMLInputElement;
-        const module_out_modname =        module_modname_dom.value;
+        const module_modname_dom    = module_dom.querySelector<HTMLInputElement>("input[name='modulename']");
+        const module_out_modname    = module_modname_dom.value;
 
         // Module Intro/Description
-        const module_description_dom = module_dom.elements.namedItem("introeditor[text]") as HTMLTextAreaElement;
+        const module_description_dom = module_dom.querySelector<HTMLTextAreaElement>("textarea[name='introeditor[text]']");
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.intro != undefined) {
             module_description_dom.value = module_in.mdl_course_module_instance.intro;
         }
         const module_out_instance_intro = module_description_dom.value;
 
         // Module Name
-        const module_name_dom = module_dom.elements.namedItem("name") as HTMLInputElement;
+        const module_name_dom = module_dom.querySelector<HTMLInputElement>("input[name='name']");
         // TODO: For label, instead of name field, use introeditor[text] field (without markup)?
 
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.name != undefined) {
@@ -971,15 +977,15 @@ namespace MJS {
 
 
         // Module Completion
-        const module_completion_dom = module_dom.elements.namedItem("completion") as HTMLInputElement;
+        const module_completion_dom = module_dom.querySelector<HTMLSelectElement>("select[name='completion']");
         const module_completion: number = module_completion_dom ? parseInt(module_completion_dom.value) : 0;
         if (module_completion == 0 || module_completion == 1 || module_completion == 2) {  }
         else                                                                        { throw new Error("WSC course get module, completion value unexpected."); }
         // module_out_completion = module_completion;
 
         // For assignments
-        const module_assignsubmission_file_enabled_x_dom = module_dom.elements.namedItem("assignsubmission_file_enabled") as HTMLInputElement;
-        const module_assignsubmission_onlinetext_enabled_x_dom = module_dom.elements.namedItem("assignsubmission_onlinetext_enabled") as HTMLInputElement;
+        const module_assignsubmission_file_enabled_x_dom = module_dom.querySelector<HTMLInputElement>("input[name='assignsubmission_file_enabled']");
+        const module_assignsubmission_onlinetext_enabled_x_dom = module_dom.querySelector<HTMLInputElement>("input[name='assignsubmission_onlinetext_enabled']");
 
         // TODO: Add these
         // const module_completionview_x_dom:     Element|RadioNodeList|null = module_dom.elements.namedItem("completionview");
@@ -1080,36 +1086,36 @@ namespace MJS {
 
         switch (body_id) {
             case "page-backup-backup":
-                result = await page_backup_backup(message);
+                result = await page_backup_backup(message as DeepPartial<page_backup_backup_data>);
                 break;
             case "page-backup-backupfilesedit":
-                result = await page_backup_backupfilesedit(message);
+                result = await page_backup_backupfilesedit(message as DeepPartial<page_backup_backupfilesedit_data>);
                 break;
             case "page-backup-restore":
-                result = await page_backup_restore(message);
+                result = await page_backup_restore(message as DeepPartial<page_backup_restore_data>);
                 break;
             case "page-backup-restorefile":
-                result = await page_backup_restorefile(message);
+                result = await page_backup_restorefile(message as DeepPartial<page_backup_restorefile_data>);
                 break;
             case "page-course-editsection":
-                result = await page_course_editsection(message);
+                result = await page_course_editsection(message as DeepPartial<page_course_editsection_data>);
                 break;
             case "page-course-index":
                 case "page-course-index-category":
-                    result = await page_course_index(message);
+                    result = await page_course_index(message as DeepPartial<page_course_index_data>);
                     break;
             case "page-course-management":
-                result = await page_course_management(message);
+                result = await page_course_management(message as DeepPartial<page_course_management_data>);
                 break;
             case "page-course-view-onetopic":
             case "page-course-view-multitopic":
-                result = await page_course_view(message);
+                result = await page_course_view(message as DeepPartial<page_course_view_data>);
                 break;
             case "page-mod-feedback-edit":
-                result = await page_mod_feedback_edit(message);
+                result = await page_mod_feedback_edit(message as DeepPartial<page_mod_feedback_edit_data>);
                 break;
             case "page-mod-feedback-use_templ":
-                result = await page_mod_feedback_use_templ(message);
+                result = await page_mod_feedback_use_templ(message as DeepPartial<page_mod_feedback_use_templ_data>);
                 break;
             case "page-mod-assign-mod":
             case "page-mod-assignment-mod":
@@ -1135,7 +1141,7 @@ namespace MJS {
             case "page-mod-url-mod":
             case "page-mod-wiki-mod":
             case "page-mod-workshop-mod":
-                result = await page_module_edit(message);
+                result = await page_module_edit(message as DeepPartial<page_module_edit_data>);
                 break;
             default:
                 result = {moodle_page: moodle_page(), page: ".*"};
@@ -1143,7 +1149,7 @@ namespace MJS {
         }
 
 
-        return result as Page_Data;
+        return result;
     }
 
 

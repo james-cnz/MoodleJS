@@ -58,11 +58,11 @@ namespace MJS {
                 this.progress_bar_dom.value = this.tabData.macro_progress;
                 this.progress_bar_dom.max   = this.tabData.macro_progress_max;
                 this.status_running_dom.style.display = (this.tabData.macro_state > 0) ? "block" : "none";
-                //if (this.tabData.macro_state < 0) {
+                // if (this.tabData.macro_state < 0) {
                     this.error_message_dom.value = this.tabData.macro_log; /*"Error type:" + this.tabData.macro_error.name + "\n"
-                                                +*/ //this.tabData.macro_error!.message + "\n"
-                                                //+ (this.tabData.macro_error!.fileName ? ("file: " + this.tabData.macro_error!.fileName + " line: " + this.tabData.macro_error!.lineNumber + "\n") : "");
-                //}
+                                                +*/ // this.tabData.macro_error!.message + "\n"
+                                                // + (this.tabData.macro_error!.fileName ? ("file: " + this.tabData.macro_error!.fileName + " line: " + this.tabData.macro_error!.lineNumber + "\n") : "");
+                // }
                 this.status_error_dom.style.display = (this.tabData.macro_state < 0 || this.tabData.macro_log) ? "block" : "none";
                 this.reset_button_dom.style.display = (this.tabData.macro_state < 0) ? "inline-block" : "none";
             }
@@ -267,14 +267,14 @@ namespace MJS {
     class Backup_UI extends Macro_UI {
 
         private backup_dom: HTMLFieldSetElement;
-        private backup_list_dom: HTMLTextAreaElement;
+        // private backup_list_dom: HTMLTextAreaElement;
         private backup_button_dom: HTMLButtonElement;
-        private backup_params: { mdl_course_categories: { mdl_course: {id: number}[]} }|null = null;
+        // private backup_params: { mdl_course_categories: { mdl_course: {id: number}[]} }|null = null;
 
         constructor(new_popup: Popup) {
             super(new_popup);
             this.backup_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#backup")!;
-            this.backup_list_dom    = document.querySelector<HTMLTextAreaElement>("textarea#backup_list")!;
+            // this.backup_list_dom    = document.querySelector<HTMLTextAreaElement>("textarea#backup_list")!;
             this.backup_button_dom  = document.querySelector<HTMLButtonElement>("button#backup_button")!;
             const this_ui = this;
             this.backup_button_dom.addEventListener("click", function() { this_ui.onClick(); });
@@ -285,6 +285,7 @@ namespace MJS {
             this.backup_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.backup.prereq) ? "block" : "none";
         }
 
+        /*
         private onInput() {
 
             try {
@@ -329,6 +330,7 @@ namespace MJS {
             }
 
         }
+        */
 
         private onClick() {
             (this.popup.tabData.macros.backup as Backup_Macro).params = {}; // this.backup_params;
