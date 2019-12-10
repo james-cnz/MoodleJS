@@ -503,12 +503,12 @@ namespace MJS {
                         const backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
                         const backup_url: string = this.page_details.mdl_course.backups[backup_index].download_url;
                         const backup_download_id = await browser.downloads.download({url: backup_url, saveAs: false});
-                        let backup_download_state: string;
+                        let backup_download_status: browser.downloads.DownloadItem;
                         do {
                             await sleep(100);
-                            backup_download_state = (await browser.downloads.search({id: backup_download_id}))[0].state;
-                        } while (backup_download_state == "in_progress");
-                        if (backup_download_state != "complete") { throw new Error("Download error"); }
+                            backup_download_status = (await browser.downloads.search({id: backup_download_id}))[0]; // .state;
+                        } while (backup_download_status.state == "in_progress" && !backup_download_status.error);
+                        if (backup_download_status.state != "complete") { throw new Error("Download error: " + backup_download_status.error); }
                         this.tabdata.page_load_count(1);
 
                         // throw new Error("Test error"); // TODO: Remove
