@@ -333,7 +333,7 @@ namespace MJS {
                     // this.tabdata.macro_error = e;
                     this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n"
                     +*/ e.message + "\n"
-                    + ((e.message != "Cancelled" && e.fileName) ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                    + ((e.message != "Cancelled" && e.message != "Too many errors" && e.fileName) ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                     + "\n";
 
                 // }
@@ -449,8 +449,11 @@ namespace MJS {
             // const error_list: {course_id: number, err: Error}[] = [];
             // let cancelled: boolean = false;
 
+            let consecutive_backup_error: number = 0;
+
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
 
+                let this_backup_error: boolean = false;
                 let created: boolean = false;
                 let backup_filename: string;
 
@@ -490,6 +493,7 @@ namespace MJS {
                     e.message + "\n"
                     + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                     + "\n";
+                    this_backup_error = true;
                     this.tabdata.update_ui();
                 }
 
@@ -521,6 +525,7 @@ namespace MJS {
                         e.message + "\n"
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
+                        this_backup_error = true;
                         this.tabdata.update_ui();
                     }
 
@@ -545,9 +550,20 @@ namespace MJS {
                         e.message + "\n"
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
+                        this_backup_error = true;
                         this.tabdata.update_ui();
                     }
 
+                }
+
+                if (this_backup_error) {
+                    consecutive_backup_error++;
+                } else {
+                    consecutive_backup_error = 0;
+                }
+
+                if (consecutive_backup_error >= 3) {
+                    throw new Error("Too many errors");
                 }
 
             }
