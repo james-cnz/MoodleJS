@@ -473,6 +473,7 @@ namespace MJS {
 
                     this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
                     this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
+                    // TODO: Check for continue button?
 
                     this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
                     this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
@@ -494,6 +495,7 @@ namespace MJS {
                     + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                     + "\n";
                     this_backup_error = true;
+                    this.tabdata.macro_state = 1;
                     this.tabdata.update_ui();
                 }
 
@@ -526,6 +528,7 @@ namespace MJS {
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
                         this_backup_error = true;
+                        this.tabdata.macro_state = 1;
                         this.tabdata.update_ui();
                     }
 
@@ -551,6 +554,7 @@ namespace MJS {
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
                         this_backup_error = true;
+                        this.tabdata.macro_state = 1;
                         this.tabdata.update_ui();
                     }
 

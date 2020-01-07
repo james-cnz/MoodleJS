@@ -1108,9 +1108,9 @@ namespace MJS {
                 result = await page_course_editsection(message as DeepPartial<page_course_editsection_data>);
                 break;
             case "page-course-index":
-                case "page-course-index-category":
-                    result = await page_course_index(message as DeepPartial<page_course_index_data>);
-                    break;
+            case "page-course-index-category":
+                result = await page_course_index(message as DeepPartial<page_course_index_data>);
+                break;
             case "page-course-management":
                 result = await page_course_management(message as DeepPartial<page_course_management_data>);
                 break;
