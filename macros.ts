@@ -146,7 +146,7 @@ namespace MJS {
 
 
         public async page_load2<T extends Page_Data>(
-            page_data1: DeepPartial<Page_Data> & {location: {pathname: string, search: {[index: string]: number|string}}},
+            page_data1: DeepPartial<Page_Data|T> & {location: {pathname: string, search: {[index: string]: number|string}}},
             page_data2: DeepPartial<T>,
             count: number = 1
         ): Promise<T> {
@@ -468,7 +468,7 @@ namespace MJS {
                     this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
 
                     this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
-                    this.page_details = await this.tabdata.page_loaded<page_backup_backup_data>({page: "backup-backup"});
+                    this.page_details = await this.tabdata.page_loaded<page_backup_backup_4_data>({page: "backup-backup"});
                     backup_filename = this.page_details.backup.filename;
 
                     this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
@@ -740,15 +740,15 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if ((section.x_options.level <= 0) && (section.section as number <= this.page_details.mdl_course_sections.section) && (section.name.toUpperCase().trim() == "MODULES")) {
+                if ((section.x_options!.level! <= 0) && (section.section as number <= this.page_details.mdl_course_sections!.section) && (section.name.toUpperCase().trim() == "MODULES")) {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
-                } else if (last_module_tab_num && section.x_options.level > 0) { // TODO: Need to scrape level property.
+                } else if (last_module_tab_num && section.x_options!.level! > 0) { // TODO: Need to scrape level property.
                     last_module_tab_num = section.section;
                 }
             }
             if (modules_tab_num && last_module_tab_num) {  } else                                        {  return; }
-            if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
+            if (this.page_details.mdl_course_sections!.section <= last_module_tab_num)
             { } else { return; }
 
             this.data = {mdl_course: {id: course.id}, mdl_course_sections: {section: modules_tab_num}, last_section_num: last_module_tab_num};
@@ -771,7 +771,7 @@ namespace MJS {
                 {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.id, section: this.data.mdl_course_sections.section}},
                 page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}},
             );
-            const modules_list = this.page_details.mdl_course_sections.mdl_course_modules;
+            const modules_list = this.page_details.mdl_course_sections!.mdl_course_modules;
             (modules_list.length == 1)                                          || throwf(new Error("Index rebuild macro, get list:\nExpected exactly one resource in Modules tab."));
             const modules_index = modules_list[0];
 
@@ -784,7 +784,7 @@ namespace MJS {
                 this.page_details = await this.tabdata.page_load<page_course_view_data>(
                     {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.id, section: section_num}},
                     page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
-                const section_full = this.page_details.mdl_course_sections;
+                const section_full = this.page_details.mdl_course_sections!;
                 const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")!
                                     ).textContent;
                 index_html = index_html
@@ -867,15 +867,15 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if (section.x_options.level <= 0 && section.section <= this.page_details.mdl_course_sections.section && section.name.toUpperCase().trim() == "MODULES") {
+                if (section.x_options!.level! <= 0 && section.section <= this.page_details.mdl_course_sections!.section && section.name.toUpperCase().trim() == "MODULES") {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
-                } else if (last_module_tab_num && section.x_options.level > 0) { // TODO: Need to scrape level property.
+                } else if (last_module_tab_num && section.x_options!.level! > 0) { // TODO: Need to scrape level property.
                     last_module_tab_num = section.section;
                 }
             }
             if (modules_tab_num && last_module_tab_num) {  } else                                        { return; }
-            if (this.page_details.mdl_course_sections.section <= last_module_tab_num)
+            if (this.page_details.mdl_course_sections!.section <= last_module_tab_num)
             { } else { return; }
             // this.new_section_pos = last_module_tab_num + 1;
 
@@ -907,7 +907,7 @@ namespace MJS {
 
             // Set new tab details (2 loads)
             this.page_details = await this.tabdata.page_load(
-                {location: {pathname: "/course/editsection.php", search: {id: new_section.id, sr: new_section.section,
+                {location: {pathname: "/course/editsection.php", search: {id: new_section.id!, sr: new_section.section,
                                                                                     /*|| throwf(new Error("WS course section edit, no amount specified."))*/}},
                                                                                     page: "course-editsection", /*mdl_course: {id: this.data.mdl_course.id}*/},
                                                                                     );
@@ -1143,7 +1143,7 @@ namespace MJS {
             }, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
 
-            let section = this.page_details.mdl_course_sections;
+            let section = this.page_details.mdl_course_sections!;
 
             // Move new module.
             this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
@@ -1168,7 +1168,7 @@ namespace MJS {
                     }, dom_submit: true});
                 this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
 
-                section = this.page_details.mdl_course_sections;
+                section = this.page_details.mdl_course_sections!;
 
                 // Move new module.
                 this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},
@@ -1192,7 +1192,7 @@ namespace MJS {
                 }, dom_submit: true});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {id: this.data.mdl_course.id}});
 
-            section = this.page_details.mdl_course_sections;
+            section = this.page_details.mdl_course_sections!;
 
             // Move new module.
             this.page_details = await this.tabdata.page_load2({location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, sr: section.section, copy: section.mdl_course_modules[section.mdl_course_modules.length - 1].id}}},

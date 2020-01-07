@@ -33,23 +33,30 @@ namespace MJS {
         return {
             wwwroot:    window.location.origin,
             body_class: window.document.body.className!,
-            sesskey:    ((window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")
-                         ).search.match(/^\?sesskey=(\w+)$/)
-                        )[1],
+            sesskey:    window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")!
+                         .search.match(/^\?sesskey=(\w+)$/)!
+                        [1],
         };
     }
 
 
-
-
-    export type page_backup_backup_data = Page_Data_Base & {
+    export type page_backup_backup_base_data = Page_Data_Base & {
         page:       "backup-backup",
         location?:  { pathname: "/backup/backup.php", search: { id: number } },
         stage:      1|2|4|null,
-        backup?:    { filename: string },
         dom_submit?: "final step"|"next"|"perform backup"|"continue"
     };
 
+    export type page_backup_backup_gen_data = page_backup_backup_base_data & {
+        stage:      1|2|null
+    };
+
+    export type page_backup_backup_4_data = page_backup_backup_base_data & {
+        stage:      4,
+        backup:    { filename: string },
+    };
+
+    export type page_backup_backup_data = page_backup_backup_gen_data | page_backup_backup_4_data;
 
     async function page_backup_backup(message: DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
@@ -120,7 +127,7 @@ namespace MJS {
         // alert (backup_filemanager_dom.outerHTML);  // TODO: Remove.
         do {
             await sleep(100);
-        } while (!backup_filemanager_dom.classList.contains("fm-loaded") || backup_filemanager_dom.querySelector("div.fp-content").children.length <= 0);
+        } while (!backup_filemanager_dom.classList.contains("fm-loaded") || backup_filemanager_dom.querySelector("div.fp-content")!.children.length <= 0);
         // await sleep(200);   // TODO: Check actually loaded?
         const backup_list_dom   = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
         const backups_dom       = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
@@ -940,33 +947,33 @@ namespace MJS {
         const module_dom: HTMLFormElement = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
 
         // Module ID
-        const module_id_dom         = module_dom.querySelector<HTMLInputElement>("input[name='coursemodule']");
+        const module_id_dom         = module_dom.querySelector<HTMLInputElement>("input[name='coursemodule']")!;
         const module_out_id         = parseInt(module_id_dom.value);
 
         // Module Instance ID
-        const module_instance_dom   = module_dom.querySelector<HTMLInputElement>("input[name='instance']");
+        const module_instance_dom   = module_dom.querySelector<HTMLInputElement>("input[name='instance']")!;
         const module_out_instance   = parseInt(module_instance_dom.value);
 
         // Module Course
-        const module_course_dom     = module_dom.querySelector<HTMLInputElement>("input[name='course']");
+        const module_course_dom     = module_dom.querySelector<HTMLInputElement>("input[name='course']")!;
         const module_out_course     = parseInt(module_course_dom.value);
 
         // Module Section
-        const module_out_section    = parseInt(window.document.querySelector<HTMLInputElement>(":root form#mform1 input[name='section'][type='hidden']").value);
+        const module_out_section    = parseInt(window.document.querySelector<HTMLInputElement>(":root form#mform1 input[name='section'][type='hidden']")!.value);
 
         // Module ModName
-        const module_modname_dom    = module_dom.querySelector<HTMLInputElement>("input[name='modulename']");
+        const module_modname_dom    = module_dom.querySelector<HTMLInputElement>("input[name='modulename']")!;
         const module_out_modname    = module_modname_dom.value;
 
         // Module Intro/Description
-        const module_description_dom = module_dom.querySelector<HTMLTextAreaElement>("textarea[name='introeditor[text]']");
+        const module_description_dom = module_dom.querySelector<HTMLTextAreaElement>("textarea[name='introeditor[text]']")!;
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.intro != undefined) {
             module_description_dom.value = module_in.mdl_course_module_instance.intro;
         }
         const module_out_instance_intro = module_description_dom.value;
 
         // Module Name
-        const module_name_dom = module_dom.querySelector<HTMLInputElement>("input[name='name']");
+        const module_name_dom = module_dom.querySelector<HTMLInputElement>("input[name='name']")!;
         // TODO: For label, instead of name field, use introeditor[text] field (without markup)?
 
         if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.name != undefined) {
