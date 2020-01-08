@@ -1,5 +1,6 @@
 /**
  * Moodle JS Macro Scripts
+ *  Implements specific tasks.
  */
 
 

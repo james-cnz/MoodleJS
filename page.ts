@@ -1,3 +1,8 @@
+/*
+ * Moodle JS Content Script
+ * Scrape Moodle web pages.
+ */
+
 
 namespace MJS {
 

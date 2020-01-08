@@ -1,3 +1,9 @@
+/*
+ * Moodle JS Misc Routines
+ * Used in background and content scripts.
+ */
+
+
 namespace MJS {
 
     export type DeepPartial<T> = {
