@@ -6,20 +6,22 @@
 
 namespace MJS {
 
+    export type BackgroundWindow = { mjs_background: Background };
+
     export class Background {
 
         private tabData: { [index: number]: TabData } = { };
 
         public constructor() {
-            const bg_this = this;
+            const this_bg = this;
             browser.runtime.onMessage.addListener(
                 function(message: object, sender: browser.runtime.MessageSender) {
-                    bg_this.onMessage(message as Page_Data, sender);
+                    this_bg.onMessage(message as Page_Data, sender);
                 }
             );
             browser.tabs.onUpdated.addListener(
                 function(tab_id: number, update_info: Partial<browser.tabs.Tab>, tab: browser.tabs.Tab) {
-                    bg_this.onTabUpdated(tab_id, update_info, tab);
+                    this_bg.onTabUpdated(tab_id, update_info, tab);
                 }
             );
         }
@@ -44,8 +46,6 @@ namespace MJS {
         }
 
     }
-
-    export type BackgroundWindow = { mjs_background: Background };
 
 
 }

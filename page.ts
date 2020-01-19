@@ -8,6 +8,14 @@ namespace MJS {
 
 
 
+    export type Page_Data_Base = { moodle_page: Moodle_Page_Data; page: string; dom_submit?: boolean|string; };
+
+    export type Moodle_Page_Data = {
+        wwwroot:    string;
+        sesskey:    string;
+        body_class: string;
+        editing:    boolean;
+    };
 
 
     export type Page_Data =
@@ -25,14 +33,6 @@ namespace MJS {
         | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; };  // some other page
 
 
-    export type Page_Data_Base = { moodle_page: Moodle_Page_Data; page: string; dom_submit?: boolean|string; };
-
-    export type Moodle_Page_Data = {
-        wwwroot:    string;
-        sesskey:    string;
-        body_class: string;
-    };
-
 
     function moodle_page(): Moodle_Page_Data {
         return {
@@ -41,6 +41,7 @@ namespace MJS {
             sesskey:    window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")!
                          .search.match(/^\?sesskey=(\w+)$/)!
                         [1],
+            editing:    window.document.body.classList.contains("editing")
         };
     }
 
@@ -192,15 +193,15 @@ namespace MJS {
         page:       "backup-restore",
         location?:  { pathname: "/backup/restore.php" }
         stage:      number|null,
-        mdl_course?: { template_id?: number }
+        // mdl_course?: { template_id?: number }
     };
 
     export type page_backup_restore_data_2  = page_backup_restore_data_base & { stage: 2, dom_submit?: "stage 2 submit" };
-    export type page_backup_restore_data_4d = page_backup_restore_data_base & { stage: 4, displayed_stage: "Destination", mdl_course_categories?: { id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" };
+    export type page_backup_restore_data_4d = page_backup_restore_data_base & { stage: 4, displayed_stage: "Destination", mdl_course_category?: { course_category_id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" };
     export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" };
     export type page_backup_restore_data_8  = page_backup_restore_data_base & { stage: 8, mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" };
     export type page_backup_restore_data_16 = page_backup_restore_data_base & { stage: 16, dom_submit?: "stage 16 submit" };
-    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, mdl_course: { id: number } };
+    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, mdl_course: { course_id: number } };
 
     async function page_backup_restore(message: DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
@@ -231,12 +232,12 @@ namespace MJS {
                     const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
                     const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
                     const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
-                    if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_categories && message.mdl_course_categories.name) {
-                        stage_4_new_cat_name_dom.value = message.mdl_course_categories.name;
+                    if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_category && message.mdl_course_category.name) {
+                        stage_4_new_cat_name_dom.value = message.mdl_course_category.name;
                     }
 
-                    if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_categories && message.mdl_course_categories.id) {
-                        const stage_4_new_cat_id_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_categories.id + "']")!;
+                    if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_category && message.mdl_course_category.course_category_id) {
+                        const stage_4_new_cat_id_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='targetid'][type='radio'][value='" + message.mdl_course_category.course_category_id + "']")!;
                         stage_4_new_cat_id_dom.click();
                     }
 
@@ -334,7 +335,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "stage complete submit") {
                     submitcomplete_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-restore", stage: null, mdl_course: {id: course_id}};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: null, mdl_course: {course_id: course_id}};
                 break;
             default:
                 throw new Error("Page backup restore: stage not recognised.");
@@ -347,7 +348,7 @@ namespace MJS {
     export type page_backup_restorefile_data = Page_Data_Base & {
         page: "backup-restorefile",
         location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
-        mdl_course: {id?: number, backups: {filename: string, download_url: string}[]}
+        mdl_course: {course_id?: number, backups: {filename: string, download_url: string}[]}
     };
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
@@ -377,21 +378,21 @@ namespace MJS {
     export type page_course_editsection_data = Page_Data_Base & {
         page:       "course-editsection";
         location?:  { pathname: "/course/editsection.php", search: { id: number } },
-        mdl_course?: { id: number },
-        mdl_course_sections: page_course_editsection_section;
+        mdl_course?: { course_id: number },
+        mdl_course_section: page_course_editsection_section;
     };
     type page_course_editsection_section = {
-        id:         number;
+        course_section_id: number;
         name:       string;
         summary:    string;
-        x_options:  { level?: number; }
+        options:    { level?: number; }
     };
 
 
     async function page_course_editsection(message: DeepPartial<page_course_editsection_data>): Promise<page_course_editsection_data> {
         // const section_id    = message.sectionid;
         // Start
-        const section_in = message.mdl_course_sections;
+        const section_in = message.mdl_course_section;
 
         const section_dom: HTMLFormElement      = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
         // let section: Partial<MDL_Course_Sections> = (message.mdl_course_sections||{});
@@ -435,8 +436,8 @@ namespace MJS {
 
         // Level
         const section_level_dom = section_dom.querySelector<HTMLSelectElement>("select[name='level']")!;
-        if (section_in && section_in.x_options && section_in.x_options.level != undefined) {
-            section_level_dom.value = "" + section_in.x_options.level;
+        if (section_in && section_in.options && section_in.options.level != undefined) {
+            section_level_dom.value = "" + section_in.options.level;
         }
         if (section_level_dom) {
             section_out_x_options.level = parseInt(section_level_dom.value);
@@ -449,13 +450,13 @@ namespace MJS {
         }
 
         const section_out = {
-            id:         section_out_id,
+            course_section_id: section_out_id,
             name:       section_out_name,
             summary:    section_out_summary,
-            x_options:  section_out_x_options
+            options:  section_out_x_options
         };
 
-        return {moodle_page: moodle_page(), page: "course-editsection", mdl_course_sections: section_out};
+        return {moodle_page: moodle_page(), page: "course-editsection", mdl_course_section: section_out};
     }
 
 
@@ -463,21 +464,21 @@ namespace MJS {
 
     export type page_course_index_data = Page_Data_Base & {
         page:       "course-index(-category)?",
-        location?:  {pathname: "/course/index.php", search: {categoryid?: number}}
-        mdl_course?: {id: number},
-        mdl_course_categories: page_course_index_category;
+        location?:  { pathname: "/course/index.php", search: { categoryid?: number } }
+        mdl_course?: { course_id: number },
+        mdl_course_category: page_course_index_category;
         dom_expand?: boolean;
     };
     type page_course_index_category = {
-        id:         number;
+        course_category_id: number;
         name:       string;
         description?: string;
         mdl_course_categories: page_course_index_category[];
-        mdl_course: page_course_index_course[];
+        mdl_courses: page_course_index_course[];
         more:       boolean;
     };
     type page_course_index_course = {
-        id:         number;
+        course_id:  number;
         fullname:   string;
     };
 
@@ -486,10 +487,10 @@ namespace MJS {
         async function category(category_dom?: HTMLDivElement): Promise<page_course_index_category> {
 
 
-            async function course(course_dom: HTMLDivElement): Promise<{id: number, fullname: string}> {
+            async function course(course_dom: HTMLDivElement): Promise<{ course_id: number, fullname: string }> {
                 const course_id_out = parseInt(course_dom.dataset.courseid!);
                 const course_name_out = course_dom.querySelector<HTMLAnchorElement>(":scope .coursename a")!.text;
-                return {id: course_id_out, fullname: course_name_out};
+                return { course_id: course_id_out, fullname: course_name_out };
             }
 
             let category_out: page_course_index_category;
@@ -513,23 +514,23 @@ namespace MJS {
                     const category_out_description = (window.document.querySelector(":root #region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
 
                     category_out = {
-                        id:         category_out_id,
+                        course_category_id: category_out_id,
                         name:       category_out_name,
                         description: category_out_description,
                         mdl_course_categories: [],
-                        mdl_course: [],
+                        mdl_courses: [],
                         more:       false
                     };
 
                 } else {
-                    category_out = { id: 0, name: "", description: "", mdl_course_categories: [], mdl_course: [], more: false};
+                    category_out = { course_category_id: 0, name: "", description: "", mdl_course_categories: [], mdl_courses: [], more: false};
                 }
                 category_dom = document.querySelector<HTMLDivElement>("div.course_category_tree")!;
             } else {
                 const category_link_dom = category_dom.querySelector<HTMLAnchorElement>(":scope > .info > .categoryname > a")!;
                 const category_out_id = parseInt(category_dom.dataset.categoryid!);
                 const category_out_name = category_link_dom.text;
-                category_out = {id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_course: [], more: false};
+                category_out = { course_category_id: category_out_id, name: category_out_name, mdl_course_categories: [], mdl_courses: [], more: false };
                 if (message.dom_expand && category_dom.classList.contains("collapsed")) {
                     category_dom.querySelector<HTMLHeadingElement>(":scope > .info > h3.categoryname, :scope > .info > h4.categoryname")!.click();
                     do {
@@ -543,7 +544,7 @@ namespace MJS {
                 subcategories_out.push(await category(subcategory_dom));
             }
             const courses_out: page_course_index_course[] = [];
-            category_out.mdl_course = courses_out;
+            category_out.mdl_courses = courses_out;
             for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
                 courses_out.push(await course(course_dom));
             }
@@ -555,7 +556,7 @@ namespace MJS {
         return {
             moodle_page: moodle_page(),
             page: "course-index(-category)?",
-            mdl_course_categories: await category()
+            mdl_course_category: await category()
         };
 
     }
@@ -565,12 +566,12 @@ namespace MJS {
     export type page_course_management_data = Page_Data_Base & {
         page:       "course-management",
         location?:  { pathname: "/course/management.php", search: { categoryid: number, perpage?: number } },
-        mdl_course_categories: page_course_management_category
-        mdl_course: page_course_management_course[]
+        mdl_course_category: page_course_management_category
+        mdl_courses: page_course_management_course[]
     };
 
     export type page_course_management_category = {
-        id:         number;
+        course_category_id: number;
         name:       string;
         coursecount: number;
         mdl_course_categories: page_course_management_category[];
@@ -580,7 +581,7 @@ namespace MJS {
     };
 
     export type page_course_management_course = {
-        id:         number;
+        course_id:  number;
         fullname:   string;
     };
 
@@ -590,7 +591,7 @@ namespace MJS {
             let result: page_course_management_category;
             if (top) {
                 result = {
-                    id:         0,
+                    course_category_id: 0,
                     name:       "",
                     coursecount: 0,
                     checked:    false,
@@ -610,7 +611,7 @@ namespace MJS {
                     // TODO: pause?
                 }
                 result = {
-                    id:         parseInt(dom.dataset.id!),
+                    course_category_id: parseInt(dom.dataset.id!),
                     name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
                     coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
                     checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
@@ -623,7 +624,7 @@ namespace MJS {
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
                 const subcategory_id = parseInt(subcategory_dom.dataset.id!);
-                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) { return value.id == subcategory_id; }) || null;
+                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) { return value.course_category_id == subcategory_id; }) || null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
             result.mdl_course_categories = subcategories_out;
@@ -633,14 +634,14 @@ namespace MJS {
         const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
         const course_list: page_course_management_course[] = [];
         for (const course_dom of Object.values(course_list_dom)) {
-            course_list.push({id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector("a")!.textContent!});
+            course_list.push({ course_id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector("a")!.textContent! });
         }
 
         return {
             moodle_page: moodle_page(),
             page:       "course-management",
-            mdl_course_categories: await category(message_in.mdl_course_categories || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
-            mdl_course: course_list
+            mdl_course_category: await category(message_in.mdl_course_category || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
+            mdl_courses: course_list
         };
     }
 
@@ -650,32 +651,30 @@ namespace MJS {
 
     export type page_course_view_data = Page_Data_Base & {
         page: "course-view-[a-z]+",
-        location?: {pathname: "/course/view.php", search: {id: number}}
+        location?: { pathname: "/course/view.php", search: { id: number } }
         mdl_course: page_course_view_course;
-        mdl_course_sections?: page_course_view_course_sections;
+        mdl_course_section?: page_course_view_course_section;
     };
     type page_course_view_course = {
-        id:         number; // Needs editing on.
+        course_id:  number; // Needs editing on.
         fullname:   string;
         format:     string
-        mdl_course_sections: page_course_view_course_sections[]
+        mdl_course_sections: page_course_view_course_section[]
     };
-    type page_course_view_course_sections = {
-        id?:        number;
+    type page_course_view_course_section = {
+        course_section_id?: number;
         section:    number;
         name:       string;
         visible?:   number;
         summary?:   string;
-        mdl_course_modules?: page_course_view_course_modules[]
-        x_options?: {level?: number};
+        mdl_course_modules?: page_course_view_course_module[]
+        options?: {level?: number};
     };
-    export type page_course_view_course_modules = {
-        id:         number;
-        mdl_modules_name: string;
-        mdl_course_module_instance: {
-            name:       string;
-            intro?:     string;
-        }
+    export type page_course_view_course_module = {
+        course_module_id: number;
+        mdl_module_name: string;
+        name:       string;
+        intro?:     string;
     };
 
     async function page_course_view(_message: DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
@@ -695,8 +694,8 @@ namespace MJS {
 
         const sections_dom:    NodeListOf<Element> = main_dom.querySelectorAll(":scope li.main");
         const single_section_dom = main_dom.querySelector(":scope .single-section .main") ;
-        let single_section_out: page_course_view_course_sections|undefined;
-        let course_out_sections: page_course_view_course_sections[] = [];
+        let single_section_out: page_course_view_course_section|undefined;
+        let course_out_sections: page_course_view_course_section[] = [];
         for (const section_dom of Object.values(sections_dom)) {
 
 
@@ -738,7 +737,7 @@ namespace MJS {
 
 
             // Modules
-            let modules_out:      page_course_view_course_modules[]|undefined;
+            let modules_out:      page_course_view_course_module[]|undefined;
             if (section_dom.querySelector(":scope > .content > .section")) {
 
                 const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope > .content > .section")!  // Note: flexsections can have nested sections.
@@ -775,12 +774,10 @@ namespace MJS {
                                         ).innerHTML;
 
                     const module_out = {
-                        id:         module_out_id,
-                        mdl_modules_name:    module_out_modname,
-                        mdl_course_module_instance: {
-                            name:       module_out_instance_name,
-                            intro:      module_out_instance_intro
-                        }
+                        course_module_id:         module_out_id,
+                        mdl_module_name:    module_out_modname,
+                        name:       module_out_instance_name,
+                        intro:      module_out_instance_intro
                     };
 
                     // Module End
@@ -791,7 +788,7 @@ namespace MJS {
 
             // Section End
             const section_out = {
-                id:         section_out_id,
+                course_section_id: section_out_id,
                 section:    section_out_section,
                 name:       section_out_name,
                 summary:    section_out_summary,
@@ -815,7 +812,7 @@ namespace MJS {
 
             // If top-level section, include lower-level section headings?  // TODO: Check
             // TODO: should be if ((include_nested_x || sectionnumber == undefined) ... ?
-            let subsections_out: page_course_view_course_sections[] = [];
+            let subsections_out: page_course_view_course_section[] = [];
             // if (document.querySelector("#region-main ul.nav.nav-tabs:nth-child(2) li a.active div.tab_initial")) {
                 const subsections_dom = document.querySelectorAll<HTMLAnchorElement>(":root #region-main ul.nav.nav-tabs:nth-child(2) li a");
                 let is_index = true;
@@ -827,11 +824,11 @@ namespace MJS {
                         subsections_out.push({
                             name:       subsection_dom.title,
                             section:    section_num,
-                            x_options: {level:    is_index ? 0 : 1},
+                            options: {level:    is_index ? 0 : 1},
                         });
                     } else {
-                        single_section_out!.x_options = single_section_out!.x_options || {};
-                        single_section_out!.x_options.level = is_index ? 0 : 1;
+                        single_section_out!.options = single_section_out!.options || {};
+                        single_section_out!.options.level = is_index ? 0 : 1;
                         subsections_out.push(single_section_out!);
                     }
                     is_index = false;
@@ -850,11 +847,11 @@ namespace MJS {
                         const section_num = parseInt(section_match[3]);
 
                         course_out_sections.push({
-                            id:         0,
+                            course_section_id: 0,
                             name:       other_section_dom.title,
                             summary:    "",
                             section:    section_num,
-                            x_options: {level:    0},
+                            options: {level:    0},
                             mdl_course_modules:    [],
                         });  // TODO: Any better way to deal with these missing values? (Maybe not.)
                     } else if (subsections_out.length > 0) {
@@ -865,8 +862,8 @@ namespace MJS {
                         subsections_out = [];
 
                     } else {
-                        single_section_out!.x_options = single_section_out!.x_options || {};
-                        single_section_out!.x_options.level = 0;
+                        single_section_out!.options = single_section_out!.options || {};
+                        single_section_out!.options.level = 0;
                         course_out_sections.push(single_section_out!);
                     }
                 }
@@ -875,13 +872,13 @@ namespace MJS {
         }
 
         const course_out: page_course_view_course = {
-            id: course_out_id,
-            fullname: course_out_fullname,
-            format: course_out_format,
+            course_id:  course_out_id,
+            fullname:   course_out_fullname,
+            format:     course_out_format,
             mdl_course_sections: course_out_sections
         };
 
-        return {moodle_page: moodle_page(), page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_sections: single_section_out};
+        return {moodle_page: moodle_page(), page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_section: single_section_out};
     }
 
 
@@ -891,15 +888,15 @@ namespace MJS {
 
     export type page_mod_feedback_edit_data = Page_Data_Base & {
         page: "mod-feedback-edit",
-        location?: {pathname: "/mod/feedback/edit.php", search: {id: number, do_show: "edit"|"templates"}},
-        mdl_course_modules?: { id?: number, mdl_course_module_instance?: { mdl_feedback_template_id?: number; } }
+        location?: { pathname: "/mod/feedback/edit.php", search: {id: number, do_show: "edit"|"templates" } },
+        mdl_course_module?: { course_module_id?: number, mdl_feedback_template_id?: number; }
     };
 
     async function page_mod_feedback_edit(message: DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
        const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid")!;
-       if (message && message.mdl_course_modules && message.mdl_course_modules.mdl_course_module_instance
-            && message.mdl_course_modules.mdl_course_module_instance.hasOwnProperty("mdl_feedback_template_id")) {
-            template_id_dom.value = "" + message.mdl_course_modules.mdl_course_module_instance.mdl_feedback_template_id;
+       if (message && message.mdl_course_module && message.mdl_course_module
+            && message.mdl_course_module.hasOwnProperty("mdl_feedback_template_id")) {
+            template_id_dom.value = "" + message.mdl_course_module.mdl_feedback_template_id;
             template_id_dom.dispatchEvent(new Event("change"));
 
        }
@@ -929,25 +926,23 @@ namespace MJS {
     export type page_module_edit_data = Page_Data_Base & {
         page:       "mod-[a-z]+-mod",
         location?:  { pathname: "/course/modedit.php", search: { update: number } },
-        mdl_course?: { id: number }
-        mdl_course_modules: page_module_edit_module
+        mdl_course?: { course_id: number }
+        mdl_course_module: page_module_edit_module
     };
     type page_module_edit_module = {
-        id:         number;
-        instance:   number;
+        course_module_id: number;
+        activity_id: number;
         course:     number;
         section:    number;
-        mdl_modules_name: string;
-        mdl_course_module_instance: {
-            name:   string;
-            intro:  string;
-        }
+        mdl_module_name: string;
+        name:   string;
+        intro:  string;
     };
 
     async function page_module_edit(message: DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
 
         // Module Start
-        const module_in = message.mdl_course_modules;
+        const module_in = message.mdl_course_module;
         // const cmid = message.cmid;
         const module_dom: HTMLFormElement = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
 
@@ -972,8 +967,8 @@ namespace MJS {
 
         // Module Intro/Description
         const module_description_dom = module_dom.querySelector<HTMLTextAreaElement>("textarea[name='introeditor[text]']")!;
-        if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.intro != undefined) {
-            module_description_dom.value = module_in.mdl_course_module_instance.intro;
+        if (module_in && module_in.intro != undefined) {
+            module_description_dom.value = module_in.intro;
         }
         const module_out_instance_intro = module_description_dom.value;
 
@@ -981,8 +976,8 @@ namespace MJS {
         const module_name_dom = module_dom.querySelector<HTMLInputElement>("input[name='name']")!;
         // TODO: For label, instead of name field, use introeditor[text] field (without markup)?
 
-        if (module_in && module_in.mdl_course_module_instance && module_in.mdl_course_module_instance.name != undefined) {
-            module_name_dom.value = module_in.mdl_course_module_instance.name;
+        if (module_in && module_in.name != undefined) {
+            module_name_dom.value = module_in.name;
         }
 
         const module_out_instance_name = module_name_dom ? module_name_dom.value : "";
@@ -1062,18 +1057,16 @@ namespace MJS {
         }
 
         const module_out: page_module_edit_module = {
-            id:         module_out_id,
-            instance:   module_out_instance,
+            course_module_id: module_out_id,
+            activity_id:   module_out_instance,
             course:     module_out_course,
             section:    module_out_section,
-            mdl_modules_name: module_out_modname,
-            mdl_course_module_instance: {
-                name: module_out_instance_name,
-                intro: module_out_instance_intro
-            }
+            mdl_module_name: module_out_modname,
+            name: module_out_instance_name,
+            intro: module_out_instance_intro
         };
 
-        return {moodle_page: moodle_page(), page: "mod-[a-z]+-mod", mdl_course_modules: module_out};
+        return {moodle_page: moodle_page(), page: "mod-[a-z]+-mod", mdl_course_module: module_out};
     }
 
 
@@ -1088,6 +1081,11 @@ namespace MJS {
     }
 
     async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data> {
+
+        const error_message_dom = document.querySelector("div.errorbox p.errormessage");
+        if (error_message_dom) {
+            throw new Error(error_message_dom.textContent);
+        }
 
         // const message = message_in;
 
