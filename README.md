@@ -75,11 +75,11 @@ Otherwise image links will likely be broken.
 
 * VS Code
 * nodejs (for installing other packages)
-  * web-ext
-  * webextension-polyfill
   * typescript
-  * web-ext-types (possible alternatives: https://github.com/mozilla/webextension-polyfill/issues/78 )
   * tslint
+  * web-ext
+  * web-ext-types (possible alternatives: https://github.com/mozilla/webextension-polyfill/issues/78 )
+  * webextension-polyfill
 * validator.w3.org (for checking panel.htm)
 
 
