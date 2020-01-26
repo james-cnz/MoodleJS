@@ -188,7 +188,7 @@ namespace MJS {
                 }
             } while (!(this.page_is_loaded && this.page_message));
             this.macro_state = 1;
-            let page_details: Page_Data = this.page_message;
+            const page_details: Page_Data = this.page_message;
             this.page_message = null;
             if (this.page_load_wait <= count * 10) {
                 this.page_load_count(count - this.page_load_wait / 10);
