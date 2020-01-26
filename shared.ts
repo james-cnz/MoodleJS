@@ -30,9 +30,9 @@ namespace MJS {
     };
 
     export function is_Errorlike(possible_Errorlike: any): possible_Errorlike is Errorlike {
-        return ((possible_Errorlike as Errorlike).name !== undefined)
+        return (typeof possible_Errorlike == "object")
+            && (possible_Errorlike != null)
             && (typeof ((possible_Errorlike as Errorlike).name) == "string")
-            && ((possible_Errorlike as Errorlike).message !== undefined)
             && (typeof ((possible_Errorlike as Errorlike).message) == "string");
     }
 
@@ -128,7 +128,7 @@ namespace MJS {
         course:             number;
         module:             number;
         mdl_module_name:    string;
-        //instance:           number;     // -> activity.id for type module
+        // instance:           number;     // -> activity.id for type module
         section:            number;
         idnumber:           string|null;
         added:              number;
@@ -148,7 +148,7 @@ namespace MJS {
         deletioninprogress: number;
 
         readonly activity_id: number;
-        //course:             number;
+        // course:             number;
         name:               string;
         intro:              string;
         introformat:        number;

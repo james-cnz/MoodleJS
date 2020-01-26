@@ -63,7 +63,8 @@ namespace MJS {
 
         public popup:           Popup|null = null;
 
-        private page_details:   Page_Data|null = null;
+        private page_last_wwwroot: string;
+        // private page_details:   Page_Data|null = null;
         private page_tab_id:    number;
 
         private page_load_wait: number = 0;
@@ -78,6 +79,7 @@ namespace MJS {
 
 
         public async init() {
+            let page_details: Page_Data|null = null;
             try {
                 if (this.popup) {
                     this.popup.close();
@@ -92,20 +94,20 @@ namespace MJS {
             this.macro_cancel = false;
             try {
                 this.macro_state = 1;
-                this.page_details = await this.page_call({});
+                page_details = await this.page_call({});
                 this.macro_state = 0;
             } catch (e) {
                 this.macro_state = 0;
-                this.page_details = null;
+                page_details = null;
             }
-            this.macros_init(this.page_details);
+            this.macros_init(page_details);
             this.macro_state = 0;
             this.update_ui();
         }
 
 
         public update_ui(): void {
-            /*
+
             if (this.macro_state == 0) {
                 browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
                 browser.browserAction.setBadgeText({text: "", tabId: this.page_tab_id});
@@ -116,7 +118,7 @@ namespace MJS {
                 browser.browserAction.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
                 browser.browserAction.setBadgeText({text: "X", tabId: this.page_tab_id});
             }
-            */
+
             try {
                 if (this.popup) {
                     this.popup.update();
@@ -136,6 +138,7 @@ namespace MJS {
             }
             const result = await browser.tabs.sendMessage(this.page_tab_id, message) as T|Errorlike;
             if (is_Errorlike(result))                                            { throw (new Error((result as Errorlike).message)); }
+            this.page_last_wwwroot = result.moodle_page.wwwroot;
 
             return result;
         }
@@ -163,7 +166,7 @@ namespace MJS {
             this.page_is_loaded = false;
             this.page_message = null;
 
-            await browser.tabs.update(this.page_tab_id, {url: this.page_details.moodle_page.wwwroot + pathname + "?" + TabData.json_to_search_params(search)});
+            await browser.tabs.update(this.page_tab_id, {url: this.page_last_wwwroot + pathname + "?" + TabData.json_to_search_params(search)});
             return await this.page_loaded<T>(page_data2, count);
         }
 
@@ -175,23 +178,24 @@ namespace MJS {
 
             this.page_load_wait  = 0;
             do {
-                await sleep(100);
+                await sleep(100);   // May lock up here
+                if (is_Errorlike(this.page_message))                            { throw new Error(this.page_message.message, this.page_message.fileName, this.page_message.lineNumber); }
                 if (this.macro_cancel)                                          { throw new Error("Cancelled"); }
+                if (this.page_load_wait > 10 * 60 * 60)                         { throw new Error("Timed out"); }
                 this.page_load_wait += 1;
                 if (this.page_load_wait <= count * 10) {  // Assume a step takes 1 second
                     this.page_load_count(1 / 10);
                 }
-            } while (!(this.page_is_loaded && this.page_message) && !(this.page_message && is_Errorlike(this.page_message)));
+            } while (!(this.page_is_loaded && this.page_message));
             this.macro_state = 1;
-            if (is_Errorlike(this.page_message))                                { throw new Error(this.page_message.message, this.page_message.fileName, this.page_message.lineNumber); }
-            this.page_details = this.page_message;
+            let page_details: Page_Data = this.page_message;
             this.page_message = null;
             if (this.page_load_wait <= count * 10) {
                 this.page_load_count(count - this.page_load_wait / 10);
             }
-            if (!this.page_load_match<T>(this.page_details, page_data))         { throw new Error("Page loaded:\nBody ID or class unexpected."); }
+            if (!this.page_load_match<T>(page_details, page_data))         { throw new Error("Page loaded:\nBody ID or class unexpected."); }
             this.macro_state = 1;
-            return this.page_details;
+            return page_details;
         }
 
 
@@ -206,18 +210,20 @@ namespace MJS {
 
 
         public onMessage(message: Page_Data|Errorlike, _sender: browser.runtime.MessageSender) {
+            let page_details: Page_Data|null = null;
 
             if (!this.page_message || this.macro_state == 0) {
                 this.page_message = message;
                 if (is_Errorlike(message)) {
-                    this.page_details = null;
+                    page_details = null;
                 } else {
-                    this.page_details = message;
+                    page_details = message;
+                    this.page_last_wwwroot = page_details.moodle_page.wwwroot;
                 }
 
                 if (this.page_is_loaded ) {
 
-                    if (this.macro_state == 0) { this.macros_init(this.page_details); }
+                    if (this.macro_state == 0) { this.macros_init(page_details); }
                     this.update_ui();
                 }
             } else if (!is_Errorlike(this.page_message)) {
@@ -242,11 +248,11 @@ namespace MJS {
                         this.page_is_loaded = true;
 
                         if (!this.page_message) {
-                            if (this.macro_state == 0) { this.page_details = null; this.macros_init(this.page_details); }
+                            if (this.macro_state == 0) { this.macros_init(null); }
                             else if (this.macro_state == 2) {
                             }
                         } else {
-                            if (this.macro_state == 0) { this.macros_init(this.page_details); }
+                            if (this.macro_state == 0) { this.macros_init(is_Errorlike(this.page_message) ? null : this.page_message); }
                             this.update_ui();
                         }
                     }
