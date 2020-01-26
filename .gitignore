@@ -1,2 +1,5 @@
 *.js
+*.js.map
 web-ext-artifacts/
+.vscode/
+.gitignore
