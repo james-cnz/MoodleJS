@@ -1,3 +1,9 @@
+/*
+ * Moodle JS Misc Routines
+ * Used in background and content scripts.
+ */
+
+
 namespace MJS {
 
     export type DeepPartial<T> = {
@@ -24,9 +30,9 @@ namespace MJS {
     };
 
     export function is_Errorlike(possible_Errorlike: any): possible_Errorlike is Errorlike {
-        return ((possible_Errorlike as Errorlike).name !== undefined)
+        return (typeof possible_Errorlike == "object")
+            && (possible_Errorlike != null)
             && (typeof ((possible_Errorlike as Errorlike).name) == "string")
-            && ((possible_Errorlike as Errorlike).message !== undefined)
             && (typeof ((possible_Errorlike as Errorlike).message) == "string");
     }
 
@@ -34,13 +40,15 @@ namespace MJS {
 
 
 
-    export type MDL_Context_Instance = {
-        readonly id:        number;     // key
+    export type MDL_Context = {
+        readonly context_id:    number;     // key
+        readonly contextlevel:  number;
     };
 
 
-    export type MDL_Course_Categories = MDL_Context_Instance & {
-        // context level 40
+    export type MDL_Course_Category = MDL_Context & {
+        readonly course_category_id: number;
+        readonly contextlevel: 40;
         name:               string;
         idnumber:           string;
         description:        string;
@@ -54,12 +62,13 @@ namespace MJS {
         depth:              number;
         path:               string;
         theme:              string;
-        mdl_course_categories: MDL_Course_Categories[];
-        mdl_course:         MDL_Course[];
+        mdl_course_categories: MDL_Course_Category[];
+        mdl_courses:        MDL_Course[];
     };
 
-    export type MDL_Course = MDL_Context_Instance & {
-        // context level 50
+    export type MDL_Course = MDL_Context & {
+        readonly course_id: number;
+        readonly contextlevel: 50;
         category:           number;     // -> course_categories.id
         sortorder:          number;
         fullname:           string;
@@ -90,12 +99,12 @@ namespace MJS {
         enablecompletion:   number;
         // completionnotify
         // cacherev
-        mdl_course_sections: MDL_Course_Sections[];
+        mdl_course_sections: MDL_Course_Section[];
     };
 
 
-    export type MDL_Course_Sections = {
-        readonly id:        number;     // key
+    export type MDL_Course_Section = {
+        readonly course_section_id: number;
         course:             number;     // -> course.id
         section:            number;
         name:               string;
@@ -105,22 +114,21 @@ namespace MJS {
         visible:            number;
         availability:       string;
         timemodified:       number;
-        x_options: {level?: number};
-        // x_submit:           boolean;
-        mdl_course_modules: MDL_Course_Modules[];
+        options:            {level?: number};
+        mdl_course_modules: MDL_Course_Module[];
     };
 
 
     // course_format_options
 
 
-    export type MDL_Course_Modules = MDL_Context_Instance & {
-        // context level 70
+    export type MDL_Course_Module_Base = MDL_Context & {
+        readonly course_module_id: number;
+        readonly contextlevel: 70;
         course:             number;
         module:             number;
-        mdl_modules_name: string;
-        instance:           number;     // -> activity.id for type module
-        mdl_course_module_instance: MDL_Course_Module_Instance;
+        mdl_module_name:    string;
+        // instance:           number;     // -> activity.id for type module
         section:            number;
         idnumber:           string|null;
         added:              number;
@@ -138,20 +146,16 @@ namespace MJS {
         showdescription:    number;
         availability:       string;
         deletioninprogress: number;
-        // x_submit:           boolean;
-    };
 
-
-    export type MDL_Course_Module_Instance_Abstract = {
-        readonly id:        number;     // key
-        course:             number;
+        readonly activity_id: number;
+        // course:             number;
         name:               string;
         intro:              string;
         introformat:        number;
     };
 
 
-    export type MDL_Assignment = MDL_Course_Module_Instance_Abstract & {
+    export type MDL_Assignment = MDL_Course_Module_Base & {
         alwaysshowdescription: number;
         nosubmissions:      number;
         sendnotifications:  number;
@@ -178,7 +182,7 @@ namespace MJS {
     };
 
 
-    export type MDL_Forum = MDL_Course_Module_Instance_Abstract & {
+    export type MDL_Forum = MDL_Course_Module_Base & {
         type:               string;
         assessed:           number;
         assesstimestart:    number;
@@ -202,12 +206,12 @@ namespace MJS {
     };
 
 
-    export type MDL_Feedback = MDL_Course_Module_Instance_Abstract & {
+    export type MDL_Feedback = MDL_Course_Module_Base & {
         mdl_feedback_template_id: number;
     };
 
 
-    export type MDL_Course_Module_Instance = MDL_Assignment | MDL_Forum | MDL_Feedback;
+    export type MDL_Course_Module = MDL_Assignment | MDL_Forum | MDL_Feedback;
 
 
 }
