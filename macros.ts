@@ -510,9 +510,7 @@ namespace MJS {
                     this.tabdata.update_ui();
                 }
 
-                if (backup_filename !== null) {
-
-                    if (backup_finished) {
+                if (backup_finished) {
 
                         while (!download_finished && download_tries < 3) {
 
@@ -551,7 +549,6 @@ namespace MJS {
 
                         }
 
-                    }
 
                     try {
 
@@ -705,7 +702,7 @@ namespace MJS {
 
             // Complete--Go to new course (1 load)
             // (this.page_details.stage == null)                                   || throwf(new Error("New course macro, complete:\nStage unexpected."));
-            const course_id = this.page_details.mdl_course.course_id as number;
+            const course_id = (this.page_details as page_backup_restore_data_final).mdl_course.course_id as number;
             this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: null, dom_submit: "stage complete submit"});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {course_id: course_id}});
 

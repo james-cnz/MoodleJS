@@ -341,7 +341,7 @@ namespace MJS {
 
 
 
-
+    // @ts-ignore
     const mjs_popup: Popup = new Popup();
 
 
