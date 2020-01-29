@@ -2,4 +2,3 @@
 *.js.map
 web-ext-artifacts/
 .vscode/
-node_modules

@@ -76,9 +76,10 @@ Otherwise image links will likely be broken.
 * VS Code
 * nodejs (for installing other packages)
   * typescript
-  * tslint (should change to eslint at some stage?)
+  * tslint
   * web-ext
-  * definately typed firefox-webext-browser https://www.npmjs.com/package/@types/firefox-webext-browser
+  * web-ext-types (possible alternatives: https://github.com/mozilla/webextension-polyfill/issues/78 )
+  * webextension-polyfill
 * validator.w3.org (for checking panel.htm)
 
 

@@ -50,5 +50,4 @@ namespace MJS {
 
 }
 
-// tslint:disable-next-line: no-var-keyword
 var mjs_background: MJS.Background = new MJS.Background();
