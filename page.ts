@@ -229,6 +229,8 @@ namespace MJS {
 
                     // Destination
 
+                    message = message as DeepPartial<page_backup_restore_data_4d>;
+
                     const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
                     const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
                     const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
@@ -254,6 +256,8 @@ namespace MJS {
 
                     // Settings
 
+                    message = message as DeepPartial<page_backup_restore_data_4s>;
+
                     const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
                     const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform input[name='submitbutton'][type='submit']")!;
 
@@ -278,6 +282,7 @@ namespace MJS {
                 break;
 
             case 8:
+                message = message as DeepPartial<page_backup_restore_data_8>;
                 const course_name_dom           = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']")!;
                 const course_shortname_dom      = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']")!;
                 const course_startdate_day_dom  = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']")!;
