@@ -20,7 +20,7 @@
 
   "content_scripts": [ {
     "matches":        ["*://*/*"],
-    "include_globs":  ["http*://moodle.*/*","http*://*.moodle.*/*", "http*://*-moodle.*/*"],
+    "include_globs":  ["http*://moodle.*/*", "http*://*-moodle.*/*", "http*://*.moodledemo.*/*", "http*://localhost/*", "http*://idp.*/*", "http*://devidp.*/*"],
     "js":             ["browser-polyfill.js", "shared.js", "page.js"]
   } ]
 

@@ -545,16 +545,20 @@ namespace MJS {
             }
             const subcategories_out: page_course_index_category[] = [];
             category_out.mdl_course_categories = subcategories_out;
-            for (const subcategory_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .subcategories > div.category"))) {
-                subcategories_out.push(await category(subcategory_dom));
-            }
             const courses_out: page_course_index_course[] = [];
             category_out.mdl_courses = courses_out;
-            for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
-                courses_out.push(await course(course_dom));
+            category_out.more = false;
+            if (category_dom) {
+                for (const subcategory_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .subcategories > div.category"))) {
+                    subcategories_out.push(await category(subcategory_dom));
+                }
+
+                for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
+                    courses_out.push(await course(course_dom));
+                }
+                // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
+                category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
             }
-            // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
-            category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
             return category_out;
         }
 
@@ -591,7 +595,7 @@ namespace MJS {
     };
 
     async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
-        async function category(message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
+        async function category(cat_message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
 
             let result: page_course_management_category;
             if (top) {
@@ -605,13 +609,13 @@ namespace MJS {
                     mdl_course_categories: [],
                 };
             } else {
-                if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
+                if (cat_message_in && cat_message_in.hasOwnProperty("expanded") && (cat_message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
                     dom.querySelector<HTMLAnchorElement>(":scope > div > a")!.click();
                     do {
                         await sleep(100);
                     } while (!dom.querySelector(":scope > ul"));
                 }
-                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
+                if (cat_message_in && cat_message_in.hasOwnProperty("checked") && (cat_message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
                     dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.click();
                     // TODO: pause?
                 }
@@ -629,7 +633,7 @@ namespace MJS {
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
                 const subcategory_id = parseInt(subcategory_dom.dataset.id!);
-                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) { return value.course_category_id == subcategory_id; }) || null;
+                const subcategory_in = cat_message_in && cat_message_in.mdl_course_categories && cat_message_in.mdl_course_categories.find(function(value) { return value.course_category_id == subcategory_id; }) || null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
             result.mdl_course_categories = subcategories_out;

@@ -192,7 +192,12 @@ namespace MJS {
             do {
                 await sleep(100);   // May lock up here
                 page_load_wait += 1;
-                if (is_Errorlike(this.page_message))                            { throw new Error(this.page_message.message, this.page_message.fileName, this.page_message.lineNumber); }
+                if (is_Errorlike(this.page_message))                            {
+                    const new_error = new Error(this.page_message.message); // , this.page_message.fileName, this.page_message.lineNumber);
+                    new_error.fileName = this.page_message.fileName;
+                    new_error.lineNumber = this.page_message.lineNumber;
+                    throw new_error;
+                }
                 if (this.macro_cancel)                                          { throw new Error("Cancelled"); }
                 if (this.page_is_loaded && !page_loaded_time) {
                     page_loaded_time = page_load_wait;
@@ -487,66 +492,82 @@ namespace MJS {
             // const error_list: {course_id: number, err: Error}[] = [];
             // let cancelled: boolean = false;
 
-            let consecutive_course_errors: number = 0;
+            // let do_sleep:                   boolean = false;
 
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
+                let course_tries:  number  = 0;
+                let this_try_error:  boolean     = false;
+                do {
 
-                let this_course_error:  boolean     = false;
-                let backup_filename:    string|null = null;
-                let backup_finished:    boolean     = false;
-                let download_tries:     number      = 0;
-                let download_finished:  boolean     = false;
+                    course_tries++;
+                    if (this_try_error) {
+                        this_try_error = false;
+                        await sleep(60 * 1000);
+                    }
 
-                try {
-                    // Create backup file (9 loads)
-                    this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.course_id}}, page: "backup-backup"});
-                    // const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
-                    //                                                                || throwf(new Error("Backup macro, create backup:\nContext not found."));
-                    // const course_context = parseInt(course_context_match[1]);
+                    let backup_filename:    string|null = null;
+                    // let backup_finished:    boolean     = false;
 
-                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
-                    this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
 
-                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
-                    this.page_details = await this.tabdata.page_loaded<page_backup_backup_4_data>({page: "backup-backup"});
-                    backup_filename = this.page_details.backup.filename;
+                    try {
+                        // course_tries++;
+                        // this_try_error = false;
 
-                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
-                    this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
-                    // TODO: Check for continue button?
+                        // Create backup file (9 loads)
+                        this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.course_id}}, page: "backup-backup"});
+                        // const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
+                        //                                                                || throwf(new Error("Backup macro, create backup:\nContext not found."));
+                        // const course_context = parseInt(course_context_match[1]);
 
-                    this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
-                    this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
+                        this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
+                        this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
 
-                    /*
-                    this.page_details = await this.tabdata.page_load(
-                        {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
-                        page: "backup-restorefile", mdl_course: {id: course_id}},
-                    );
-                    */
-                   backup_finished = true;
+                        this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
+                        this.page_details = await this.tabdata.page_loaded<page_backup_backup_4_data>({page: "backup-backup"});
+                        backup_filename = this.page_details.backup.filename;
 
-                } catch (e) {
-                    this.tabdata.macro_log += "In course: " + course.course_id + ", creating backup\n";
-                    if (e.message == "Cancelled") { throw e; }
-                    // error_list.push({course_id: course.id, err: e});
-                    this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
-                    e.message + "\n"
-                    + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
-                    + "\n";
-                    await sleep(1000);
-                    this_course_error = true;
-                    this.tabdata.macro_state = 1;
-                    this.tabdata.update_ui();
-                }
+                        this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
+                        this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
+                        // TODO: Check for continue button?
 
-                if (backup_finished) {
+                        this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
+                        this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
 
-                        while (!download_finished && download_tries < 3) {
+                        /*
+                        this.page_details = await this.tabdata.page_load(
+                            {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
+                            page: "backup-restorefile", mdl_course: {id: course_id}},
+                        );
+                        */
+                    // backup_finished = true;
+
+                    } catch (e) {
+                        this.tabdata.macro_log += "In course: " + course.course_id + ", creating backup: " + backup_filename + "\n";
+                        if (e.message == "Cancelled") { throw e; }
+                        // error_list.push({course_id: course.id, err: e});
+                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                        e.message + "\n"
+                        + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                        + "\n";
+                        await sleep(4 * 1000);
+                        // do_sleep = true;
+                        this_try_error = true;
+                        this.tabdata.macro_state = 1;
+                        // TODO: Rewind progress bar
+                        this.tabdata.update_ui();
+                    }
+
+                    if (!this_try_error) {
+
+                        let download_tries:     number      = 0;
+                        // let download_finished:  boolean     = false;
+
+                        do {
 
                             try {
-
                                 download_tries++;
+                                this_try_error = false;
+
 
                                 this.page_details = this.page_details as page_backup_restorefile_data;
 
@@ -562,26 +583,28 @@ namespace MJS {
                                 if (backup_download_status.state != "complete") { throw new Error("Download error: " + backup_download_status.error); }
                                 this.tabdata.page_load_count(1);
 
-                                download_finished = true;
+                                // download_finished = true;
 
                             } catch (e) {
-                                this.tabdata.macro_log += "In course: " + course.course_id + " downloading backup, try " + download_tries + "\n";
+                                this.tabdata.macro_log += "In course: " + course.course_id + " downloading backup: " + backup_filename + ", try " + download_tries + "\n";
                                 if (e.message == "Cancelled") { throw e; }
                                 // error_list.push({course_id: course.id, err: e});
                                 this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
                                 e.message + "\n"
                                 + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                                 + "\n";
-                                await sleep(1000);
-                                this_course_error = true;
+                                await sleep(4 * 1000);
+                                // do_sleep = true;
+                                this_try_error = true;
                                 this.tabdata.macro_state = 1;
                                 this.tabdata.update_ui();
                             }
 
-                        }
+                        } while (this_try_error && download_tries < 3);
 
+                    }
 
-                    try {
+                    if (!this_try_error) try {
 
                         // Delete backup file (2 loads?)
                         this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
@@ -595,33 +618,26 @@ namespace MJS {
                         this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
 
                     } catch (e) {
-                        this.tabdata.macro_log += "In course: " + course.course_id + " deleting backup\n";
+                        this.tabdata.macro_log += "In course: " + course.course_id + " deleting backup: " + backup_filename + "\n";
                         if (e.message == "Cancelled") { throw e; }
                         // error_list.push({course_id: course.id, err: e});
                         this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
                         e.message + "\n"
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
-                        await sleep(1000);
-                        this_course_error = true;
+                        await sleep(4 * 1000);
+                        // do_sleep = true;
+                        this_try_error = true;
                         this.tabdata.macro_state = 1;
                         this.tabdata.update_ui();
                     }
 
-                }
+                } while (this_try_error && course_tries < 3);
 
-                if (this_course_error) {
-                    consecutive_course_errors++;
-                } else {
-                    consecutive_course_errors = 0;
-                }
-
-                if (consecutive_course_errors >= 3) {
+                if (this_try_error) {
                     throw new Error("Too many consecutive errors.");
                 }
-
             }
-
 
 
         }
