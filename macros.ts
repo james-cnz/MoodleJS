@@ -680,6 +680,8 @@ namespace MJS {
                 template_id = 6548;
             } else if (page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 template_id = 6548;
+            } else if (page_details.moodle_page.wwwroot == "http://localhost") {
+                template_id = 2;
             } else                                                                      { return; }
 
             this.data = {
@@ -919,6 +921,8 @@ namespace MJS {
                 feedback_template_id = 59;
             } else if (this.page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 feedback_template_id = 59;
+            } else if (this.page_details.moodle_page.wwwroot == "http://localhost") {
+                feedback_template_id = 1;
             } else                                                                      { return; }
 
             // Check editing on
