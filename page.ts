@@ -27,20 +27,23 @@ namespace MJS {
         | page_course_index_data
         | page_course_management_data
         | page_course_view_data
+        | page_grade_report_grader_index_data
+        | page_local_otago_login_data
+        | page_login_index_data
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
+        | page_my_index_data
         | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; };  // some other page
 
 
 
     function moodle_page(): Moodle_Page_Data {
+        const logout_dom = window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']");
         return {
             wwwroot:    window.location.origin,
             body_class: window.document.body.className!,
-            sesskey:    window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")!
-                         .search.match(/^\?sesskey=(\w+)$/)!
-                        [1],
+            sesskey:    logout_dom ? logout_dom.search.match(/^\?sesskey=(\w+)$/)![1] : "",
             editing:    window.document.body.classList.contains("editing")
         };
     }
@@ -893,6 +896,84 @@ namespace MJS {
 
 
 
+    export type page_grade_report_grader_index_data = Page_Data_Base & {
+        page:       "grade-report-grader-index",
+        location?:  { pathname: "/grade/report/grader/index.php", search: {id: number} },
+        grades_table_as_text: string
+    };
+
+    async function page_grade_report_grader_index(_message: DeepPartial<page_grade_report_grader_index_data>): Promise<page_grade_report_grader_index_data> {
+        // alert("starting page_local_otago_login");
+        const grades_table_dom = document.querySelector("table#user-grades.gradereport-grader-table") as HTMLTableElement;
+        let found_heading: boolean = false;
+        let table_as_text: string = "";
+        for (const row_dom of Object.values(grades_table_dom.rows)) {
+            if (!found_heading) {
+                if (!row_dom.classList.contains("heading")) { continue; }
+                found_heading = true;
+            }
+            if (row_dom.classList.contains("lastrow")) { break; }
+            let col_num: number = 0;
+            for (const cell_dom of Object.values(row_dom.cells)) {
+                table_as_text = table_as_text + cell_dom.textContent;
+                for (let col_count = 0; col_count < cell_dom.colSpan; col_count++) {
+                    col_num++;
+                    table_as_text = table_as_text + "\t";
+                }
+            }
+            table_as_text = table_as_text + "\n";
+        }
+        return {moodle_page: moodle_page(), page: "grade-report-grader-index", grades_table_as_text: table_as_text};
+    }
+
+
+
+
+    export type page_local_otago_login_data = Page_Data_Base & {
+        page:       "local-otago-login",
+        location?:  { pathname: "/local/otago/login.php", search: {} },
+        dom_submit?: "staff_students"|"other_users"
+    };
+
+    async function page_local_otago_login(message: DeepPartial<page_local_otago_login_data>): Promise<page_local_otago_login_data> {
+        // alert("starting page_local_otago_login");
+        const staff_students_dom    = document.querySelector("div.loginactions a[href*='/auth/saml2']") as HTMLAnchorElement;
+        const other_users_dom       = document.querySelector("div.loginactions a[href*='/login/index']") as HTMLAnchorElement;
+        if (message.dom_submit == "staff_students") {
+            staff_students_dom.click();
+        } else if (message.dom_submit == "other_users") {
+            other_users_dom.click();
+        }
+        return {moodle_page: moodle_page(), page: "local-otago-login"};
+    }
+
+
+
+    export type page_login_index_data = Page_Data_Base & {
+        page:       "login-index",
+        location?:  { pathname: "/login/index.php", search: {} },
+        mdl_user?:   page_login_index_user,
+        dom_submit?: "log_in"
+    };
+
+    type page_login_index_user = {
+        username:   string;
+        password:   string;
+    };
+
+    async function page_login_index(message: DeepPartial<page_login_index_data>): Promise<page_login_index_data> {
+        const username_dom  = document.querySelector("input#username") as HTMLInputElement;
+        const password_dom  = document.querySelector("input#password") as HTMLInputElement;
+        const log_in_dom    = document.querySelector("button#loginbtn") as HTMLAnchorElement;
+        if (message.mdl_user) {
+            username_dom.value = message.mdl_user.username;
+            password_dom.value = message.mdl_user.password;
+        }
+        if (message.dom_submit == "log_in") {
+            log_in_dom.click();
+        }
+        return {moodle_page: moodle_page(), page: "login-index"};
+    }
 
 
 
@@ -1081,6 +1162,14 @@ namespace MJS {
 
 
 
+    export type page_my_index_data = Page_Data_Base & {
+        page:       "my-index",
+        location?:  { pathname: "/my/index.php", search: {} },
+    };
+
+    async function page_my_index(_message: DeepPartial<page_my_index_data>): Promise<page_my_index_data> {
+        return {moodle_page: moodle_page(), page: "my-index"};
+    }
 
 
 
@@ -1131,6 +1220,15 @@ namespace MJS {
             case "page-course-view-multitopic":
                 result = await page_course_view(message as DeepPartial<page_course_view_data>);
                 break;
+            case "page-grade-report-grader-index":
+                result = await page_grade_report_grader_index(message as DeepPartial<page_grade_report_grader_index_data>);
+                break;
+            case "page-local-otago-login":
+                result = await page_local_otago_login(message as DeepPartial<page_local_otago_login_data>);
+                break;
+            case "page-login-index":
+                result = await page_login_index(message as DeepPartial<page_login_index_data>);
+                break;
             case "page-mod-feedback-edit":
                 result = await page_mod_feedback_edit(message as DeepPartial<page_mod_feedback_edit_data>);
                 break;
@@ -1162,6 +1260,9 @@ namespace MJS {
             case "page-mod-wiki-mod":
             case "page-mod-workshop-mod":
                 result = await page_module_edit(message as DeepPartial<page_module_edit_data>);
+                break;
+            case "page-my-index":
+                result = await page_my_index(message as DeepPartial<page_my_index_data>);
                 break;
             default:
                 result = {moodle_page: moodle_page(), page: ".*"};

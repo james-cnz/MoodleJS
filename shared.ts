@@ -214,5 +214,10 @@ namespace MJS {
 
     export type MDL_Course_Module = MDL_Assignment | MDL_Forum | MDL_Feedback;
 
+    export type MDL_User = MDL_Context & {
+        readonly contextlevel: 30;
+        username:           string;
+        password:           string;
+    };
 
 }

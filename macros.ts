@@ -58,7 +58,8 @@ namespace MJS {
             index_rebuild:  new Index_Rebuild_Macro(this),
             new_section:    new New_Section_Macro(this),
             new_topic:      new New_Topic_Macro(this),
-            backup:         new Backup_Macro(this)
+            backup:         new Backup_Macro(this),
+            copy_grades:    new Copy_Grades_Macro(this)
         };
 
         public popup:           Popup|null = null;
@@ -308,6 +309,7 @@ namespace MJS {
             this.macros.new_section.init(page_details);
             this.macros.new_topic.init(page_details);
             this.macros.backup.init(page_details);
+            this.macros.copy_grades.init(page_details);
         }
 
 
@@ -500,18 +502,60 @@ namespace MJS {
                 do {
 
                     course_tries++;
-                    if (this_try_error) {
+                    if (this_try_error) try {
                         this_try_error = false;
-                        await sleep(60 * 1000);
+                        await sleep(60 * 60 * 1000);
+                        try {
+                            // alert("before try");
+                            this.page_details = await this.tabdata.page_load({location: {pathname: "/my/index.php", search: {id: course.course_id}}, page: "my-index"});
+                            // alert("after try");
+                        } catch (e) {
+                            // alert("starting catch");
+                            // alert(e.message);
+                            // alert(e.message != "Unexpected tab update");
+                            if (e.message != "Unexpected tab update") throw e;
+                            // alert("reset stuff");
+                            await sleep(4 * 1000);
+                            // do_sleep = true;
+                            this.tabdata.macro_state = 1;
+                            // this.tabdata.update_ui();
+                            // alert("check local login");
+                            // TODO: pause, reset?
+                            // this.page_details = await this.tabdata.page_loaded({page: "local-otago-login"});
+                            this.page_details = await this.tabdata.page_call({});
+                            if (this.page_details.page != "local-otago-login") throw new Error("Not on login page");
+                            // alert("call click");
+                            this.page_details = await this.tabdata.page_call({page: "local-otago-login", dom_submit: "other_users"});
+                            // alert("await login");
+                            this.page_details = await this.tabdata.page_loaded({page: "login-index"});
+                            // alert("call click");
+                            this.page_details = await this.tabdata.page_call({page: "login-index", mdl_user: {username: "opmoodlebackup", password: "somethingrandom1"}, dom_submit: "log_in"});
+                            // alert("await my");
+                            this.page_details = await this.tabdata.page_loaded({page: "my-index"});
+                            // alert("all OK");
+                        }
+
+                    }  catch (e) {
+                        this.tabdata.macro_log += "In course: " + course.course_id + ", recovering\n";
+                        if (e.message == "Cancelled") { throw e; }
+                        // error_list.push({course_id: course.id, err: e});
+                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                        e.message + "\n"
+                        + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                        + "\n";
+                        await sleep(4 * 1000);
+                        // do_sleep = true;
+                        this_try_error = true;
+                        this.tabdata.macro_state = 1;
+                        // TODO: Rewind progress bar
+                        this.tabdata.update_ui();
                     }
 
                     let backup_filename:    string|null = null;
                     // let backup_finished:    boolean     = false;
 
 
-                    try {
-                        // course_tries++;
-                        // this_try_error = false;
+                    if (!this_try_error) try {
 
                         // Create backup file (9 loads)
                         this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.course_id}}, page: "backup-backup"});
@@ -1277,6 +1321,40 @@ namespace MJS {
 
 
     }
+
+
+
+    export type Copy_Grades_Params = {
+
+    };
+
+    type Copy_Grades_Data = {
+        grades_table_as_text: string;
+    };
+
+    export class Copy_Grades_Macro extends Macro {
+
+
+        public params: Copy_Grades_Params|null = null;
+        protected data: Copy_Grades_Data|null = null;
+
+
+        public init(page_details: Page_Data) {
+
+            this.prereq = false;
+            this.page_details = page_details;
+            if (this.page_details.page != "grade-report-grader-index") { return; }
+            this.data = { grades_table_as_text: (page_details as page_grade_report_grader_index_data).grades_table_as_text };
+            this.prereq = true;
+
+        }
+
+        protected async content() {
+            await navigator.clipboard.writeText(this.data.grades_table_as_text);
+        }
+
+    }
+
 
 
 
