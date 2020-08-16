@@ -1343,7 +1343,7 @@ namespace MJS {
 
             this.prereq = false;
             this.page_details = page_details;
-            if (this.page_details.page != "grade-report-grader-index") { return; }
+            if (!this.page_details || this.page_details.page != "grade-report-grader-index") { return; }
             this.data = { grades_table_as_text: (page_details as page_grade_report_grader_index_data).grades_table_as_text };
             this.prereq = true;
 

@@ -913,11 +913,11 @@ namespace MJS {
                 found_heading = true;
             }
             if (row_dom.classList.contains("lastrow")) { break; }
-            let col_num: number = 0;
+            // let col_num: number = 0;
             for (const cell_dom of Object.values(row_dom.cells)) {
                 table_as_text = table_as_text + cell_dom.textContent;
                 for (let col_count = 0; col_count < cell_dom.colSpan; col_count++) {
-                    col_num++;
+                    // col_num++;
                     table_as_text = table_as_text + "\t";
                 }
             }
