@@ -626,7 +626,7 @@ namespace MJS {
                     course_category_id: parseInt(dom.dataset.id!),
                     name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
                     coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
-                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
+                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div input.bulk-action-checkbox")!.checked, // broken?
                     expanded:   dom.getAttribute("aria-expanded") == "true",
                     expandable: (dom.dataset.expandable == "1"),
                     mdl_course_categories: [],
