@@ -74,17 +74,13 @@ namespace MJS {
         const cats: page_admin_report_customsql_category[] = [];
         for (const cat_dom of Object.values(cats_dom)) {
             const cat_header_dom = cat_dom.querySelector<HTMLAnchorElement>("h2 > a.categoryname");
-            console.log("cat id parse pre");
             const cat_id = parseInt(cat_header_dom.search.match(/\?hidecat=([0-9]+)/)[1]);
-            console.log("cat id parse post");
             const cat_name = cat_header_dom.textContent;
             const queries_dom = cat_dom.querySelectorAll<HTMLParagraphElement>("div.csql_category_reports > p");
             const queries: page_admin_report_customsql_query[] = [];
             for (const query_dom of Object.values(queries_dom)) {
                 const query_link_dom = query_dom.querySelector<HTMLAnchorElement>("a");
-                console.log("query id parse pre");
                 const query_id = parseInt(query_link_dom.search.match(/\?id=([0-9]+)/)[1]);
-                console.log("query id parse post");
                 const query_name = query_link_dom.textContent;
                 queries.push({id: query_id, displayname: query_name});
             }

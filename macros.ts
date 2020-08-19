@@ -433,15 +433,14 @@ namespace MJS {
         }
         */
 
-        private static ticked_categories(category: page_course_management_category, path_as_names: string = ""): string[] {
-            let result: string[] = [];
+        private static ticked_categories(category: page_course_management_category): number[] {
+            let result: number[] = [];
             for (const subcategory of category.mdl_course_categories) {
-                const subcat_path_as_names = path_as_names + (path_as_names ? " / " : "") + subcategory.name;
                 if (subcategory.checked) {
-                    result.push(subcat_path_as_names);
+                    result.push(subcategory.course_category_id);
                 }
                 if (subcategory.mdl_course_categories.length > 0) {
-                    result = result.concat(Backup_Macro.ticked_categories(subcategory, subcat_path_as_names));
+                    result = result.concat(Backup_Macro.ticked_categories(subcategory));
                 }
             }
             return result;
@@ -508,20 +507,30 @@ namespace MJS {
 
             // Run course list query.
             this.page_details = await this.tabdata.page_load<page_admin_report_customsql_view_data>({location: {pathname: "/report/customsql/view.php", search: {id: course_list_query_id}}, page: "admin-report-customsql-view"});
-            if (this.page_details.query_results.headers[1] != "Cat Path"
-                || this.page_details.query_results.headers[2] != "Course ID"
-                || this.page_details.query_results.headers[3] != "Course Name") {
-                throw new Error("Unexpected headers");
+            let cat_path_col:   number|null = null;
+            let course_id_col:  number|null = null;
+            let course_name_col: number|null = null;
+            let col:            number = 0;
+            for (const col_name of this.page_details.query_results.headers) {
+                switch (col_name.toLocaleLowerCase()) {
+                    case "cat path":        cat_path_col = col; break;
+                    case "course id":       course_id_col = col; break;
+                    case "course short name": course_name_col = col; break;
+                }
+                col++;
+            }
+            if (cat_path_col === null || course_id_col === null || course_name_col === null) {
+                throw new Error("Headers not found");
             }
 
             // Find courses in ticked categories.
-            const course_list: {course_id: number, fullname: string}[] = [];
+            const course_list: {course_id: number, shortname: string}[] = [];
             for (const query_row of this.page_details.query_results.data) {
                 let match: boolean = false;
-                for (const cat_path of category_list) {
-                    if (query_row[1].startsWith(cat_path)) { match = true; }
+                for (const cat_id of category_list) {
+                    if ((query_row[cat_path_col] + "/").search("/" + cat_id + "/") >= 0) { match = true; }
                 }
-                if (match) { course_list.push({course_id: parseInt(query_row[2]), fullname: query_row[3]}); }
+                if (match) { course_list.push({course_id: parseInt(query_row[course_id_col]), shortname: query_row[course_name_col]}); }
             }
 
             // Calculate max progress.
