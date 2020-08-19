@@ -19,7 +19,9 @@ namespace MJS {
 
 
     export type Page_Data =
-          page_backup_backup_data
+          page_admin_report_customsql_index_data
+        | page_admin_report_customsql_view_data
+        | page_backup_backup_data
         | page_backup_backupfilesedit_data
         | page_backup_restore_data
         | page_backup_restorefile_data
@@ -46,6 +48,81 @@ namespace MJS {
             sesskey:    logout_dom ? logout_dom.search.match(/^\?sesskey=(\w+)$/)![1] : "",
             editing:    window.document.body.classList.contains("editing")
         };
+    }
+
+
+    export type page_admin_report_customsql_index_data = Page_Data_Base & {
+        page:       "admin-report-customsql-index",
+        location?:  { pathname: "/report/customsql/index.php" }
+        query_cats: page_admin_report_customsql_category[];
+    };
+
+    export type page_admin_report_customsql_category = {
+        readonly id:    number;
+        name:           string;
+        mdl_report_customsql_queries: page_admin_report_customsql_query[];
+    };
+
+    export type page_admin_report_customsql_query = {
+        readonly id:    number;
+        displayname:    string;
+    };
+
+
+    async function page_admin_report_customsql_index(_message: DeepPartial<page_admin_report_customsql_index_data>): Promise<page_admin_report_customsql_index_data> {
+        const cats_dom = document.querySelectorAll<HTMLDivElement>("section#region-main div.csql_category");
+        const cats: page_admin_report_customsql_category[] = [];
+        for (const cat_dom of Object.values(cats_dom)) {
+            const cat_header_dom = cat_dom.querySelector<HTMLAnchorElement>("h2 > a.categoryname");
+            console.log("cat id parse pre");
+            const cat_id = parseInt(cat_header_dom.search.match(/\?hidecat=([0-9]+)/)[1]);
+            console.log("cat id parse post");
+            const cat_name = cat_header_dom.textContent;
+            const queries_dom = cat_dom.querySelectorAll<HTMLParagraphElement>("div.csql_category_reports > p");
+            const queries: page_admin_report_customsql_query[] = [];
+            for (const query_dom of Object.values(queries_dom)) {
+                const query_link_dom = query_dom.querySelector<HTMLAnchorElement>("a");
+                console.log("query id parse pre");
+                const query_id = parseInt(query_link_dom.search.match(/\?id=([0-9]+)/)[1]);
+                console.log("query id parse post");
+                const query_name = query_link_dom.textContent;
+                queries.push({id: query_id, displayname: query_name});
+            }
+            cats.push({id: cat_id, name: cat_name, mdl_report_customsql_queries: queries});
+        }
+        return {moodle_page: moodle_page(), page: "admin-report-customsql-index", query_cats: cats};
+    }
+
+
+    export type page_admin_report_customsql_view_data = Page_Data_Base & {
+        page:       "admin-report-customsql-view",
+        location?:  { pathname: "/report/customsql/view.php", search: { id: number } }
+        query_results: page_admin_report_customsql_results;
+    };
+
+    export type page_admin_report_customsql_results = {headers: string[], data: string[][]};
+
+    async function page_admin_report_customsql_view(_message: DeepPartial<page_admin_report_customsql_view_data>): Promise<page_admin_report_customsql_view_data> {
+        const results_dom = document.querySelector<HTMLTableElement>("section#region-main table.generaltable");
+
+        const headers_dom = results_dom.querySelectorAll<HTMLTableHeaderCellElement>("thead tr th");
+        const headers: string[] = [];
+        for (const header_dom of Object.values(headers_dom)) {
+            headers.push(header_dom.textContent);
+        }
+
+        const data_dom = results_dom.querySelectorAll<HTMLTableRowElement>("tbody tr");
+        const rows: string[][] = [];
+        for (const row_dom of Object.values(data_dom)) {
+            const row: string[] = [];
+            const cells_dom = row_dom.querySelectorAll<HTMLTableDataCellElement>("td");
+            for (const cell_dom of Object.values(cells_dom)) {
+                row.push(cell_dom.textContent);
+            }
+            rows.push(row);
+        }
+
+        return {moodle_page: moodle_page(), page: "admin-report-customsql-view", query_results: {headers: headers, data: rows}};
     }
 
 
@@ -1194,6 +1271,12 @@ namespace MJS {
         let result: Page_Data;
 
         switch (body_id) {
+            case "page-admin-report-customsql-index":
+                result = await page_admin_report_customsql_index(message as DeepPartial<page_admin_report_customsql_index_data>);
+                break;
+            case "page-admin-report-customsql-view":
+                result = await page_admin_report_customsql_view(message as DeepPartial<page_admin_report_customsql_view_data>);
+                break;
             case "page-backup-backup":
                 result = await page_backup_backup(message as DeepPartial<page_backup_backup_data>);
                 break;

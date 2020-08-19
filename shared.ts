@@ -220,4 +220,17 @@ namespace MJS {
         password:           string;
     };
 
+
+    export type MDL_Report_CustomSQL_Categories = {
+        readonly id:    number;
+        name:           string;
+        mdl_report_customsql_queries: MDL_Report_CustomSQL_Queries[];
+    };
+
+    export type MDL_Report_CustomSQL_Queries = {
+        readonly id:    number;
+        displayname:    string;
+    };
+
+
 }

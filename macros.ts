@@ -415,6 +415,7 @@ namespace MJS {
 
     export class Backup_Macro extends Macro {
 
+        /*
         private static expand_ticked(category: page_course_management_category, parent_ticked?: boolean): boolean {
             let change: boolean = false;
             if (parent_ticked && !category.checked) {
@@ -430,15 +431,17 @@ namespace MJS {
             }
             return change;
         }
+        */
 
-        private static ticked_categories(category: page_course_management_category): page_course_management_category[] {
-            let result: page_course_management_category[] = [];
+        private static ticked_categories(category: page_course_management_category, path_as_names: string = ""): string[] {
+            let result: string[] = [];
             for (const subcategory of category.mdl_course_categories) {
+                const subcat_path_as_names = path_as_names + (path_as_names ? " / " : "") + subcategory.name;
                 if (subcategory.checked) {
-                    result.push(subcategory);
+                    result.push(subcat_path_as_names);
                 }
                 if (subcategory.mdl_course_categories.length > 0) {
-                    result = result.concat(Backup_Macro.ticked_categories(subcategory));
+                    result = result.concat(Backup_Macro.ticked_categories(subcategory, subcat_path_as_names));
                 }
             }
             return result;
@@ -459,10 +462,7 @@ namespace MJS {
 
         protected async content() {
 
-            // this.progress_max = this.params.mdl_course_categories.mdl_course.length * 12 + 1;
-            // this.tabdata.macro_progress_max = this.progress_max;
-
-            // const site_map = await this.tabdata.page_call({page: "course-index(-category)?", dom_expand: true});
+            /*
             let change: boolean;
             do {
                 this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
@@ -473,9 +473,13 @@ namespace MJS {
                     // await sleep(1000);
                 }
             } while (change);
+            */
 
+            // Get ticked categories.
+            this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
             const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
 
+            /*
             // Calculate max progress
             let course_count = 0;
             for (const category of category_list) {
@@ -490,6 +494,39 @@ namespace MJS {
                 this.page_details = await this.tabdata.page_load<page_course_management_data>({location: {pathname: "/course/management.php", search: {categoryid: category.course_category_id, perpage: 999}}});
                 course_list = course_list.concat(this.page_details.mdl_courses);
             }
+            */
+
+            // Find course list query.
+            this.page_details = await this.tabdata.page_load<page_admin_report_customsql_index_data>({location: {pathname: "/report/customsql/index.php", search: {}}, page: "admin-report-customsql-index"});
+            let course_list_query_id: number|null = null;
+            for (const query_cat of this.page_details.query_cats) {
+                for (const query of query_cat.mdl_report_customsql_queries) {
+                    if (query.displayname == "Course list") { course_list_query_id = query.id; }
+                }
+            }
+            if (course_list_query_id === null) { throw new Error("Course list query not found"); }
+
+            // Run course list query.
+            this.page_details = await this.tabdata.page_load<page_admin_report_customsql_view_data>({location: {pathname: "/report/customsql/view.php", search: {id: course_list_query_id}}, page: "admin-report-customsql-view"});
+            if (this.page_details.query_results.headers[1] != "Cat Path"
+                || this.page_details.query_results.headers[2] != "Course ID"
+                || this.page_details.query_results.headers[3] != "Course Name") {
+                throw new Error("Unexpected headers");
+            }
+
+            // Find courses in ticked categories.
+            const course_list: {course_id: number, fullname: string}[] = [];
+            for (const query_row of this.page_details.query_results.data) {
+                let match: boolean = false;
+                for (const cat_path of category_list) {
+                    if (query_row[1].startsWith(cat_path)) { match = true; }
+                }
+                if (match) { course_list.push({course_id: parseInt(query_row[2]), fullname: query_row[3]}); }
+            }
+
+            // Calculate max progress.
+            this.progress_max = category_list.length + course_list.length * 12 + 1;
+            this.tabdata.macro_progress_max = this.progress_max;
 
             // const error_list: {course_id: number, err: Error}[] = [];
             // let cancelled: boolean = false;
