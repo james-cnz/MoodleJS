@@ -194,7 +194,7 @@ namespace MJS {
                 await sleep(100);   // May lock up here
                 page_load_wait += 1;
                 if (is_Errorlike(this.page_message))                            {
-                    const new_error = new Error(this.page_message.message); // , this.page_message.fileName, this.page_message.lineNumber);
+                    const new_error: Error&{fileName?: string; lineNumber?: number} = new Error(this.page_message.message); // , this.page_message.fileName, this.page_message.lineNumber);
                     new_error.fileName = this.page_message.fileName;
                     new_error.lineNumber = this.page_message.lineNumber;
                     throw new_error;
