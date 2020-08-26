@@ -543,8 +543,9 @@ namespace MJS {
             // let do_sleep:                   boolean = false;
 
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
-                let course_tries:  number  = 0;
-                let this_try_error:  boolean     = false;
+                let course_tries:   number  = 0;
+                let course_skip:    boolean = false;
+                let this_try_error: boolean = false;
                 do {
 
                     course_tries++;
@@ -601,7 +602,7 @@ namespace MJS {
                     // let backup_finished:    boolean     = false;
 
 
-                    if (!this_try_error) try {
+                    if (!this_try_error && !course_skip) try {
 
                         // Create backup file (9 loads)
                         this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.course_id}}, page: "backup-backup"});
@@ -642,12 +643,13 @@ namespace MJS {
                         await sleep(4 * 1000);
                         // do_sleep = true;
                         this_try_error = true;
+                        if (e.message == "Can not find data record in database table course.") { course_skip = true; }
                         this.tabdata.macro_state = 1;
                         // TODO: Rewind progress bar
                         this.tabdata.update_ui();
                     }
 
-                    if (!this_try_error) {
+                    if (!this_try_error && !course_skip) {
 
                         let download_tries:     number      = 0;
                         // let download_finished:  boolean     = false;
@@ -694,7 +696,7 @@ namespace MJS {
 
                     }
 
-                    if (!this_try_error) try {
+                    if (!this_try_error && !course_skip) try {
 
                         // Delete backup file (2 loads?)
                         this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
@@ -722,9 +724,9 @@ namespace MJS {
                         this.tabdata.update_ui();
                     }
 
-                } while (this_try_error && course_tries < 3);
+                } while (this_try_error && course_tries < 3 && !course_skip);
 
-                if (this_try_error) {
+                if (this_try_error && !course_skip) {
                     throw new Error("Too many consecutive errors.");
                 }
             }

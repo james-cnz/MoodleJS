@@ -179,7 +179,7 @@ namespace MJS {
                 break;
 
             case null:
-                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form button[type='submit']")!;
+                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form [type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
@@ -435,7 +435,7 @@ namespace MJS {
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody")!;
         const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']")!;
-        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']")!;
+        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form [type='submit']")!;
 
         const backups: {filename: string, download_url: string}[] = [];
         if (!course_backups_dom.classList.contains("empty")) {
