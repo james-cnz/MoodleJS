@@ -7,13 +7,14 @@
 namespace MJS {
 
     export type DeepPartial<T> = {
-        [P in keyof T]?: T[P] extends Array<infer U>
-          ? Array<DeepPartial<U>>
-          : T[P] extends ReadonlyArray<infer U>
+        [P in keyof T]?: T[P] extends Array<infer U> // tslint:disable-line:array-type
+          ? Array<DeepPartial<U>> // tslint:disable-line:array-type
+          : T[P] extends ReadonlyArray<infer U> // tslint:disable-line:no-shadowed-variable
             ? ReadonlyArray<DeepPartial<U>>
             : DeepPartial<T[P]>
       };
 
+    // tslint:disable-next-line: promise-function-async
     export function sleep(time: number): Promise<{}> {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
@@ -212,6 +213,24 @@ namespace MJS {
 
 
     export type MDL_Course_Module = MDL_Assignment | MDL_Forum | MDL_Feedback;
+
+    export type MDL_User = MDL_Context & {
+        readonly contextlevel: 30;
+        username:           string;
+        password:           string;
+    };
+
+
+    export type MDL_Report_CustomSQL_Categories = {
+        readonly id:    number;
+        name:           string;
+        mdl_report_customsql_queries: MDL_Report_CustomSQL_Queries[];
+    };
+
+    export type MDL_Report_CustomSQL_Queries = {
+        readonly id:    number;
+        displayname:    string;
+    };
 
 
 }

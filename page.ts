@@ -19,7 +19,9 @@ namespace MJS {
 
 
     export type Page_Data =
-          page_backup_backup_data
+          page_admin_report_customsql_index_data
+        | page_admin_report_customsql_view_data
+        | page_backup_backup_data
         | page_backup_backupfilesedit_data
         | page_backup_restore_data
         | page_backup_restorefile_data
@@ -27,22 +29,96 @@ namespace MJS {
         | page_course_index_data
         | page_course_management_data
         | page_course_view_data
+        | page_grade_report_grader_index_data
+        | page_local_otago_login_data
+        | page_login_index_data
         | page_mod_feedback_edit_data
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
+        | page_my_index_data
         | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; };  // some other page
 
 
 
     function moodle_page(): Moodle_Page_Data {
+        const logout_dom = window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']");
         return {
             wwwroot:    window.location.origin,
             body_class: window.document.body.className!,
-            sesskey:    window.document.querySelector<HTMLAnchorElement>(":root a.menu-action[data-title='logout,moodle']")!
-                         .search.match(/^\?sesskey=(\w+)$/)!
-                        [1],
+            sesskey:    logout_dom ? logout_dom.search.match(/^\?sesskey=(\w+)$/)![1] : "",
             editing:    window.document.body.classList.contains("editing")
         };
+    }
+
+
+    export type page_admin_report_customsql_index_data = Page_Data_Base & {
+        page:       "admin-report-customsql-index",
+        location?:  { pathname: "/report/customsql/index.php" }
+        query_cats: page_admin_report_customsql_category[];
+    };
+
+    export type page_admin_report_customsql_category = {
+        readonly id:    number;
+        name:           string;
+        mdl_report_customsql_queries: page_admin_report_customsql_query[];
+    };
+
+    export type page_admin_report_customsql_query = {
+        readonly id:    number;
+        displayname:    string;
+    };
+
+
+    async function page_admin_report_customsql_index(_message: DeepPartial<page_admin_report_customsql_index_data>): Promise<page_admin_report_customsql_index_data> {
+        const cats_dom = document.querySelectorAll<HTMLDivElement>("section#region-main div.csql_category");
+        const cats: page_admin_report_customsql_category[] = [];
+        for (const cat_dom of Object.values(cats_dom)) {
+            const cat_header_dom = cat_dom.querySelector<HTMLAnchorElement>("h2 > a.categoryname");
+            const cat_id = parseInt(cat_header_dom.search.match(/\?hidecat=([0-9]+)/)[1]);
+            const cat_name = cat_header_dom.textContent;
+            const queries_dom = cat_dom.querySelectorAll<HTMLParagraphElement>("div.csql_category_reports > p");
+            const queries: page_admin_report_customsql_query[] = [];
+            for (const query_dom of Object.values(queries_dom)) {
+                const query_link_dom = query_dom.querySelector<HTMLAnchorElement>("a");
+                const query_id = parseInt(query_link_dom.search.match(/\?id=([0-9]+)/)[1]);
+                const query_name = query_link_dom.textContent;
+                queries.push({id: query_id, displayname: query_name});
+            }
+            cats.push({id: cat_id, name: cat_name, mdl_report_customsql_queries: queries});
+        }
+        return {moodle_page: moodle_page(), page: "admin-report-customsql-index", query_cats: cats};
+    }
+
+
+    export type page_admin_report_customsql_view_data = Page_Data_Base & {
+        page:       "admin-report-customsql-view",
+        location?:  { pathname: "/report/customsql/view.php", search: { id: number } }
+        query_results: page_admin_report_customsql_results;
+    };
+
+    export type page_admin_report_customsql_results = {headers: string[], data: string[][]};
+
+    async function page_admin_report_customsql_view(_message: DeepPartial<page_admin_report_customsql_view_data>): Promise<page_admin_report_customsql_view_data> {
+        const results_dom = document.querySelector<HTMLTableElement>("section#region-main table.generaltable");
+
+        const headers_dom = results_dom.querySelectorAll<HTMLTableHeaderCellElement>("thead tr th");
+        const headers: string[] = [];
+        for (const header_dom of Object.values(headers_dom)) {
+            headers.push(header_dom.textContent);
+        }
+
+        const data_dom = results_dom.querySelectorAll<HTMLTableRowElement>("tbody tr");
+        const rows: string[][] = [];
+        for (const row_dom of Object.values(data_dom)) {
+            const row: string[] = [];
+            const cells_dom = row_dom.querySelectorAll<HTMLTableDataCellElement>("td");
+            for (const cell_dom of Object.values(cells_dom)) {
+                row.push(cell_dom.textContent);
+            }
+            rows.push(row);
+        }
+
+        return {moodle_page: moodle_page(), page: "admin-report-customsql-view", query_results: {headers: headers, data: rows}};
     }
 
 
@@ -103,7 +179,7 @@ namespace MJS {
                 break;
 
             case null:
-                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form button[type='submit']")!;
+                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form [type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
@@ -129,13 +205,13 @@ namespace MJS {
 
     async function page_backup_backupfilesedit(message_in: DeepPartial<page_backup_backupfilesedit_data>): Promise<page_backup_backupfilesedit_data> {
 
-        const backup_filemanager_dom = document.querySelector("section#region-main form#mform1 div.filemanager")!;
+        const backup_filemanager_dom = document.querySelector("section#region-main form.mform div.filemanager")!;
         // alert (backup_filemanager_dom.outerHTML);  // TODO: Remove.
         do {
             await sleep(100);
         } while (!backup_filemanager_dom.classList.contains("fm-loaded") || backup_filemanager_dom.querySelector("div.fp-content")!.children.length <= 0);
         // await sleep(200);   // TODO: Check actually loaded?
-        const backup_list_dom   = document.querySelector("section#region-main form#mform1 div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
+        const backup_list_dom   = document.querySelector("section#region-main form.mform div.filemanager div.filemanager-container div.fm-content-wrapper div.fp-content")!;
         const backups_dom       = backup_list_dom.querySelectorAll(".fp-file.fp-hascontextmenu, .fp-filename-icon.fp-hascontextmenu");
         const save_button_dom   = document.querySelector<HTMLInputElement>("input#id_submitbutton[type='submit']")!;
         const delete_button_dom = document.querySelector<HTMLButtonElement>("button.fp-file-delete")!;
@@ -229,6 +305,8 @@ namespace MJS {
 
                     // Destination
 
+                    message = message as DeepPartial<page_backup_restore_data_4d>;
+
                     const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
                     const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
                     const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
@@ -254,8 +332,10 @@ namespace MJS {
 
                     // Settings
 
-                    const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
-                    const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form#mform1.mform input[name='submitbutton'][type='submit']")!;
+                    message = message as DeepPartial<page_backup_restore_data_4s>;
+
+                    const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
+                    const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form.mform input[name='submitbutton'][type='submit']")!;
 
                     if (message.stage == 4 && message.displayed_stage == "Settings" && message.restore_settings) {
                         if (/*message.restore_settings.hasOwnProperty("users") &&*/ message.restore_settings.users != undefined) {
@@ -278,12 +358,13 @@ namespace MJS {
                 break;
 
             case 8:
-                const course_name_dom           = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']")!;
-                const course_shortname_dom      = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']")!;
-                const course_startdate_day_dom  = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']")!;
-                const course_startdate_month_dom = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[month]']")!;
-                const course_startdate_year_dom = document.querySelector<HTMLSelectElement>("#region-main form#mform2.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[year]']")!;
-                const submit_dom                = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform input[name='submitbutton'][type='submit']")!;
+                message = message as DeepPartial<page_backup_restore_data_8>;
+                const course_name_dom           = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']")!;
+                const course_shortname_dom      = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']")!;
+                const course_startdate_day_dom  = document.querySelector<HTMLSelectElement>("#region-main form.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[day]']")!;
+                const course_startdate_month_dom = document.querySelector<HTMLSelectElement>("#region-main form.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[month]']")!;
+                const course_startdate_year_dom = document.querySelector<HTMLSelectElement>("#region-main form.mform fieldset#id_coursesettings select[name^='setting_course_course_startdate'][name$='[year]']")!;
+                const submit_dom                = document.querySelector<HTMLInputElement>("#region-main form.mform input[name='submitbutton'][type='submit']")!;
 
                 if (message.stage == 8 && message.mdl_course && message.mdl_course.fullname) {
                     course_name_dom.value = message.mdl_course.fullname;
@@ -319,7 +400,7 @@ namespace MJS {
                 break;
 
             case 16:
-                const submit16_dom = document.querySelector<HTMLInputElement>("#region-main form#mform2.mform input[name='submitbutton'][type='submit']")!;
+                const submit16_dom = document.querySelector<HTMLInputElement>("#region-main form.mform input[name='submitbutton'][type='submit']")!;
 
                 if (message.dom_submit && message.dom_submit == "stage 16 submit") {
                     submit16_dom.click();
@@ -354,7 +435,7 @@ namespace MJS {
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const course_backups_dom = document.querySelector<HTMLTableElement>("table.backup-files-table tbody")!;
         const restore_link = document.querySelector<HTMLAnchorElement>("#region-main table.backup-files-table.generaltable  tbody tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']")!;
-        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form button[type='submit']")!;
+        const manage_button_dom = document.querySelector<HTMLButtonElement>("section#region-main div.singlebutton form [type='submit']")!;
 
         const backups: {filename: string, download_url: string}[] = [];
         if (!course_backups_dom.classList.contains("empty")) {
@@ -394,7 +475,7 @@ namespace MJS {
         // Start
         const section_in = message.mdl_course_section;
 
-        const section_dom: HTMLFormElement      = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
+        const section_dom: HTMLFormElement      = window.document.querySelector<HTMLFormElement>(":root form.mform")!;
         // let section: Partial<MDL_Course_Sections> = (message.mdl_course_sections||{});
 
         // ID
@@ -540,16 +621,20 @@ namespace MJS {
             }
             const subcategories_out: page_course_index_category[] = [];
             category_out.mdl_course_categories = subcategories_out;
-            for (const subcategory_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .subcategories > div.category"))) {
-                subcategories_out.push(await category(subcategory_dom));
-            }
             const courses_out: page_course_index_course[] = [];
             category_out.mdl_courses = courses_out;
-            for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
-                courses_out.push(await course(course_dom));
+            category_out.more = false;
+            if (category_dom) {
+                for (const subcategory_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .subcategories > div.category"))) {
+                    subcategories_out.push(await category(subcategory_dom));
+                }
+
+                for (const course_dom of Object.values(category_dom.querySelectorAll<HTMLDivElement>(":scope > .content > .courses > div.coursebox"))) {
+                    courses_out.push(await course(course_dom));
+                }
+                // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
+                category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
             }
-            // TODO: Check for "View more"? .paging.paging-morelink > a   > 40?
-            category_out.more = category_dom.querySelector(":scope > .content > .courses > div.paging.paging-morelink") ? true : false;
             return category_out;
         }
 
@@ -586,7 +671,7 @@ namespace MJS {
     };
 
     async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
-        async function category(message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
+        async function category(cat_message_in: DeepPartial<page_course_management_category> | null, dom: HTMLDivElement | HTMLLIElement, top?: boolean): Promise<page_course_management_category> {
 
             let result: page_course_management_category;
             if (top) {
@@ -600,13 +685,13 @@ namespace MJS {
                     mdl_course_categories: [],
                 };
             } else {
-                if (message_in && message_in.hasOwnProperty("expanded") && (message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
+                if (cat_message_in && cat_message_in.hasOwnProperty("expanded") && (cat_message_in.expanded != (dom.getAttribute("aria-expanded") == "true"))) {
                     dom.querySelector<HTMLAnchorElement>(":scope > div > a")!.click();
                     do {
                         await sleep(100);
                     } while (!dom.querySelector(":scope > ul"));
                 }
-                if (message_in && message_in.hasOwnProperty("checked") && (message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
+                if (cat_message_in && cat_message_in.hasOwnProperty("checked") && (cat_message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked)) {
                     dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.click();
                     // TODO: pause?
                 }
@@ -614,7 +699,7 @@ namespace MJS {
                     course_category_id: parseInt(dom.dataset.id!),
                     name:       dom.querySelector(":scope > div > a.categoryname")!.textContent!,
                     coursecount: parseInt(dom.querySelector(":scope > div > div > span.course-count")!.textContent!),
-                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div.ba-checkbox > input.bulk-action-checkbox")!.checked, // broken?
+                    checked:    dom.querySelector<HTMLInputElement>(":scope > div > div input.bulk-action-checkbox")!.checked, // broken?
                     expanded:   dom.getAttribute("aria-expanded") == "true",
                     expandable: (dom.dataset.expandable == "1"),
                     mdl_course_categories: [],
@@ -624,14 +709,14 @@ namespace MJS {
             const subcategories_out: page_course_management_category[] = [];
             for (const subcategory_dom of Object.values(subcategories_dom)) {
                 const subcategory_id = parseInt(subcategory_dom.dataset.id!);
-                const subcategory_in = message_in && message_in.mdl_course_categories && message_in.mdl_course_categories.find(function(value) { return value.course_category_id == subcategory_id; }) || null;
+                const subcategory_in = cat_message_in && cat_message_in.mdl_course_categories && cat_message_in.mdl_course_categories.find(function(value) { return value.course_category_id == subcategory_id; }) || null;
                 subcategories_out.push(await category(subcategory_in, subcategory_dom));
             }
             result.mdl_course_categories = subcategories_out;
             return result;
         }
 
-        const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul.course-list li.listitem-course");
+        const course_list_dom = document.querySelectorAll<HTMLLIElement>("div.course-listing ul li.listitem-course");
         const course_list: page_course_management_course[] = [];
         for (const course_dom of Object.values(course_list_dom)) {
             course_list.push({ course_id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector("a")!.textContent! });
@@ -640,7 +725,8 @@ namespace MJS {
         return {
             moodle_page: moodle_page(),
             page:       "course-management",
-            mdl_course_category: await category(message_in.mdl_course_category || null, document.querySelector<HTMLDivElement>(".category-listing > div.card-body")!, true),
+            mdl_course_category: await category(message_in.mdl_course_category || null,
+                (document.querySelector<HTMLDivElement>(".category-listing > div.card-body") || document.querySelector<HTMLDivElement>(".category-listing"))!, true),
             mdl_courses: course_list
         };
     }
@@ -883,6 +969,84 @@ namespace MJS {
 
 
 
+    export type page_grade_report_grader_index_data = Page_Data_Base & {
+        page:       "grade-report-grader-index",
+        location?:  { pathname: "/grade/report/grader/index.php", search: {id: number} },
+        grades_table_as_text: string
+    };
+
+    async function page_grade_report_grader_index(_message: DeepPartial<page_grade_report_grader_index_data>): Promise<page_grade_report_grader_index_data> {
+        // alert("starting page_local_otago_login");
+        const grades_table_dom = document.querySelector("table#user-grades.gradereport-grader-table") as HTMLTableElement;
+        let found_heading: boolean = false;
+        let table_as_text: string = "";
+        for (const row_dom of Object.values(grades_table_dom.rows)) {
+            if (!found_heading) {
+                if (!row_dom.classList.contains("heading")) { continue; }
+                found_heading = true;
+            }
+            if (row_dom.classList.contains("lastrow")) { break; }
+            // let col_num: number = 0;
+            for (const cell_dom of Object.values(row_dom.cells)) {
+                table_as_text = table_as_text + cell_dom.textContent;
+                for (let col_count = 0; col_count < cell_dom.colSpan; col_count++) {
+                    // col_num++;
+                    table_as_text = table_as_text + "\t";
+                }
+            }
+            table_as_text = table_as_text + "\n";
+        }
+        return {moodle_page: moodle_page(), page: "grade-report-grader-index", grades_table_as_text: table_as_text};
+    }
+
+
+
+
+    export type page_local_otago_login_data = Page_Data_Base & {
+        page:       "local-otago-login",
+        location?:  { pathname: "/local/otago/login.php", search: {} },
+        dom_submit?: "staff_students"|"other_users"
+    };
+
+    async function page_local_otago_login(message: DeepPartial<page_local_otago_login_data>): Promise<page_local_otago_login_data> {
+        // alert("starting page_local_otago_login");
+        const staff_students_dom    = document.querySelector("div.loginactions a[href*='/auth/saml2']") as HTMLAnchorElement;
+        const other_users_dom       = document.querySelector("div.loginactions a[href*='/login/index']") as HTMLAnchorElement;
+        if (message.dom_submit == "staff_students") {
+            staff_students_dom.click();
+        } else if (message.dom_submit == "other_users") {
+            other_users_dom.click();
+        }
+        return {moodle_page: moodle_page(), page: "local-otago-login"};
+    }
+
+
+
+    export type page_login_index_data = Page_Data_Base & {
+        page:       "login-index",
+        location?:  { pathname: "/login/index.php", search: {} },
+        mdl_user?:   page_login_index_user,
+        dom_submit?: "log_in"
+    };
+
+    type page_login_index_user = {
+        username:   string;
+        password:   string;
+    };
+
+    async function page_login_index(message: DeepPartial<page_login_index_data>): Promise<page_login_index_data> {
+        const username_dom  = document.querySelector("input#username") as HTMLInputElement;
+        const password_dom  = document.querySelector("input#password") as HTMLInputElement;
+        const log_in_dom    = document.querySelector("button#loginbtn") as HTMLAnchorElement;
+        if (message.mdl_user) {
+            username_dom.value = message.mdl_user.username;
+            password_dom.value = message.mdl_user.password;
+        }
+        if (message.dom_submit == "log_in") {
+            log_in_dom.click();
+        }
+        return {moodle_page: moodle_page(), page: "login-index"};
+    }
 
 
 
@@ -893,7 +1057,7 @@ namespace MJS {
     };
 
     async function page_mod_feedback_edit(message: DeepPartial<page_mod_feedback_edit_data>): Promise<page_mod_feedback_edit_data> {
-       const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form#mform2.mform select#id_templateid")!;
+       const template_id_dom = document.querySelector<HTMLSelectElement>(":root #region-main form.mform[action='use_templ.php'] select#id_templateid")!;
        if (message && message.mdl_course_module && message.mdl_course_module
             && message.mdl_course_module.hasOwnProperty("mdl_feedback_template_id")) {
             template_id_dom.value = "" + message.mdl_course_module.mdl_feedback_template_id;
@@ -912,7 +1076,7 @@ namespace MJS {
     };
 
     async function page_mod_feedback_use_templ(message: DeepPartial<page_mod_feedback_use_templ_data>): Promise<page_mod_feedback_use_templ_data> {
-       const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form#mform1.mform input#id_submitbutton")!;
+       const submit_dom = document.querySelector<HTMLInputElement>(":root #region-main form.mform:not(.feedback_form) input#id_submitbutton")!;
        if (message && message.dom_submit) { // message.mdl_course_modules.x_submit) {
             submit_dom.click();
        }
@@ -944,7 +1108,7 @@ namespace MJS {
         // Module Start
         const module_in = message.mdl_course_module;
         // const cmid = message.cmid;
-        const module_dom: HTMLFormElement = window.document.querySelector<HTMLFormElement>(":root form#mform1")!;
+        const module_dom: HTMLFormElement = window.document.querySelector<HTMLFormElement>(":root form.mform")!;
 
         // Module ID
         const module_id_dom         = module_dom.querySelector<HTMLInputElement>("input[name='coursemodule']")!;
@@ -959,7 +1123,7 @@ namespace MJS {
         const module_out_course     = parseInt(module_course_dom.value);
 
         // Module Section
-        const module_out_section    = parseInt(window.document.querySelector<HTMLInputElement>(":root form#mform1 input[name='section'][type='hidden']")!.value);
+        const module_out_section    = parseInt(window.document.querySelector<HTMLInputElement>(":root form.mform input[name='section'][type='hidden']")!.value);
 
         // Module ModName
         const module_modname_dom    = module_dom.querySelector<HTMLInputElement>("input[name='modulename']")!;
@@ -1071,6 +1235,14 @@ namespace MJS {
 
 
 
+    export type page_my_index_data = Page_Data_Base & {
+        page:       "my-index",
+        location?:  { pathname: "/my/index.php", search: {} },
+    };
+
+    async function page_my_index(_message: DeepPartial<page_my_index_data>): Promise<page_my_index_data> {
+        return {moodle_page: moodle_page(), page: "my-index"};
+    }
 
 
 
@@ -1095,6 +1267,12 @@ namespace MJS {
         let result: Page_Data;
 
         switch (body_id) {
+            case "page-admin-report-customsql-index":
+                result = await page_admin_report_customsql_index(message as DeepPartial<page_admin_report_customsql_index_data>);
+                break;
+            case "page-admin-report-customsql-view":
+                result = await page_admin_report_customsql_view(message as DeepPartial<page_admin_report_customsql_view_data>);
+                break;
             case "page-backup-backup":
                 result = await page_backup_backup(message as DeepPartial<page_backup_backup_data>);
                 break;
@@ -1120,6 +1298,15 @@ namespace MJS {
             case "page-course-view-onetopic":
             case "page-course-view-multitopic":
                 result = await page_course_view(message as DeepPartial<page_course_view_data>);
+                break;
+            case "page-grade-report-grader-index":
+                result = await page_grade_report_grader_index(message as DeepPartial<page_grade_report_grader_index_data>);
+                break;
+            case "page-local-otago-login":
+                result = await page_local_otago_login(message as DeepPartial<page_local_otago_login_data>);
+                break;
+            case "page-login-index":
+                result = await page_login_index(message as DeepPartial<page_login_index_data>);
                 break;
             case "page-mod-feedback-edit":
                 result = await page_mod_feedback_edit(message as DeepPartial<page_mod_feedback_edit_data>);
@@ -1152,6 +1339,9 @@ namespace MJS {
             case "page-mod-wiki-mod":
             case "page-mod-workshop-mod":
                 result = await page_module_edit(message as DeepPartial<page_module_edit_data>);
+                break;
+            case "page-my-index":
+                result = await page_my_index(message as DeepPartial<page_my_index_data>);
                 break;
             default:
                 result = {moodle_page: moodle_page(), page: ".*"};

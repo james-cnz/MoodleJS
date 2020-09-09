@@ -5,4 +5,4 @@ REM TODO: continue on error
 tsc
 tslint --project .
 web-ext lint
-web-ext build --overwrite-dest
+web-ext build --overwrite-dest --ignore-files=node_modules web-ext-artifacts package-lock.json

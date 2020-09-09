@@ -31,7 +31,8 @@ namespace MJS {
                 new Index_Rebuild_UI(this),
                 new New_Section_UI(this),
                 new New_Topic_UI(this),
-                new Backup_UI(this)
+                new Backup_UI(this),
+                new Copy_Grades_UI(this)
             ];
 
             this.status_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#status")!;
@@ -185,7 +186,7 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.new_course as Index_Rebuild_Macro).params = {};
+            (this.popup.tabData.macros.index_rebuild as Index_Rebuild_Macro).params = {};
             void this.popup.tabData.macros.index_rebuild.run();
         }
 
@@ -341,7 +342,33 @@ namespace MJS {
 
 
 
+    class Copy_Grades_UI extends Macro_UI {
 
+        private copy_grades_dom:          HTMLFieldSetElement;
+        private copy_grades_button_dom:   HTMLButtonElement;
+
+        constructor(new_popup: Popup) {
+            super(new_popup);
+            this.copy_grades_dom          = document.querySelector<HTMLFieldSetElement>("fieldset#copy_grades")!;
+            this.copy_grades_button_dom   = document.querySelector<HTMLButtonElement>("button#copy_grades_button")!;
+            const this_ui = this;
+            this.copy_grades_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+        }
+
+        public update() {
+            this.copy_grades_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.copy_grades.prereq) ? "block" : "none";
+        }
+
+        private onClick() {
+            (this.popup.tabData.macros.copy_grades as Index_Rebuild_Macro).params = {};
+            void this.popup.tabData.macros.copy_grades.run();
+        }
+
+    }
+
+
+
+    // @ts-ignore
     const mjs_popup: Popup = new Popup();
 
 

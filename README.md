@@ -17,6 +17,8 @@ For Firefox: Open install file moodlejs-x.x-an+fx.xpi
 
 It should add an icon "MJS" to the toolbar.
 
+On Moodle server, install plugin Ad-hoc database queries
+Add query "Course list" with contents as per course_list.sql
 
 ## Running
 
