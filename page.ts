@@ -51,6 +51,38 @@ namespace MJS {
     }
 
 
+
+    export type block_data = {
+        id:         number;
+        blockname:  string;
+        configdata_unserialised: {
+            title?: string;
+            text?:  string;
+        }
+    };
+
+
+    async function block(): Promise<block_data[]> {
+        const blocks_dom = document.querySelectorAll<HTMLElement>("aside.block-region > section.block.card");
+        const blocks: block_data[] = [];
+        for (const block_dom of Object.values(blocks_dom)) {
+            const block_id      = parseInt(block_dom.getAttribute("id").match(/inst([0-9]+)/)[1]);
+            const block_type    = block_dom.getAttribute("data-block");
+            const block_title_dom = block_dom.querySelector<HTMLHeadingElement>(":scope > div.card-body > h5.card-title");
+            const block_text_dom = block_dom.querySelector<HTMLDivElement>(":scope > div.card-body > div.card-text.content > div.no-overflow");
+            blocks.push({
+                id:         block_id,
+                blockname:  block_type,
+                configdata_unserialised: {
+                    title:  block_title_dom ? block_title_dom.textContent : null,
+                    text:   block_text_dom ? block_text_dom.innerHTML : null
+                }
+            });
+        }
+        return blocks;
+    }
+
+
     export type page_admin_report_customsql_index_data = Page_Data_Base & {
         page:       "admin-report-customsql-index",
         location?:  { pathname: "/report/customsql/index.php" }
@@ -740,6 +772,7 @@ namespace MJS {
         location?: { pathname: "/course/view.php", search: { id: number } }
         mdl_course: page_course_view_course;
         mdl_course_section?: page_course_view_course_section;
+        mdl_block_instance: block_data[];
     };
     type page_course_view_course = {
         course_id:  number; // Needs editing on.
@@ -766,7 +799,7 @@ namespace MJS {
     async function page_course_view(_message: DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
 
         // Course Start
-        const main_dom:        Element             = window.document.querySelector(":root #region-main")!;
+        const main_dom:         Element = window.document.querySelector(":root #region-main")!;
         // const result: Partial<Page_Data> = {};
 
         const course_out_id =    parseInt((window.document.body.className!.match(/\bcourse-(\d+)\b/)!
@@ -778,8 +811,8 @@ namespace MJS {
         // Sections
         // const section_container_dom: Element = main_dom.querySelector(":scope .course-content")
 
-        const sections_dom:    NodeListOf<Element> = main_dom.querySelectorAll(":scope li.main");
-        const single_section_dom = main_dom.querySelector(":scope .single-section .main") ;
+        const sections_dom:    NodeListOf<Element> = main_dom.querySelectorAll(":scope ul.topics li.section.main, :scope ul.weeks li.section.main, :scope ul.sections li.section.main, :scope ul.gtopics li.section.main");
+        const single_section_dom = main_dom.querySelector(":scope .single-section li.section.main") ;
         let single_section_out: page_course_view_course_section|undefined;
         let course_out_sections: page_course_view_course_section[] = [];
         for (const section_dom of Object.values(sections_dom)) {
@@ -796,7 +829,7 @@ namespace MJS {
                 section_out_id = parseInt(section_id_str);
             }
                 // Note: Needs editing on.  Doesn't work for onetopic?
-                // const section_id_str = (section_dom.querySelector(":scope > .content > .sectionname .inplaceeditable")
+                // const section_id_str = (section_dom.querySelector(":scope .content > .sectionname .inplaceeditable")
                 //                                                                        ||throwf(new Error("WSC course get content, section name edit not found.")
                 //                       ).getAttribute("data-itemid")                    ||throwf(new Error("WSC course get content, section id not found.")
                 // section_out.id = parseInt(section_id_str)                                || throwf(new Error("WSC course get content, seciton id 0."));
@@ -809,7 +842,7 @@ namespace MJS {
             const section_out_section   = parseInt(section_num_str);  // Note: can be 0
 
             // Section Name
-            const section_out_name      = (section_dom.querySelector(":scope > .content > .sectionname")!
+            const section_out_name      = (section_dom.querySelector(":scope .content > .sectionname, :scope .content > .section-title")!
                                           ).textContent!;
                                           // TODO: Remove spurious whitespace.  Note: There may be hidden and visible section names?
 
@@ -817,17 +850,17 @@ namespace MJS {
             const section_out_visible = section_dom.classList.contains("hidden") ? 0 : 1;
 
             // Section Summary
-            const section_summary_container_dom = section_dom.querySelector(":scope > .content > .summary")!;
+            const section_summary_container_dom = section_dom.querySelector(":scope .content > .summary, :scope .content > .summarytext")!;
             const section_summary_dom  = section_summary_container_dom.querySelector(":scope .no-overflow");
             const section_out_summary =    section_summary_dom ? section_summary_dom.innerHTML : "";
 
 
             // Modules
             let modules_out:      page_course_view_course_module[]|undefined;
-            if (section_dom.querySelector(":scope > .content > .section")) {
+            if (section_dom.querySelector(":scope .content > .section")) {
 
-                const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope > .content > .section")!  // Note: flexsections can have nested sections.
-                                                        ).querySelectorAll(":scope .activity");
+                const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope .content > .section")!  // Note: flexsections can have nested sections.
+                                                        ).querySelectorAll(":scope > .activity");
                 modules_out = [];
 
                 for (const module_dom of Object.values(modules_dom)) {
@@ -847,7 +880,7 @@ namespace MJS {
                     const module_out_instance_name =       (module_modname == "label")
                             ? (module_dom.querySelector(":scope .contentwithoutlink")!
                             ).textContent || ""
-                            : (module_dom.querySelector(":scope .instancename")!
+                            : (module_dom.querySelector(":scope .instancename") || module_dom.querySelector(":scope .fp-filename")
                             ).textContent || "";  // TODO: Use innerText to avoid unwanted hidden text with Assignments?
                             // TODO: Check handling of empty strings?
                             // TODO: For folder (to handle inline) if no .instancename, use .fp-filename ???
@@ -964,7 +997,7 @@ namespace MJS {
             mdl_course_sections: course_out_sections
         };
 
-        return {moodle_page: moodle_page(), page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_section: single_section_out};
+        return {moodle_page: moodle_page(), page: "course-view-[a-z]+", mdl_course: course_out, mdl_course_section: single_section_out, mdl_block_instance: await block()};
     }
 
 
@@ -1297,6 +1330,11 @@ namespace MJS {
                 break;
             case "page-course-view-onetopic":
             case "page-course-view-multitopic":
+            case "page-course-view-topics":
+            case "page-course-view-grid":
+            case "page-course-view-singleactivity":
+            case "page-course-view-social":
+            case "page-course-view-weeks":
                 result = await page_course_view(message as DeepPartial<page_course_view_data>);
                 break;
             case "page-grade-report-grader-index":

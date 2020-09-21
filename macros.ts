@@ -534,7 +534,7 @@ namespace MJS {
             }
 
             // Calculate max progress.
-            this.progress_max = category_list.length + course_list.length * 12 + 1;
+            this.progress_max = course_list.length * 12 + 1;
             this.tabdata.macro_progress_max = this.progress_max;
 
             // const error_list: {course_id: number, err: Error}[] = [];
