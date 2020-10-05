@@ -59,7 +59,7 @@ namespace MJS {
             new_section:    new New_Section_Macro(this),
             new_topic:      new New_Topic_Macro(this),
             backup:         new Backup_Macro(this),
-            copy_grades:    new Copy_Grades_Macro(this)
+            // copy_grades:    new Copy_Grades_Macro(this)
         };
 
         public popup:           Popup|null = null;

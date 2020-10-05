@@ -32,7 +32,7 @@ namespace MJS {
                 new New_Section_UI(this),
                 new New_Topic_UI(this),
                 new Backup_UI(this),
-                new Copy_Grades_UI(this)
+                // new Copy_Grades_UI(this)
             ];
 
             this.status_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#status")!;
