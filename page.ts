@@ -340,7 +340,7 @@ namespace MJS {
                     message = message as DeepPartial<page_backup_restore_data_4d>;
 
                     const stage_4_new_cat_name_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='catsearch'][type='text']")!;
-                    const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[name='searchcourses'][type='submit']")!;
+                    const stage_4_new_cat_search_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform .bcs-new-course.backup-section .restore-course-search [type='submit']")!;
                     const stage_4_new_continue_dom = document.querySelector<HTMLInputElement>("#region-main div.backup-course-selector.backup-restore form.mform input[value='Continue']")!;
                     if (message.stage == 4 && message.displayed_stage == "Destination" && message.mdl_course_category && message.mdl_course_category.name) {
                         stage_4_new_cat_name_dom.value = message.mdl_course_category.name;
