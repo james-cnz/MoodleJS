@@ -309,7 +309,7 @@ namespace MJS {
             this.macros.new_section.init(page_details);
             this.macros.new_topic.init(page_details);
             this.macros.backup.init(page_details);
-            this.macros.copy_grades.init(page_details);
+            // this.macros.copy_grades.init(page_details);
         }
 
 
