@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1 Tiny//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11-tiny.dtd">
 <svg viewBox="0 0 128 128" width="128" height="128">
-  <text text-anchor="middle" x="64" y="80" font-size="60" font-family="sans-serif" font-weight="bold">MJS</text>
+  <text text-anchor="middle" x="64" y="80" font-size="60" font-family="sans-serif" font-weight="bold" stroke="#fff">MJS</text>
 </svg>

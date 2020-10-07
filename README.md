@@ -58,7 +58,6 @@ You can start the script by clicking on the icon, after you've logged in to OP M
 
 ## Known issues
 
-* Creating module, image linked to Blended course template.
 * May need to turn editing on before use.
 * If viewing as student, etc. return to normal role (or role with at least teacher privilages) before use.
 * Take care not to type while the script is active and the content page is in focus.  (Input to page isn't blocked.)
