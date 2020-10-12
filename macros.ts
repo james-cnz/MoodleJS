@@ -46,12 +46,13 @@ namespace MJS {
 
 
 
-        public macro_state:         number = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load
+        public macro_state:         -1|0|1|2|3 = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load / 3 awaiting user input
         // macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
         public macro_log:           string = "";
         public macro_progress:      number = 1;
         public macro_progress_max:  number = 1;
         public macro_cancel:        boolean = false;
+        public macro_input:         "retry"|"skip"|null = null;
 
         public macros: {[index: string] : Macro} = {
             new_course:     new New_Course_Macro(this),
@@ -93,6 +94,7 @@ namespace MJS {
             this.macro_progress = 1;
             this.macro_progress_max = 1;
             this.macro_cancel = false;
+            this.macro_input = null;
             try {
                 this.macro_state = 1;
                 page_details = await this.page_call({});
@@ -112,9 +114,12 @@ namespace MJS {
             if (this.macro_state == 0) {
                 browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
                 browser.browserAction.setBadgeText({text: "", tabId: this.page_tab_id});
-            } else if (this.macro_state > 0) {
+            } else if (this.macro_state > 0 && this.macro_state < 3) {
                 browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
                 browser.browserAction.setBadgeText({text: ">", tabId: this.page_tab_id});
+            } else if (this.macro_state == 3) {
+                browser.browserAction.setBadgeBackgroundColor({color: "yellow", tabId: this.page_tab_id});
+                browser.browserAction.setBadgeText({text: "||", tabId: this.page_tab_id});
             } else {
                 browser.browserAction.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
                 browser.browserAction.setBadgeText({text: "X", tabId: this.page_tab_id});
@@ -366,6 +371,7 @@ namespace MJS {
             }
 
             this.tabdata.macro_cancel   = false;
+            this.tabdata.macro_input    = null;
             this.tabdata.macro_state    = 1;
             this.tabdata.macro_progress = 0;
             this.tabdata.macro_progress_max = this.progress_max;
@@ -451,6 +457,8 @@ namespace MJS {
         public init(page_details: Page_Data) {
             this.prereq     = false;
             if (!page_details || page_details.page != "course-management") { return; }
+            // const category_list = Backup_Macro.ticked_categories((this.page_details as page_course_management_data).mdl_course_category);
+            // if (category_list.length <= 0) { return; }
             this.progress_max = 1000;
             this.page_details = page_details;
             this.data       = {};
@@ -534,7 +542,7 @@ namespace MJS {
             }
 
             // Calculate max progress.
-            this.progress_max = course_list.length * 12 + 1;
+            this.progress_max = 2 + course_list.length * 12 + 1;
             this.tabdata.macro_progress_max = this.progress_max;
 
             // const error_list: {course_id: number, err: Error}[] = [];
@@ -543,13 +551,15 @@ namespace MJS {
             // let do_sleep:                   boolean = false;
 
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
-                let course_tries:   number  = 0;
+                const course_start_progress:  number  = this.tabdata.macro_progress;
+                // let course_tries:   number  = 0;
                 let course_skip:    boolean = false;
                 let this_try_error: boolean = false;
+                let backup_step:    string = "";
                 do {
 
-                    course_tries++;
-                    if (this_try_error) try {
+                    // course_tries++;
+                    /* if (this_try_error) try {
                         this_try_error = false;
                         await sleep(60 * 60 * 1000);
                         try {
@@ -586,7 +596,7 @@ namespace MJS {
                         this.tabdata.macro_log += "In course: " + course.course_id + ", recovering\n";
                         if (e.message == "Cancelled") { throw e; }
                         // error_list.push({course_id: course.id, err: e});
-                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */ /*
                         e.message + "\n"
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
@@ -596,13 +606,14 @@ namespace MJS {
                         this.tabdata.macro_state = 1;
                         // TODO: Rewind progress bar
                         this.tabdata.update_ui();
-                    }
+                    } */
 
+                    backup_step = "creating";
                     let backup_filename:    string|null = null;
                     // let backup_finished:    boolean     = false;
 
 
-                    if (!this_try_error && !course_skip) try {
+                    /*if (!this_try_error && !course_skip)*/ try {
 
                         // Create backup file (9 loads)
                         this.page_details = await this.tabdata.page_load({location: {pathname: "/backup/backup.php", search: {id: course.course_id}}, page: "backup-backup"});
@@ -632,11 +643,11 @@ namespace MJS {
                         */
                     // backup_finished = true;
 
-                    } catch (e) {
+                    /*} catch (e) {
                         this.tabdata.macro_log += "In course: " + course.course_id + ", creating backup: " + backup_filename + "\n";
                         if (e.message == "Cancelled") { throw e; }
                         // error_list.push({course_id: course.id, err: e});
-                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                        this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */ /*
                         e.message + "\n"
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
@@ -647,16 +658,17 @@ namespace MJS {
                         this.tabdata.macro_state = 1;
                         // TODO: Rewind progress bar
                         this.tabdata.update_ui();
-                    }
+                    }*/
 
-                    if (!this_try_error && !course_skip) {
+                    /*if (!this_try_error && !course_skip) {*/
 
-                        let download_tries:     number      = 0;
+                        backup_step = "downloading";
+
+                        let download_tries:         number  = 0;
                         // let download_finished:  boolean     = false;
 
                         do {
 
-                            try {
                                 download_tries++;
                                 this_try_error = false;
 
@@ -672,31 +684,31 @@ namespace MJS {
                                     await sleep(100);
                                     backup_download_status = (await browser.downloads.search({id: backup_download_id}))[0]; // .state;
                                 } while (backup_download_status.state == "in_progress" && !backup_download_status.error);
-                                if (backup_download_status.state != "complete") { throw new Error("Download error: " + backup_download_status.error); }
-                                this.tabdata.page_load_count(1);
+                                this_try_error = (backup_download_status.state != "complete");
+                                if (this_try_error) {
+                                    this.tabdata.macro_log += "In course: " + course.course_id + " downloading backup: " + backup_filename + ", try " + download_tries + "\n";
+                                    this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
+                                    "Download error: " + backup_download_status.error + "\n";
+                                    this.tabdata.update_ui();
+                                    if (download_tries >= 3) {
+                                        throw new Error("Too many download errors");
+                                    }
+                                }
+                                await sleep(100);
+
 
                                 // download_finished = true;
 
-                            } catch (e) {
-                                this.tabdata.macro_log += "In course: " + course.course_id + " downloading backup: " + backup_filename + ", try " + download_tries + "\n";
-                                if (e.message == "Cancelled") { throw e; }
-                                // error_list.push({course_id: course.id, err: e});
-                                this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
-                                e.message + "\n"
-                                + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
-                                + "\n";
-                                await sleep(4 * 1000);
-                                // do_sleep = true;
-                                this_try_error = true;
-                                this.tabdata.macro_state = 1;
-                                this.tabdata.update_ui();
-                            }
 
-                        } while (this_try_error && download_tries < 3);
 
-                    }
+                        } while (this_try_error);
 
-                    if (!this_try_error && !course_skip) try {
+                        this.tabdata.page_load_count(1);
+                    // }
+
+                    // if (!this_try_error && !course_skip) try {
+
+                        backup_step = "deleting";
 
                         // Delete backup file (2 loads?)
                         this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
@@ -710,25 +722,45 @@ namespace MJS {
                         this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
 
                     } catch (e) {
-                        this.tabdata.macro_log += "In course: " + course.course_id + " deleting backup: " + backup_filename + "\n";
+                        this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
                         if (e.message == "Cancelled") { throw e; }
                         // error_list.push({course_id: course.id, err: e});
                         this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n" */
                         e.message + "\n"
                         + (e.fileName ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                         + "\n";
-                        await sleep(4 * 1000);
+                        await sleep(100);
                         // do_sleep = true;
                         this_try_error = true;
+
+                        // TODO: Rewind progress bar
+                        this.tabdata.macro_progress = course_start_progress;
+
+                        if (e.message.match(/^(?:Can not|Can't) find data record in database table course.$/)) { course_skip = true; }
+                        else {
+                            this.tabdata.macro_state = 3;
+                            this.tabdata.macro_input = null;
+                            this.tabdata.update_ui();
+                            while (!this.tabdata.macro_input && !this.tabdata.macro_cancel) {
+                                await sleep(100);
+                            }
+                            if (this.tabdata.macro_cancel)                      { throw new Error("Cancelled"); }
+                            course_skip = (this.tabdata.macro_input == "skip");
+                            this.tabdata.macro_input = null;
+                        }
+
                         this.tabdata.macro_state = 1;
                         this.tabdata.update_ui();
                     }
 
-                } while (this_try_error && course_tries < 3 && !course_skip);
+                    // TODO: If skip, fast forward progress bar
+                    if (course_skip) { this.tabdata.page_load_count(12); }
 
-                if (this_try_error && !course_skip) {
+                } while (this_try_error && !course_skip);
+
+                /*if (this_try_error && !course_skip) {
                     throw new Error("Too many consecutive errors.");
-                }
+                }*/
             }
 
 
