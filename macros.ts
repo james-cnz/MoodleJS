@@ -421,7 +421,6 @@ namespace MJS {
 
     export class Backup_Macro extends Macro {
 
-        /*
         private static expand_ticked(category: page_course_management_category, parent_ticked?: boolean): boolean {
             let change: boolean = false;
             if (parent_ticked && !category.checked) {
@@ -437,13 +436,12 @@ namespace MJS {
             }
             return change;
         }
-        */
 
-        private static ticked_categories(category: page_course_management_category): number[] {
-            let result: number[] = [];
+        private static ticked_categories(category: page_course_management_category): page_course_management_category[] {
+            let result: page_course_management_category[] = [];
             for (const subcategory of category.mdl_course_categories) {
                 if (subcategory.checked) {
-                    result.push(subcategory.course_category_id);
+                    result.push(subcategory);
                 }
                 if (subcategory.mdl_course_categories.length > 0) {
                     result = result.concat(Backup_Macro.ticked_categories(subcategory));
@@ -469,7 +467,6 @@ namespace MJS {
 
         protected async content() {
 
-            /*
             let change: boolean;
             do {
                 this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
@@ -480,13 +477,11 @@ namespace MJS {
                     // await sleep(1000);
                 }
             } while (change);
-            */
 
             // Get ticked categories.
-            this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
+            // this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
             const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
 
-            /*
             // Calculate max progress
             let course_count = 0;
             for (const category of category_list) {
@@ -501,8 +496,8 @@ namespace MJS {
                 this.page_details = await this.tabdata.page_load<page_course_management_data>({location: {pathname: "/course/management.php", search: {categoryid: category.course_category_id, perpage: 999}}});
                 course_list = course_list.concat(this.page_details.mdl_courses);
             }
-            */
 
+            /*
             // Find course list query.
             this.page_details = await this.tabdata.page_load<page_admin_report_customsql_index_data>({location: {pathname: "/report/customsql/index.php", search: {}}, page: "admin-report-customsql-index"});
             let course_list_query_id: number|null = null;
@@ -544,6 +539,7 @@ namespace MJS {
             // Calculate max progress.
             this.progress_max = 2 + course_list.length * 12 + 1;
             this.tabdata.macro_progress_max = this.progress_max;
+            */
 
             // const error_list: {course_id: number, err: Error}[] = [];
             // let cancelled: boolean = false;

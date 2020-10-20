@@ -721,8 +721,8 @@ namespace MJS {
                         await sleep(100);
                     } while (!dom.querySelector(":scope > ul"));
                 }
-                if (cat_message_in && cat_message_in.hasOwnProperty("checked") && (cat_message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div > input.bulk-action-checkbox")!.checked)) {
-                    dom.querySelector<HTMLInputElement>(":scope > div > div > input.bulk-action-checkbox")!.click();
+                if (cat_message_in && cat_message_in.hasOwnProperty("checked") && (cat_message_in.checked != dom.querySelector<HTMLInputElement>(":scope > div > div input.bulk-action-checkbox")!.checked)) {
+                    dom.querySelector<HTMLInputElement>(":scope > div > div input.bulk-action-checkbox")!.click();
                     // TODO: pause?
                 }
                 result = {
