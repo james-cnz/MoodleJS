@@ -11,7 +11,7 @@ namespace MJS {
     export class Popup {
 
 
-        public tabData:            TabData;
+        public tabData:             TabData;
 
         private macro_uis:          Macro_UI[];
 
@@ -20,8 +20,8 @@ namespace MJS {
         private status_running_dom: HTMLDivElement;
         private status_awaiting_dom: HTMLDivElement;
         private cancel_button_dom:  HTMLButtonElement;
-        private retry_button_dom:  HTMLButtonElement;
-        private skip_button_dom:  HTMLButtonElement;
+        private retry_button_dom:   HTMLButtonElement;
+        private skip_button_dom:    HTMLButtonElement;
         private status_error_dom:   HTMLDivElement;
         private error_message_dom:  HTMLTextAreaElement;
         private reset_button_dom:   HTMLButtonElement;
@@ -43,8 +43,8 @@ namespace MJS {
             this.status_running_dom = document.querySelector<HTMLDivElement>("div#status_running")!;
             this.status_awaiting_dom = document.querySelector<HTMLDivElement>("div#status_awaiting_input")!;
             this.cancel_button_dom  = document.querySelector<HTMLButtonElement>("button#cancel_button")!;
-            this.retry_button_dom  = document.querySelector<HTMLButtonElement>("button#retry_button")!;
-            this.skip_button_dom  = document.querySelector<HTMLButtonElement>("button#skip_button")!;
+            this.retry_button_dom   = document.querySelector<HTMLButtonElement>("button#retry_button")!;
+            this.skip_button_dom    = document.querySelector<HTMLButtonElement>("button#skip_button")!;
             this.status_error_dom   = document.querySelector<HTMLDivElement>("div#status_error")!;
             this.error_message_dom  = document.querySelector<HTMLTextAreaElement>("textarea#error_message")!;
             this.reset_button_dom   = document.querySelector<HTMLButtonElement>("button#reset_button")!;
@@ -350,7 +350,8 @@ namespace MJS {
         */
 
         private onClick() {
-            (this.popup.tabData.macros.backup as Backup_Macro).params = {}; // this.backup_params;
+            (this.popup.tabData.macros.backup as Backup_Macro).params = {mdl_user: {username: document.querySelector<HTMLInputElement>("input#backup_username")!.value,
+                                                                                    password_plaintext: document.querySelector<HTMLInputElement>("input#backup_password")!.value}};
             void this.popup.tabData.macros.backup.run();
         }
 
