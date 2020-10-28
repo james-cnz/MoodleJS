@@ -8,7 +8,7 @@
 
   "applications": { "gecko": { "id": "{3eeb542a-cd0b-44f7-8cbb-4f7b6d87450f}" } },
   "icons":        {"16": "icons/moodlejs-16.png", "48": "icons/moodlejs-48.png", "128": "icons/moodlejs-128.png"},
-  "permissions":  ["activeTab", "downloads", "clipboardWrite"],
+  "permissions":  ["activeTab", "downloads"],
 
   "background": { "scripts": ["browser-polyfill.js", "shared.js", "macros.js", "background.js"] },
   
@@ -19,8 +19,7 @@
   },
 
   "content_scripts": [ {
-    "matches":        ["*://*/*"],
-    "include_globs":  ["http*://moodle.*/*", "http*://*-moodle.*/*", "http*://*.moodledemo.*/*", "http*://localhost/*"],
+    "matches":        ["*://moodle.op.ac.nz/*", "*://otagopoly-moodle.testing.catlearn.nz/*", "*://localhost/*"],
     "js":             ["browser-polyfill.js", "shared.js", "page.js"]
   } ]
 
