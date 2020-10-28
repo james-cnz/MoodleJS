@@ -1,26 +1,26 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml" >
+<html xmlns="http://www.w3.org/1999/xhtml">
 
-<head >
+<head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Moodle JS 2</title>
 </head>
 
 <body>
 
-<form id="panel_form" action="" style="min-width: 24em;" >
+<form id="panel_form" action="" style="min-width: 24em;">
 
     <fieldset id="new_course" style="display: none;">
         <b>New Course</b><br />
         <table style="width: 100%;">
             <tr> <th>Name: </th> <td><input id="new_course_name"                                     style="width: 100%;" /></td> </tr>
             <tr> <th>Short:</th> <td><input id="new_course_shortname"                                style="width: 100%;" /></td> </tr>
-            <tr> <th>Start:</th> <td><input id="new_course_start"     type="date" value="2019-12-30" style="width: 100%;" /></td> </tr> 
+            <tr> <th>Start:</th> <td><input id="new_course_start"     type="date" value="2019-12-30" style="width: 100%;" /></td> </tr>
         </table>
         <button id="new_course_button" type="button" style="width: 100%;" disabled="disabled" >Create new course</button>
     </fieldset>
-    
+
     <fieldset id="index_rebuild" style="display: none;">
         <b>Modules Index Page</b><br />
         <button id="index_rebuild_button" type="button" style="width: 100%;">Rebuild modules index page</button>
@@ -33,7 +33,7 @@
             <tr> <th>Name: </th> <td><input id="new_section_name"      style="width: 100%;" /></td> </tr>
             <tr> <th>Short:</th> <td><input id="new_section_shortname" style="width: 100%;" /></td> </tr>
         </table>
-        <button id="new_section_button" type="button" style="width: 100%;" disabled="disabled" >Create new module</button>
+        <button id="new_section_button" type="button" style="width: 100%;" disabled="disabled">Create new module</button>
     </fieldset>
 
     <fieldset id="new_topic" style="display: none;">
@@ -41,7 +41,7 @@
         <table style="width: 100%;">
             <tr> <th>Name:</th> <td><input id="new_topic_name" style="width: 100%;" /></td> </tr>
         </table>
-        <button id="new_topic_button" type="button" style="width: 100%;" disabled="disabled" >Create new topic</button>
+        <button id="new_topic_button" type="button" style="width: 100%;" disabled="disabled">Create new topic</button>
     </fieldset>
 
     <fieldset id="backup" style="display: none;">
@@ -54,7 +54,7 @@
     </fieldset>
 
     <fieldset id="copy_grades" style="display: none;">
-        <button id="copy_grades_button" type="button" style="width: 100%;" >Copy grades</button>
+        <button id="copy_grades_button" type="button" style="width: 100%;">Copy grades</button>
     </fieldset>
 
     <fieldset id="status" style="display: none;">
@@ -62,22 +62,22 @@
         <progress id="progress_bar" value="1" style="width: 100%;"></progress>
         <div id="status_running">
             <div id="status_awaiting_input">
-                <button id="retry_button" type="button" style="width: 100%;" >Retry</button>
-                <button id="skip_button" type="button" style="width: 100%;" >Skip</button>
+                <button id="retry_button" type="button" style="width: 100%;">Retry</button>
+                <button id="skip_button"  type="button" style="width: 100%;">Skip</button>
             </div>
-            <button id="cancel_button" type="button" style="width: 100%;" >Cancel</button>
+            <button id="cancel_button" type="button" style="width: 100%;">Cancel</button>
         </div>
         <div id="status_error">
             <textarea id="error_message" style="width: 100%;" readonly="readonly"></textarea>
-            <button id="reset_button" type="button" style="width: 100%;" >Reset</button>
+            <button id="reset_button" type="button" style="width: 100%;">Reset</button>
         </div>
     </fieldset>
 
 </form>
 
 <script src="browser-polyfill.js" type="text/javascript"></script>
-<script src="shared.js"             type="text/javascript"></script>
-<script src="popup.js"         type="text/javascript"></script>
+<script src="shared.js"           type="text/javascript"></script>
+<script src="popup.js"            type="text/javascript"></script>
 
 </body>
 
