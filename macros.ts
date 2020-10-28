@@ -494,7 +494,7 @@ namespace MJS {
                     // alert("call click");
                     this.page_details = await this.tabdata.page_call({page: "login-index", mdl_user: {username: this.params!.mdl_user.username, password: this.params!.mdl_user.password_plaintext}, dom_submit: "log_in"});
                     // alert("await my");
-                    this.page_details = await this.tabdata.page_loaded({page: "my-index"});
+                    this.page_details = await this.tabdata.page_loaded({page: "my-index"});  // If error here, maybe bad login details?
                     // alert("all OK");
                 }
                 this.login_check_needed = false;
@@ -586,6 +586,7 @@ namespace MJS {
             // let do_sleep:                   boolean = false;
             // let delete_errors: number = 0;
 
+            // Logout.
             const logout_start_progress: number = this.tabdata.macro_progress;
             try {
                 this.page_details = await this.tabdata.page_load2({location: {pathname: "/login/logout.php", search: {sesskey: this.page_details.moodle_page.sesskey}}},
@@ -595,6 +596,8 @@ namespace MJS {
                 this.tabdata.macro_progress = logout_start_progress + 1;
                 await sleep(4 * 1000);
                 this.tabdata.macro_state = 1;
+                this.page_details = await this.tabdata.page_call({});
+                if (this.page_details.page != "local-otago-login") throw new Error("Not on login page");  // If error here, maybe auto logged in?
                 this.tabdata.update_ui();
             }
             this.login_check_needed = true;
