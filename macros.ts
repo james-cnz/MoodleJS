@@ -895,11 +895,11 @@ namespace MJS {
 
 
     export type New_Course_Params = {
-        mdl_course: { fullname: string, shortname: string, startdate: number};
+        mdl_course: { fullname: string, shortname: string, startdate: number, format: "onetopic"|"multitopic"};
     };
 
     type New_Course_Data = {
-        mdl_course: { template_id: number };
+        // mdl_course: { template_id: number };
         mdl_course_category: { course_category_id: number; name: string };
     };
 
@@ -920,18 +920,9 @@ namespace MJS {
 
             if (!this.page_details.mdl_course_category.course_category_id) { return; }
 
-            let template_id: number;
-            if (page_details.moodle_page.wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
-                template_id = 6548;
-            } else if (page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
-                template_id = 8310;
-            } else if (page_details.moodle_page.wwwroot == "http://localhost" || page_details.moodle_page.wwwroot == "https://localhost") {
-                template_id = 2;
-            } else                                                                      { return; }
-
             this.data = {
                 mdl_course_category: this.page_details.mdl_course_category,
-                mdl_course: { template_id: template_id}
+                // mdl_course: { template_id: template_id}
             };
 
 
@@ -946,10 +937,19 @@ namespace MJS {
 
             if (!this.data || !this.params)                                     throw new Error("New course macro, prereq:\ndata not set.");
 
+            let template_id: number;
+            if (this.page_details.moodle_page.wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
+                template_id = 6548;
+            } else if (this.page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
+                template_id = this.params!.mdl_course.format == "onetopic" ? 8310 : 8705;
+            } else if (this.page_details.moodle_page.wwwroot == "http://localhost" || this.page_details.moodle_page.wwwroot == "https://localhost") {
+                template_id = this.params!.mdl_course.format == "onetopic" ? 2 : 3;
+            } else                                                                      { throw new Error("Site not recognised."); }
+
             // Get template course context (1 load)
             this.page_details = await this.tabdata.page_load(
-                {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.template_id, section: 0}},
-                page: "course-view-[a-z]+", mdl_course: {course_id: this.data.mdl_course.template_id}}
+                {location: {pathname: "/course/view.php", search: {id: template_id, section: 0}},
+                page: "course-view-[a-z]+", mdl_course: {course_id: template_id}}
             );
             const source_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)!;
             const source_context = parseInt(source_context_match[1]);
@@ -1013,7 +1013,7 @@ namespace MJS {
             (this.page_details.moodle_page.body_class.match(/\bediting\b/))     || throwf(new Error("New course macro, turn editing on:\nEditing not on."));
 
             // Fill in course name (2 loads)
-            const section_0_id = this.page_details.mdl_course_section!.course_section_id || throwf(new Error("New course macro, fill in course name:\nID not found."));
+            const section_0_id = this.page_details.mdl_course.mdl_course_sections[0].course_section_id || throwf(new Error("New course macro, fill in course name:\nID not found."));
             this.page_details = await this.tabdata.page_load<page_course_editsection_data>(
                 {location: {pathname: "/course/editsection.php", search: {id: section_0_id}}, // NOTE: Needs editing on.
                 page: "course-editsection" /*, mdl_course: {id: course_id}*/},

@@ -146,6 +146,7 @@ namespace MJS {
         private new_course_name_dom:        HTMLInputElement;
         private new_course_shortname_dom:   HTMLInputElement;
         private new_course_start_dom:       HTMLInputElement;
+        private new_course_format_dom:      NodeListOf<HTMLInputElement>;
         private new_course_button_dom:      HTMLButtonElement;
 
         constructor(new_popup: Popup) {
@@ -154,10 +155,13 @@ namespace MJS {
             this.new_course_name_dom        = document.querySelector<HTMLInputElement>("input#new_course_name")!;
             this.new_course_shortname_dom   = document.querySelector<HTMLInputElement>("input#new_course_shortname")!;
             this.new_course_start_dom       = document.querySelector<HTMLInputElement>("input#new_course_start")!;
+            this.new_course_format_dom      = document.querySelectorAll<HTMLInputElement>("input[name='new_course_format']");
             this.new_course_button_dom      = document.querySelector<HTMLButtonElement>("button#new_course_button")!;
             const this_ui = this;
             this.new_course_name_dom.addEventListener("input", function() { this_ui.onInput(); });
             this.new_course_shortname_dom.addEventListener("input", function() { this_ui.onInput(); });
+            this.new_course_format_dom[0].addEventListener("click", function() { this_ui.onInput(); });
+            this.new_course_format_dom[1].addEventListener("click", function() { this_ui.onInput(); });
             this.new_course_button_dom.addEventListener("click", function() { this_ui.onClick(); });
         }
 
@@ -166,7 +170,8 @@ namespace MJS {
         }
 
         private onInput() {
-            this.new_course_button_dom.disabled = !(this.new_course_name_dom.value != "" && this.new_course_shortname_dom.value != "");
+            this.new_course_button_dom.disabled = !(this.new_course_name_dom.value != "" && this.new_course_shortname_dom.value != ""
+                                                    && (this.new_course_format_dom[0].checked || this.new_course_format_dom[1].checked));
         }
 
         private onClick() {
@@ -174,7 +179,8 @@ namespace MJS {
             (this.popup.tabData.macros.new_course as New_Course_Macro).params = {mdl_course: {
                 fullname:   this.new_course_name_dom.value,
                 shortname:  this.new_course_shortname_dom.value,
-                startdate:  (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000
+                startdate:  (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000,
+                format:     this.new_course_format_dom[0].checked ? "onetopic" : "multitopic"
             }};
             void this.popup.tabData.macros.new_course.run();
         }

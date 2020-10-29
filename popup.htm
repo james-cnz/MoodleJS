@@ -17,6 +17,14 @@
             <tr> <th>Name: </th> <td><input id="new_course_name"                                     style="width: 100%;" /></td> </tr>
             <tr> <th>Short:</th> <td><input id="new_course_shortname"                                style="width: 100%;" /></td> </tr>
             <tr> <th>Start:</th> <td><input id="new_course_start"     type="date" value="2019-12-30" style="width: 100%;" /></td> </tr>
+            <tr> <th>Format:</th>
+                <td>
+                    <input type="radio" id="new_course_format_onetopic" name="new_course_format" value="onetopic" />
+                    <label for="new_course_format_onetopic">Onetopic</label>
+                    <input type="radio" id="new_course_format_multitopic" name="new_course_format" value="multitopic" />
+                    <label for="new_course_format_multitopic">Multitopic</label>
+                </td>
+            </tr>
         </table>
         <button id="new_course_button" type="button" style="width: 100%;" disabled="disabled" >Create new course</button>
     </fieldset>

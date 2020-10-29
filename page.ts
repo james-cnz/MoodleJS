@@ -925,8 +925,8 @@ namespace MJS {
 
         // Get section names from OneTopic tabs (hack)
 
-        if (document.body.classList.contains("format-onetopic")) {
-            course_out_sections = [];
+        if (document.body.classList.contains("format-onetopic")) { // TODO: Check tabs are present?
+            course_out_sections = []; // TODO: Keep Section 0, if shown on all pages?
 
             // If top-level section, include lower-level section headings?  // TODO: Check
             // TODO: should be if ((include_nested_x || sectionnumber == undefined) ... ?
