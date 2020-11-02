@@ -1072,7 +1072,9 @@ namespace MJS {
         const log_in_dom    = document.querySelector("button#loginbtn") as HTMLAnchorElement;
         if (message.mdl_user) {
             username_dom.value = message.mdl_user.username!;
+            await sleep(100);
             password_dom.value = message.mdl_user.password!;
+            await sleep(100);
         }
         if (message.dom_submit == "log_in") {
             log_in_dom.click();
