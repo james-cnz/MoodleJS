@@ -923,10 +923,16 @@ namespace MJS {
         }
 
 
-        // Get section names from OneTopic tabs (hack)
+        // Get section names from OneTopic tabs, if present (hack)
 
-        if (document.body.classList.contains("format-onetopic")) { // TODO: Check tabs are present?
-            course_out_sections = []; // TODO: Keep Section 0, if shown on all pages?
+        if (document.body.classList.contains("format-onetopic") && document.querySelector("#region-main ul.nav.nav-tabs")) {
+
+            // Keep section 0, if shown on all pages.
+            if (course_out_sections.length > 0 && course_out_sections[0].section == 0 && course_out_sections[0] != single_section_out) {
+                course_out_sections = [ course_out_sections[0] ];
+            } else {
+                course_out_sections = [];
+            }
 
             // If top-level section, include lower-level section headings?  // TODO: Check
             // TODO: should be if ((include_nested_x || sectionnumber == undefined) ... ?
@@ -965,13 +971,13 @@ namespace MJS {
                         const section_num = parseInt(section_match[3]);
 
                         course_out_sections.push({
-                            course_section_id: 0,
+                            // course_section_id: 0,
                             name:       other_section_dom.title,
-                            summary:    "",
+                            // summary:    "",
                             section:    section_num,
                             options: {level:    0},
-                            mdl_course_modules:    [],
-                        });  // TODO: Any better way to deal with these missing values? (Maybe not.)
+                            // mdl_course_modules:    [],
+                        });
                     } else if (subsections_out.length > 0) {
 
                         for (const subsection_out of subsections_out) {
