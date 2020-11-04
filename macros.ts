@@ -604,7 +604,7 @@ namespace MJS {
             this.login_check_needed = true;
 
             const unattended_errors_max = 50;
-            const unattended_delay = 1.25 * 60 * 60;
+            const unattended_delay = 3.25 * 60 * 60;
             let unattended_errors = 0;
 
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
