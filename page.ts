@@ -993,6 +993,59 @@ namespace MJS {
                 }
             // }
 
+        } else if (document.body.classList.contains("format-multitopic") && document.body.classList.contains("editing")) {
+            const other_sections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-child li a");
+            let section_num = 0;
+            for (const other_section_dom of Object.values(other_sections_dom)) {
+                if (other_section_dom.href && other_section_dom.href.match(/changenumsections.php/)) { continue; }
+                if (other_section_dom.href) {
+                    const section_match = other_section_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
+                                                                                || throwf(new Error("WSC course get content, tab links unrecognised: " + other_section_dom.href));
+                    if (section_match[3]) {
+                        const section_id = parseInt(section_match[3]);
+                        while (course_out_sections[section_num].course_section_id != section_id) { section_num++; }
+                    }
+                    course_out_sections[section_num].options = course_out_sections[section_num].options || {};
+                    course_out_sections[section_num].options!.level = 0;
+                } else {
+                    let subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:nth-child(2) li a");
+                    if (subsections_dom.length <= 0) {
+                        subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-child li a:not([href])");
+                    }
+
+
+                    for (const subsection_dom of Object.values(subsections_dom)) {
+                        if (subsection_dom.href && subsection_dom.href.match(/changenumsections.php/)) { continue; }
+                        if (subsection_dom.href) {
+                            const section_match = subsection_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
+                                                                                        || throwf(new Error("WSC course get content, tab links unrecognised: " + subsection_dom.href));
+                            if (section_match[3]) {
+                                const section_id = parseInt(section_match[3]);
+                                while (course_out_sections[section_num].course_section_id != section_id) { section_num++; }
+                            }
+                            course_out_sections[section_num].options = course_out_sections[section_num].options || {};
+                            course_out_sections[section_num].options!.level = (subsection_dom == subsections_dom[0]) ? 0 : 1;
+                        } else {
+                            while (!course_out_sections[section_num].mdl_course_modules) {
+                                section_num++;
+                            }
+                            // course_out_sections[section_num].options = course_out_sections[section_num].options || {};
+                            // course_out_sections[section_num].options!.level = (subsection_dom == other_section_dom) ? 0 : 1;
+                            // section_num++;
+                            let first = true;
+                            while (section_num < course_out_sections.length && course_out_sections[section_num].mdl_course_modules) {
+                                course_out_sections[section_num].options = course_out_sections[section_num].options || {};
+                                course_out_sections[section_num].options!.level = first ? ((subsection_dom == subsections_dom[0]) ? 0 : 1) : 2;
+                                if (first) {
+                                    single_section_out = course_out_sections[section_num];
+                                }
+                                section_num++;
+                                first = false;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         const course_out: page_course_view_course = {
