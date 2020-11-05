@@ -779,7 +779,7 @@ namespace MJS {
         format:     string
         mdl_course_sections: page_course_view_course_section[]
     };
-    type page_course_view_course_section = {
+    export type page_course_view_course_section = {
         course_section_id?: number;
         section:    number;
         name:       string;

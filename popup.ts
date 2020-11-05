@@ -32,6 +32,7 @@ namespace MJS {
             this.macro_uis = [
                 new New_Course_UI(this),
                 new Index_Rebuild_UI(this),
+                new Index_Rebuild_MT_UI(this),
                 new New_Section_UI(this),
                 new New_Topic_UI(this),
                 new Backup_UI(this),
@@ -214,6 +215,30 @@ namespace MJS {
 
     }
 
+
+    class Index_Rebuild_MT_UI extends Macro_UI {
+
+        private index_rebuild_mt_dom:       HTMLFieldSetElement;
+        private index_rebuild_mt_button_dom: HTMLButtonElement;
+
+        constructor(new_popup: Popup) {
+            super(new_popup);
+            this.index_rebuild_mt_dom       = document.querySelector<HTMLFieldSetElement>("fieldset#index_rebuild_mt")!;
+            this.index_rebuild_mt_button_dom = document.querySelector<HTMLButtonElement>("button#index_rebuild_mt_button")!;
+            const this_ui = this;
+            this.index_rebuild_mt_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+        }
+
+        public update() {
+            this.index_rebuild_mt_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.index_rebuild_mt.prereq) ? "block" : "none";
+        }
+
+        private onClick() {
+            (this.popup.tabData.macros.index_rebuild_mt as Index_Rebuild_MT_Macro).params = {};
+            void this.popup.tabData.macros.index_rebuild_mt.run();
+        }
+
+    }
 
 
     class New_Section_UI extends Macro_UI {

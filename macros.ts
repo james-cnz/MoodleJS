@@ -57,6 +57,7 @@ namespace MJS {
         public macros: {[index: string] : Macro} = {
             new_course:     new New_Course_Macro(this),
             index_rebuild:  new Index_Rebuild_Macro(this),
+            index_rebuild_mt: new Index_Rebuild_MT_Macro(this),
             new_section:    new New_Section_Macro(this),
             new_topic:      new New_Topic_Macro(this),
             backup:         new Backup_Macro(this),
@@ -311,6 +312,7 @@ namespace MJS {
         private macros_init(page_details: Page_Data|null) {
             this.macros.new_course.init(page_details);
             this.macros.index_rebuild.init(page_details);
+            this.macros.index_rebuild_mt.init(page_details);
             this.macros.new_section.init(page_details);
             this.macros.new_topic.init(page_details);
             this.macros.backup.init(page_details);
@@ -1159,6 +1161,127 @@ namespace MJS {
     }
 
 
+    export class Index_Rebuild_MT_Macro extends Macro {
+
+
+        protected data: {mdl_course: {course_id: number}; mdl_course_sections: {id: number}[]; } | null = null;
+
+
+        public init(page_details: Page_Data) {
+
+            this.prereq = false;
+
+            this.page_details = page_details;
+
+            // Check course type
+            if (!this.page_details || this.page_details.page != "course-view-[a-z]+")                      { return; }
+            const course = this.page_details.mdl_course;
+            if (!course || course.format != "multitopic" || !course.course_id) {  return; }
+
+            // Check editing on
+            if (!this.page_details.moodle_page || !this.page_details.moodle_page.body_class || !this.page_details.moodle_page.body_class.match(/\bediting\b/)) {
+                return;
+            }
+
+            // Find Modules tab number
+            const course_contents = course.mdl_course_sections;
+            let sections: {id: number}[] = [];
+            let modules_tab_num: number|undefined|null = null;
+            let last_module_tab_num: number|undefined|null = null;
+            for (const section of course_contents) {
+                if (section.options && (section.options!.level! <= 0) && (section.section as number <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
+                    modules_tab_num = section.section;
+                    sections = [];
+                    sections.push({id: section.course_section_id!});
+                    last_module_tab_num = modules_tab_num;
+                } else if (last_module_tab_num && section.options && section.options!.level! == 1) { // TODO: Need to scrape level property.
+                    sections.push({id: section.course_section_id!});
+                    last_module_tab_num = section.section;
+                }
+            }
+            if (modules_tab_num && last_module_tab_num) {  } else                                        {  return; }
+            if (this.page_details.mdl_course_section!.section <= last_module_tab_num)
+            { } else { return; }
+
+            this.data = {mdl_course: {course_id: course.course_id}, mdl_course_sections: sections};
+
+            this.progress_max = sections.length + 2 + 1;
+            this.prereq = true;
+
+        }
+
+
+        protected async content() {
+
+            if (!this.data /*|| !this.params*/)                                     throw new Error("Index rebuild macro, prereq:\ndata not set.");
+            // TODO: Don't include hidden tabs or topic headings?
+
+            // const parser = new DOMParser();
+
+            // Get list of sections (1 load)
+            this.page_details = await this.tabdata.page_load<page_course_view_data>(
+                {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.course_id, sectionid: this.data.mdl_course_sections[0].id}},
+                page: "course-view-[a-z]+", mdl_course: {course_id: this.data.mdl_course.course_id}},
+            );
+            const modules_list = this.page_details.mdl_course_section!.mdl_course_modules!;
+            (modules_list.length == 1)                                          || throwf(new Error("Index rebuild macro, get list:\nExpected exactly one resource in Modules tab."));
+            const modules_index = modules_list[0];
+
+
+            // Get section contents (1 load per section)
+            let index_html = '<div class="textblock">\n';
+            // modules_list.shift();
+            for (const section of this.data.mdl_course_sections) {
+                if (section == this.data.mdl_course_sections[0]) { continue; }
+                // const section_num = section.section                                     || throwf(new Error("Module number not found."));
+                this.page_details = await this.tabdata.page_load<page_course_view_data>(
+                    {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.course_id, sectionid: section.id}},
+                    page: "course-view-[a-z]+", mdl_course: {course_id: this.data.mdl_course.course_id}});
+                const section_full = this.page_details.mdl_course_section!;
+                const section_name = section_full.name.trim();
+                index_html = index_html
+                            + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.data.mdl_course.course_id + "&sectionid=" + section.id + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
+                            + "<ul>\n";
+                let section_count = 0;
+                while (this.page_details.mdl_course.mdl_course_sections[section_count].course_section_id! != section_full.course_section_id!) {
+                    section_count++;
+                }
+                section_count++;
+                let subsection: page_course_view_course_section;
+                while (this.page_details.mdl_course.mdl_course_sections.length > section_count
+                        && (subsection = this.page_details.mdl_course.mdl_course_sections[section_count]).options
+                        && subsection.options!.level == 2) {
+                /* for (const mod of section_full.mdl_course_modules!) { */
+                    // parse description
+                    // const mod_desc = parser.parseFromString(mod.intro || "", "text/html");
+                    // const part_name = subsection.name; // mod_desc.querySelector(".header2, .header2gradient")!;
+                    // if (part_name) {
+                        index_html = index_html
+                                    + "<li>"
+                                    + TabData.escapeHTML(subsection.name.trim())
+                                    + "</li>\n";
+                    // }
+                    section_count++;
+                }
+                index_html = index_html
+                            + "</ul>\n"
+                            + "<br />\n";
+            }
+            index_html = index_html
+                        + "</div>\n";
+
+            // Update TOC (2 loads)
+            this.page_details = await this.tabdata.page_load2(
+                {location: {pathname: "/course/mod.php", search: {sesskey: this.page_details.moodle_page.sesskey, update: modules_index.course_module_id}}},
+                {page: "mod-[a-z]+-mod" /*, mdl_course: {id: this.data.mdl_course.id}*/});
+            this.page_details = await this.tabdata.page_call({page: "mod-[a-z]+-mod", mdl_course_module: {course: this.data.mdl_course.course_id, /*sectionnum: new_section.section,*/ /*modname: "label",*/
+                intro: index_html}, dom_submit: true});
+            this.page_details = await this.tabdata.page_loaded({page: "course-view-[a-z]+", mdl_course: {course_id: this.data.mdl_course.course_id}});
+
+        }
+
+
+    }
 
 
     export class New_Section_Macro extends Macro {
