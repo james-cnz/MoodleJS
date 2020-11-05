@@ -6,7 +6,7 @@
   "version":      "2.1",
   "description":  "A script for automating some Moodle tasks at Otago Polytechnic (New Zealand).",
 
-  "applications": { "gecko": { "id": "{3eeb542a-cd0b-44f7-8cbb-4f7b6d87450f}" } },
+  "applications": { "gecko": { "id": "{3eeb542a-cd0b-44f7-8cbb-4f7b6d87450f}", "strict_min_version": "60.0" } },
   "icons":        {"16": "icons/moodlejs-16.png", "48": "icons/moodlejs-48.png", "128": "icons/moodlejs-128.png"},
   "permissions":  ["activeTab", "downloads"],
 
