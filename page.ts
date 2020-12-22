@@ -125,32 +125,53 @@ namespace MJS {
     export type page_admin_report_customsql_view_data = Page_Data_Base & {
         page:       "admin-report-customsql-view",
         location?:  { pathname: "/report/customsql/view.php", search: { id: number } }
-        query_results: page_admin_report_customsql_results;
+        query_params?:  {name: string, value: string}[]
+        query_results?: page_admin_report_customsql_results;
     };
 
     export type page_admin_report_customsql_results = {headers: string[], data: string[][]};
 
-    async function page_admin_report_customsql_view(_message: DeepPartial<page_admin_report_customsql_view_data>): Promise<page_admin_report_customsql_view_data> {
-        const results_dom = document.querySelector<HTMLTableElement>("#region-main table#report_customsql_results")!;
-
-        const headers_dom = results_dom.querySelectorAll<HTMLTableHeaderCellElement>(":scope > thead > tr > th");
-        const headers: string[] = [];
-        for (const header_dom of Object.values(headers_dom)) {
-            headers.push(header_dom.textContent!);
-        }
-
-        const data_dom = results_dom.querySelectorAll<HTMLTableRowElement>(":scope > tbody > tr");
-        const rows: string[][] = [];
-        for (const row_dom of Object.values(data_dom)) {
-            const row: string[] = [];
-            const cells_dom = row_dom.querySelectorAll<HTMLTableDataCellElement>(":scope > td");
-            for (const cell_dom of Object.values(cells_dom)) {
-                row.push(cell_dom.textContent!);
+    async function page_admin_report_customsql_view(message: DeepPartial<page_admin_report_customsql_view_data>): Promise<page_admin_report_customsql_view_data> {
+        let params_out: {name: string, value: string}[]|undefined;
+        const params_dom = document.querySelectorAll<HTMLDivElement>("#region-main div[id^='fitem_id_queryparam']");
+        if (params_dom.length > 0) {
+            params_out = [];
+            for (const param_dom of Object.values(params_dom)) {
+                const param_out = {name: param_dom.querySelector<HTMLLabelElement>(":scope label")!.textContent!,
+                                    value: param_dom.querySelector<HTMLInputElement>(":scope input")!.value};
+                if (message.query_params) {
+                    const param_in = message.query_params.find((element) => element?.name == param_out.name);
+                    if (param_in && param_in.value !== undefined) {
+                        param_dom.querySelector<HTMLInputElement>(":scope input")!.value = param_in.value;
+                    }
+                }
+                params_out.push(param_out);
             }
-            rows.push(row);
         }
 
-        return {moodle_page: moodle_page(), page: "admin-report-customsql-view", query_results: {headers: headers, data: rows}};
+        let results: page_admin_report_customsql_results|undefined;
+        const results_dom = document.querySelector<HTMLTableElement>("#region-main table")!;
+        if (results_dom) {
+            const headers_dom = results_dom.querySelectorAll<HTMLTableHeaderCellElement>(":scope > thead > tr > th");
+            const headers: string[] = [];
+            for (const header_dom of Object.values(headers_dom)) {
+                headers.push(header_dom.textContent!);
+            }
+
+            const data_dom = results_dom.querySelectorAll<HTMLTableRowElement>(":scope > tbody > tr");
+            const rows: string[][] = [];
+            for (const row_dom of Object.values(data_dom)) {
+                const row: string[] = [];
+                const cells_dom = row_dom.querySelectorAll<HTMLTableDataCellElement>(":scope > td");
+                for (const cell_dom of Object.values(cells_dom)) {
+                    row.push(cell_dom.textContent!);
+                }
+                rows.push(row);
+            }
+            results = {headers: headers, data: rows};
+        }
+
+        return {moodle_page: moodle_page(), page: "admin-report-customsql-view", query_params: params_out, query_results: results};
     }
 
 

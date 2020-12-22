@@ -18,7 +18,9 @@ namespace MJS {
         private status_dom:         HTMLFieldSetElement;
         private progress_bar_dom:   HTMLProgressElement;
         private status_running_dom: HTMLDivElement;
-        private status_awaiting_dom: HTMLDivElement;
+        private status_paused_dom:  HTMLDivElement;
+        private interrupt_allowed_dom: HTMLDivElement;
+        private interrupt_button_dom:  HTMLButtonElement;
         private cancel_button_dom:  HTMLButtonElement;
         private retry_button_dom:   HTMLButtonElement;
         private skip_button_dom:    HTMLButtonElement;
@@ -42,7 +44,9 @@ namespace MJS {
             this.status_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#status")!;
             this.progress_bar_dom   = document.querySelector<HTMLProgressElement>("progress#progress_bar")!;
             this.status_running_dom = document.querySelector<HTMLDivElement>("div#status_running")!;
-            this.status_awaiting_dom = document.querySelector<HTMLDivElement>("div#status_awaiting_input")!;
+            this.status_paused_dom  = document.querySelector<HTMLDivElement>("div#status_paused")!;
+            this.interrupt_allowed_dom = document.querySelector<HTMLDivElement>("div#interrupt_allowed")!;
+            this.interrupt_button_dom  = document.querySelector<HTMLButtonElement>("button#interrupt_button")!;
             this.cancel_button_dom  = document.querySelector<HTMLButtonElement>("button#cancel_button")!;
             this.retry_button_dom   = document.querySelector<HTMLButtonElement>("button#retry_button")!;
             this.skip_button_dom    = document.querySelector<HTMLButtonElement>("button#skip_button")!;
@@ -65,8 +69,9 @@ namespace MJS {
             if (this.tabData.macro_state != 0) {
                 this.progress_bar_dom.value = this.tabData.macro_progress;
                 this.progress_bar_dom.max   = this.tabData.macro_progress_max;
-                this.status_running_dom.style.display = (this.tabData.macro_state > 0) ? "block" : "none";
-                this.status_awaiting_dom.style.display = (this.tabData.macro_state == 3) ? "block" : "none";
+                this.status_running_dom.style.display   = (this.tabData.macro_state > 0) ? "block" : "none";
+                this.interrupt_allowed_dom.style.display = (this.tabData.macro_allow_interrupt && this.tabData.macro_state != 3) ? "block" : "none";
+                this.status_paused_dom.style.display    = (this.tabData.macro_state == 3) ? "block" : "none";
                 // if (this.tabData.macro_state < 0) {
                     this.error_message_dom.value = this.tabData.macro_log; /*"Error type:" + this.tabData.macro_error.name + "\n"
                                                 +*/ // this.tabData.macro_error!.message + "\n"
@@ -96,6 +101,7 @@ namespace MJS {
             this.tabData.popup = this;
             const this_popup: Popup = this;
             this.cancel_button_dom.addEventListener("click", function() { this_popup.onCancel(); });
+            this.interrupt_button_dom.addEventListener("click", function() { this_popup.onInterrupt(); });
             this.retry_button_dom.addEventListener("click", function() { this_popup.onRetry(); });
             this.skip_button_dom.addEventListener("click", function() { this_popup.onSkip(); });
             this.reset_button_dom.addEventListener("click", function() { this_popup.onReset(); });
@@ -104,7 +110,11 @@ namespace MJS {
 
 
         private onCancel() {
-            this.tabData.macro_cancel = true;
+            this.tabData.macro_input = "cancel";
+        }
+
+        private onInterrupt() {
+            this.tabData.macro_input = "interrupt";
         }
 
         private onRetry() {

@@ -46,13 +46,13 @@ namespace MJS {
 
 
 
-        public macro_state:         -1|0|1|2|3 = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load / 3 awaiting user input
+        public macro_state:         -1|0|1|2|3 = 0;     // -1 error / 0 idle / 1 running / 2 running & awaiting load / 3 paused
+        public macro_allow_interrupt: boolean = false;
         // macro_callstack:    string[3]       // 0: macro  1: macro step  2: tabdata function
         public macro_log:           string = "";
         public macro_progress:      number = 1;
         public macro_progress_max:  number = 1;
-        public macro_cancel:        boolean = false;
-        public macro_input:         "retry"|"skip"|null = null;
+        public macro_input:         "cancel"|"interrupt"|"retry"|"skip"|null = null;
 
         public macros: {[index: string] : Macro} = {
             new_course:     new New_Course_Macro(this),
@@ -94,8 +94,8 @@ namespace MJS {
             this.macro_log = "";
             this.macro_progress = 1;
             this.macro_progress_max = 1;
-            this.macro_cancel = false;
             this.macro_input = null;
+            this.macro_allow_interrupt = false;
             try {
                 this.macro_state = 1;
                 page_details = await this.page_call({});
@@ -205,7 +205,8 @@ namespace MJS {
                     new_error.lineNumber = this.page_message.lineNumber;
                     throw new_error;
                 }
-                if (this.macro_cancel)                                          { throw new Error("Cancelled"); }
+                if (this.macro_input == "cancel")                               { throw new Error("Cancelled"); }
+                if (this.macro_input == "interrupt")                            { throw new Error("Interrupted"); }
                 if (this.page_is_loaded && !page_loaded_time) {
                     page_loaded_time = page_load_wait;
                 }
@@ -372,7 +373,6 @@ namespace MJS {
                 return;
             }
 
-            this.tabdata.macro_cancel   = false;
             this.tabdata.macro_input    = null;
             this.tabdata.macro_state    = 1;
             this.tabdata.macro_progress = 0;
@@ -386,11 +386,12 @@ namespace MJS {
                     // this.tabdata.macro_error = e;
                     this.tabdata.macro_log += /*"Error type:" + this.tabData.macro_error.name + "\n"
                     +*/ e.message + "\n"
-                    + ((e.message != "Cancelled" && e.message != "Too many errors" && e.fileName) ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
+                    + ((e.message != "Cancelled" && e.message != "Interrupted" && e.message != "Too many errors" && e.fileName) ? ("file: " + e.fileName + " line: " + e.lineNumber + "\n") : "")
                     + "\n";
 
                 // }
             } // finally {
+                this.tabdata.macro_allow_interrupt = false;
                 if (this.tabdata.macro_log) {
                     this.tabdata.macro_state = -1;
                     this.tabdata.update_ui();
@@ -488,12 +489,17 @@ namespace MJS {
                     // TODO: pause, reset?
                     // this.page_details = await this.tabdata.page_loaded({page: "local-otago-login"});
                     this.page_details = await this.tabdata.page_call({});
-                    if (this.page_details.page != "local-otago-login") throw new Error("Not on login page");
-                    // alert("call click");
-                    this.page_details = await this.tabdata.page_call({page: "local-otago-login", dom_submit: "other_users"});
-                    // alert("await login");
-                    this.page_details = await this.tabdata.page_loaded({page: "login-index"});
-                    // alert("call click");
+                    if (this.page_details.page == "local-otago-login") {
+                        // alert("call click");
+                        this.page_details = await this.tabdata.page_call({page: "local-otago-login", dom_submit: "other_users"});
+                        // alert("await login");
+                        this.page_details = await this.tabdata.page_loaded({page: "login-index"});
+                        // alert("call click");
+                    } else if (this.page_details.page == "login-index") {
+                        this.tabdata.page_load_count(1);
+                    } else {
+                        throw new Error("Not on login page");
+                    }
                     this.page_details = await this.tabdata.page_call({page: "login-index", mdl_user: {username: this.params!.mdl_user.username, password: this.params!.mdl_user.password_plaintext}, dom_submit: "log_in"});
                     // alert("await my");
                     this.page_details = await this.tabdata.page_loaded({page: "my-index"});  // If error here, maybe bad login details?
@@ -508,79 +514,89 @@ namespace MJS {
 
         protected async content() {
 
-            let tick_change: boolean;
-            do {
+            let course_list: {course_id: number, fullname?: string, shortname?: string}[] = [];
+
+            if (false) {
+
+                let tick_change: boolean;
+                do {
+                    this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
+                    const site_map: page_course_management_category = this.page_details.mdl_course_category;
+                    tick_change = Backup_Macro.expand_ticked(site_map);
+                    if (tick_change) {
+                        this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management", mdl_course_category: site_map});
+                        // await sleep(1000);
+                    }
+                } while (tick_change);
+
+                // Get ticked categories.
+                // this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
+                const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
+
+                // Calculate max progress
+                let course_count = 0;
+                for (const category of category_list) {
+                    course_count += category.coursecount;
+                }
+                this.progress_max = category_list.length + 1 + course_count * 17 + 1;
+                this.tabdata.macro_progress_max = this.progress_max;
+
+                // Get course list from category list
+                // let course_list: page_course_management_course[] = [];
+                for (const category of category_list) {
+                    this.page_details = await this.tabdata.page_load<page_course_management_data>({location: {pathname: "/course/management.php", search: {categoryid: category.course_category_id, perpage: 999}}});
+                    course_list = course_list.concat(this.page_details.mdl_courses);
+                }
+
+            } else {
+
+                // Get ticked categories.
                 this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
-                const site_map: page_course_management_category = this.page_details.mdl_course_category;
-                tick_change = Backup_Macro.expand_ticked(site_map);
-                if (tick_change) {
-                    this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management", mdl_course_category: site_map});
-                    // await sleep(1000);
+                const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
+
+                // Find course list query.
+                this.page_details = await this.tabdata.page_load<page_admin_report_customsql_index_data>({location: {pathname: "/report/customsql/index.php", search: {}}, page: "admin-report-customsql-index"});
+                let course_list_query_id: number|null = null;
+                for (const query_cat of this.page_details.query_cats) {
+                    for (const query of query_cat.mdl_report_customsql_queries) {
+                        if (query.displayname == "Course list") { course_list_query_id = query.id; }
+                    }
                 }
-            } while (tick_change);
+                if (course_list_query_id === null) { throw new Error("Course list query not found"); }
 
-            // Get ticked categories.
-            // this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
-            const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
-
-            // Calculate max progress
-            let course_count = 0;
-            for (const category of category_list) {
-                course_count += category.coursecount;
-            }
-            this.progress_max = category_list.length + 1 + course_count * 17 + 1;
-            this.tabdata.macro_progress_max = this.progress_max;
-
-            // Get course list from category list
-            let course_list: page_course_management_course[] = [];
-            for (const category of category_list) {
-                this.page_details = await this.tabdata.page_load<page_course_management_data>({location: {pathname: "/course/management.php", search: {categoryid: category.course_category_id, perpage: 999}}});
-                course_list = course_list.concat(this.page_details.mdl_courses);
-            }
-
-            /*
-            // Find course list query.
-            this.page_details = await this.tabdata.page_load<page_admin_report_customsql_index_data>({location: {pathname: "/report/customsql/index.php", search: {}}, page: "admin-report-customsql-index"});
-            let course_list_query_id: number|null = null;
-            for (const query_cat of this.page_details.query_cats) {
-                for (const query of query_cat.mdl_report_customsql_queries) {
-                    if (query.displayname == "Course list") { course_list_query_id = query.id; }
+                // Run course list query.
+                this.page_details = await this.tabdata.page_load<page_admin_report_customsql_view_data>({location: {pathname: "/report/customsql/view.php", search: {id: course_list_query_id}}, page: "admin-report-customsql-view"});
+                let cat_path_col:   number|null = null;
+                let course_id_col:  number|null = null;
+                let course_name_col: number|null = null;
+                let col:            number = 0;
+                for (const col_name of this.page_details.query_results!.headers) {
+                    switch (col_name.toLocaleLowerCase()) {
+                        case "cat path":        cat_path_col = col; break;
+                        case "course id":       course_id_col = col; break;
+                        case "course short name": course_name_col = col; break;
+                    }
+                    col++;
                 }
-            }
-            if (course_list_query_id === null) { throw new Error("Course list query not found"); }
-
-            // Run course list query.
-            this.page_details = await this.tabdata.page_load<page_admin_report_customsql_view_data>({location: {pathname: "/report/customsql/view.php", search: {id: course_list_query_id}}, page: "admin-report-customsql-view"});
-            let cat_path_col:   number|null = null;
-            let course_id_col:  number|null = null;
-            let course_name_col: number|null = null;
-            let col:            number = 0;
-            for (const col_name of this.page_details.query_results.headers) {
-                switch (col_name.toLocaleLowerCase()) {
-                    case "cat path":        cat_path_col = col; break;
-                    case "course id":       course_id_col = col; break;
-                    case "course short name": course_name_col = col; break;
+                if (cat_path_col === null || course_id_col === null || course_name_col === null) {
+                    throw new Error("Headers not found");
                 }
-                col++;
-            }
-            if (cat_path_col === null || course_id_col === null || course_name_col === null) {
-                throw new Error("Headers not found");
-            }
 
-            // Find courses in ticked categories.
-            const course_list: {course_id: number, shortname: string}[] = [];
-            for (const query_row of this.page_details.query_results.data) {
-                let match: boolean = false;
-                for (const cat_id of category_list) {
-                    if ((query_row[cat_path_col] + "/").search("/" + cat_id + "/") >= 0) { match = true; }
+                // Find courses in ticked categories.
+                // const course_list: {course_id: number, shortname: string}[] = [];
+                for (const query_row of this.page_details.query_results!.data) {
+                    let match: boolean = false;
+                    for (const cat of category_list) {
+                        if ((query_row[cat_path_col] + "/").search("/" + cat.course_category_id + "/") >= 0) { match = true; }
+                    }
+                    if (match) { course_list.push({course_id: parseInt(query_row[course_id_col]), shortname: query_row[course_name_col]}); }
                 }
-                if (match) { course_list.push({course_id: parseInt(query_row[course_id_col]), shortname: query_row[course_name_col]}); }
-            }
 
-            // Calculate max progress.
-            this.progress_max = 2 + course_list.length * 12 + 1;
-            this.tabdata.macro_progress_max = this.progress_max;
-            */
+                // Calculate max progress.
+                this.progress_max = 3 + course_list.length * 17 + 1;
+                this.tabdata.macro_progress_max = this.progress_max;
+
+            }
 
             // const error_list: {course_id: number, err: Error}[] = [];
             // let cancelled: boolean = false;
@@ -605,22 +621,24 @@ namespace MJS {
             }
             this.login_check_needed = true;
 
-            const unattended_errors_max = 50;
+            // const unattended_errors_max = 50;
             const unattended_delay = 3.25 * 60 * 60;
-            let unattended_errors = 0;
+            // let unattended_errors = 0;
+
+            this.tabdata.macro_allow_interrupt = true;
 
             for (const course of course_list) { // this.params.mdl_course_categories.mdl_course) {
 
                 const course_start_progress:  number  = this.tabdata.macro_progress;
-                // let course_tries:   number  = 0;
-                let course_skip:    boolean = false;
+                let course_tries:   number  = 0;
+                let course_skip:    0|1|2 = 0; // 0: Don't skip  1: Skip backup  2: Skip backup and delete
                 let backup_try_error: boolean = false;
                 let backup_step:    string = "";
 
                 do {
 
                     if (backup_try_error) { this.tabdata.macro_progress = course_start_progress; }
-                    // course_tries++;
+                    course_tries++;
                     backup_try_error = false;
                     // let course_deleted = false;
                     let course_context:     number|null = null;
@@ -720,6 +738,8 @@ namespace MJS {
                                 let backup_download_status: browser.downloads.DownloadItem;
                                 do {
                                     await sleep(100);
+                                    if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
+                                    if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
                                     backup_download_status = (await browser.downloads.search({id: backup_download_id}))[0]; // .state;
                                 } while (backup_download_status.state == "in_progress" && !backup_download_status.error);
                                 if (backup_download_status.state != "complete") { throw new Error("Download error: " + backup_download_status.error); }
@@ -759,35 +779,45 @@ namespace MJS {
                         await sleep(4 * 1000);
 
                         if (e.message.match(/^(?:Can not|Can't) find data record in database table course.$/)) {
-                            course_skip = true;
+                            course_skip = 2;
                             // course_skip = true;
                             this.tabdata.macro_progress = course_start_progress + 12;
                         } else {
                             // await sleep(100);
                             // do_sleep = true;
                             backup_try_error = true;
-                            unattended_errors++;
+                            // unattended_errors++;
                             this.login_check_needed = true;
                             // TODO: Rewind progress bar
                             this.tabdata.macro_progress = course_start_progress;
                             this.tabdata.macro_state = 3;
                             this.tabdata.macro_input = null;
                             this.tabdata.update_ui();
-                            const unattended_retry = (e.message == "error/error_zip_packing"
+                            const unattended_action = (e.message == "error/error_zip_packing"
                                                         || e.message == "final_step_cont_dom is null"
                                                         || e.message == "Download error: NETWORK_FAILED"
-                                                        || backup_step == "creating" && e.message == "Unexpected tab update")
-                                                    && (unattended_errors <= unattended_errors_max);
+                                                        || backup_step == "creating" && e.message == "Unexpected tab update");
+                            let unattended_skip = false;
                             let waited = 0;
-                            while (!this.tabdata.macro_input && !this.tabdata.macro_cancel && !(unattended_retry && waited >= unattended_delay * 10)) {
+                            while (!this.tabdata.macro_input) {
+                                if (unattended_action && waited >= unattended_delay * 10) {
+                                    if (course_tries >= 3) { unattended_skip = true; }
+                                    break;
+                                }
                                 await sleep(100);
                                 waited++;
                             }
-                            if (this.tabdata.macro_cancel)                      { throw new Error("Cancelled"); }
-                            course_skip = (this.tabdata.macro_input == "skip");
-                            if (this.tabdata.macro_input) { unattended_errors = 0; }
+                            if (this.tabdata.macro_input == "cancel")           { throw new Error("Cancelled"); }
+                            else if (this.tabdata.macro_input == "skip") {
+                                course_skip = 2;
+                                this.tabdata.macro_log += "*** Backup and delete skipped for course: " + course.course_id + " ***\n\n";
+                            } else if (unattended_skip) {
+                                course_skip = 1;
+                                this.tabdata.macro_log += "*** Backup failed for course: " + course.course_id + " ***\n\n";
+                            }
+                            // if (this.tabdata.macro_input) { unattended_errors = 0; }
                             this.tabdata.macro_input = null;
-                            if (course_skip) { this.tabdata.macro_progress = course_start_progress + 12; }
+                            if (course_skip > 0) { this.tabdata.macro_progress = course_start_progress + 12; }
                         }
 
                         this.tabdata.macro_state = 1;
@@ -796,10 +826,10 @@ namespace MJS {
 
 
                     const delete_start_progress:  number  = this.tabdata.macro_progress;
-                    // let delete_tries: number = 0;
+                    let delete_tries: number = 0;
                     let delete_try_error: boolean = false;
-                    if (backup_filename && !course_skip) do {
-                        // delete_tries++;
+                    if (backup_filename && course_skip < 2) do {
+                        delete_tries++;
                         delete_try_error = false;
                         try {
 
@@ -850,7 +880,7 @@ namespace MJS {
                                 this.tabdata.macro_progress = delete_start_progress + 5;
                             } else {
                                 delete_try_error = true;
-                                unattended_errors++;
+                                // unattended_errors++;
                                 this.login_check_needed = true;
                                 // await sleep(100);
                                 // do_sleep = true;
@@ -861,24 +891,27 @@ namespace MJS {
                                 this.tabdata.macro_input = null;
                                 this.tabdata.update_ui();
                                 const unattended_retry = (backup_step == "deleting" && e.message == "Unexpected tab update")
-                                                        && (unattended_errors <= unattended_errors_max);
+                                                        && (delete_tries < 3);
                                 let waited = 0;
-                                while (!this.tabdata.macro_input && !this.tabdata.macro_cancel && !(unattended_retry && waited >= unattended_delay * 10)) {
+                                while (!this.tabdata.macro_input && !(unattended_retry && waited >= unattended_delay * 10)) {
                                     await sleep(100);
                                     waited++;
                                 }
-                                if (this.tabdata.macro_cancel)                      { throw new Error("Cancelled"); }
-                                course_skip = (this.tabdata.macro_input == "skip");
-                                if (this.tabdata.macro_input) { unattended_errors = 0; }
+                                if (this.tabdata.macro_input == "cancel")       { throw new Error("Cancelled"); }
+                                else if (this.tabdata.macro_input == "skip") {
+                                    course_skip = 2;
+                                    this.tabdata.macro_log += "*** Delete skipped for course: " + course.course_id + " ***\n\n";
+                                }
+                                // if (this.tabdata.macro_input) { unattended_errors = 0; }
                                 this.tabdata.macro_input = null;
-                                if (course_skip) { this.tabdata.macro_progress = delete_start_progress + 5; }
+                                if (course_skip >= 2) { this.tabdata.macro_progress = delete_start_progress + 5; }
                             }
 
                             this.tabdata.macro_state = 1;
                             this.tabdata.update_ui();
                         }
-                    } while (delete_try_error && !course_skip);
-                    else if (course_skip) { this.tabdata.macro_progress = delete_start_progress + 5; }
+                    } while (delete_try_error && course_skip < 2);
+                    else if (course_skip >= 2) { this.tabdata.macro_progress = delete_start_progress + 5; }
 
                     /* if (course_try_error && !course_skip || delete_errors > 3) {
                         this.tabdata.macro_state = 3;
@@ -899,12 +932,14 @@ namespace MJS {
                     // TODO: If skip, fast forward progress bar
                     // if (course_skip) { this.tabdata.page_load_count(16); }
 
-                } while (backup_try_error && !course_skip);
+                } while (backup_try_error && course_skip < 1);
 
                 /*if (this_try_error && !course_skip) {
                     throw new Error("Too many consecutive errors.");
                 }*/
             }
+
+            this.tabdata.macro_allow_interrupt = false;
 
 
         }

@@ -3,7 +3,7 @@
 
   "name":         "MoodleJS",
   "author":       "James C",
-  "version":      "2.1",
+  "version":      "2.2",
   "description":  "A script for automating some Moodle tasks at Otago Polytechnic (New Zealand).",
 
   "applications": { "gecko": { "id": "{3eeb542a-cd0b-44f7-8cbb-4f7b6d87450f}", "strict_min_version": "60.0" } },
