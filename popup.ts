@@ -391,8 +391,18 @@ namespace MJS {
         */
 
         private onClick() {
+            const exclude_input: string = document.querySelector<HTMLTextAreaElement>("textarea#backup_exclude_list")!.value;
+            const exclude_strings: string[] = exclude_input.split(/\r?\n/);
+            const exclude_list: number[] = [];
+            for (const exclude_string of exclude_strings) {
+                const exclude_match_1 = exclude_string.match(/^(\d+)$/);
+                if (exclude_match_1) { exclude_list.push(parseInt(exclude_match_1[1])); }
+                const exclude_match_2 = exclude_string.match(/^backup-moodle2-course-(\d+)-\S+-\d{8}-\d{4}.mbz$/);
+                if (exclude_match_2) { exclude_list.push(parseInt(exclude_match_2[1])); }
+            }
             (this.popup.tabData.macros.backup as Backup_Macro).params = {mdl_user: {username: document.querySelector<HTMLInputElement>("input#backup_username")!.value,
-                                                                                    password_plaintext: document.querySelector<HTMLInputElement>("input#backup_password")!.value}};
+                                                                                    password_plaintext: document.querySelector<HTMLInputElement>("input#backup_password")!.value},
+                                                                        exclude_list: exclude_list};
             void this.popup.tabData.macros.backup.run();
         }
 

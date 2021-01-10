@@ -1149,7 +1149,7 @@ namespace MJS {
     async function page_login_index(message: DeepPartial<page_login_index_data>): Promise<page_login_index_data> {
         const username_dom  = document.querySelector("input#username") as HTMLInputElement;
         const password_dom  = document.querySelector("input#password") as HTMLInputElement;
-        const log_in_dom    = document.querySelector("button#loginbtn") as HTMLAnchorElement;
+        const log_in_dom    = document.querySelector("#loginbtn") as HTMLAnchorElement;
         if (message.mdl_user) {
             username_dom.value = message.mdl_user.username!;
             await sleep(100);

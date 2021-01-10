@@ -453,7 +453,7 @@ namespace MJS {
             return result;
         }
 
-        public params: {mdl_user: {username: string, password_plaintext: string}}|null = null; // mdl_course_categories: { mdl_course: {id: number}[]} };
+        public params: {mdl_user: {username: string, password_plaintext: string}, exclude_list: number[]}|null = null; // mdl_course_categories: { mdl_course: {id: number}[]} };
 
         protected login_check_needed: boolean = false;
 
@@ -512,6 +512,18 @@ namespace MJS {
             }
         }
 
+        protected exclude_from(course_list: {course_id: number, fullname?: string, shortname?: string}[]) {
+            const exclude_list: string = this.params!.exclude_list;
+            const exclude_set: Set<number> = new Set(exclude_list);
+            for (let course_count = 0; course_count < course_list.length; ) {
+                if (exclude_set.has(course_list[course_count].course_id)) {
+                    course_list.splice(course_count, 1);
+                } else {
+                    course_count++;
+                }
+            }
+        }
+
         protected async content() {
 
             let course_list: {course_id: number, fullname?: string, shortname?: string}[] = [];
@@ -533,7 +545,7 @@ namespace MJS {
                 // this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
                 const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
 
-                // Calculate max progress
+                // Estimate max progress
                 let course_count = 0;
                 for (const category of category_list) {
                     course_count += category.coursecount;
@@ -547,6 +559,12 @@ namespace MJS {
                     this.page_details = await this.tabdata.page_load<page_course_management_data>({location: {pathname: "/course/management.php", search: {categoryid: category.course_category_id, perpage: 999}}});
                     course_list = course_list.concat(this.page_details.mdl_courses);
                 }
+
+                this.exclude_from(course_list);
+
+                // Calculate max progress.
+                this.progress_max = category_list.length + 1 + course_list.length * 17 + 1;
+                this.tabdata.macro_progress_max = this.progress_max;
 
             } else {
 
@@ -591,6 +609,8 @@ namespace MJS {
                     }
                     if (match) { course_list.push({course_id: parseInt(query_row[course_id_col]), shortname: query_row[course_name_col]}); }
                 }
+
+                this.exclude_from(course_list);
 
                 // Calculate max progress.
                 this.progress_max = 3 + course_list.length * 17 + 1;
@@ -796,7 +816,8 @@ namespace MJS {
                             const unattended_action = (e.message == "error/error_zip_packing"
                                                         || e.message == "final_step_cont_dom is null"
                                                         || e.message == "Download error: NETWORK_FAILED"
-                                                        || backup_step == "creating" && e.message == "Unexpected tab update");
+                                                        || backup_step == "creating" && e.message == "Unexpected tab update"
+                                                        || backup_step == "creating" && e.message == "error/directory_not_exists");
                             let unattended_skip = false;
                             let waited = 0;
                             while (!this.tabdata.macro_input) {
