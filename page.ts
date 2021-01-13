@@ -66,8 +66,9 @@ namespace MJS {
         const blocks_dom = document.querySelectorAll<HTMLElement>("aside.block-region > .block");
         const blocks: block_data[] = [];
         for (const block_dom of Object.values(blocks_dom)) {
-            const block_id      = parseInt(block_dom.getAttribute("id")!.match(/^inst([0-9]+)$/)![1]);
             const block_type    = block_dom.getAttribute("data-block")!;
+            if (block_type == "adminblock" && !block_dom.getAttribute("id")) { continue; }
+            const block_id      = parseInt(block_dom.getAttribute("id")!.match(/^inst([0-9]+)$/)![1]);
             const block_title_dom = block_dom.querySelector<HTMLHeadingElement>(":scope > div > .card-title, :scope > div.header > div.title > h2");
             const block_text_dom = block_dom.querySelector<HTMLDivElement>(":scope > div > div.card-text.content > div.no-overflow, :scope > div.content > div.no-overflow");
             blocks.push({
@@ -959,11 +960,11 @@ namespace MJS {
             // TODO: should be if ((include_nested_x || sectionnumber == undefined) ... ?
             let subsections_out: page_course_view_course_section[] = [];
             // if (document.querySelector("#region-main ul.nav.nav-tabs:nth-child(2) li a.active div.tab_initial")) {
-                const subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:nth-child(2) li a");
+                const subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:nth-of-type(2) li a");
                 let is_index = true;
                 for (const subsection_dom of Object.values(subsections_dom)) {
                     if (subsection_dom.href) {
-                        const section_match = subsection_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)$/)
+                        const section_match = subsection_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + subsection_dom.href));
                         const section_num = parseInt(section_match[3]);
                         subsections_out.push({
@@ -982,12 +983,12 @@ namespace MJS {
 
 
             // if (sectionnumber == undefined) {
-                const other_sections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-child li a");
+                const other_sections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-of-type li a");
                 for (const other_section_dom of Object.values(other_sections_dom)) {
 
                     if ((other_section_dom).href && other_section_dom.href.match(/changenumsections.php/)) {
                     } else if (other_section_dom.href) {
-                        const section_match = other_section_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)$/)
+                        const section_match = other_section_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + other_section_dom.href));
                         const section_num = parseInt(section_match[3]);
 

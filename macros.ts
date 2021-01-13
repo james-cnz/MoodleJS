@@ -478,7 +478,8 @@ namespace MJS {
                     // alert("starting catch");
                     // alert(e.message);
                     // alert(e.message != "Unexpected tab update");
-                    if (e.message != "Unexpected tab update") throw e;
+                    if (   e.message != "Unexpected tab update"
+                        && e.message != "Mismatch on property: \"page\".  Expected: \"my-index\", found: \"login-index\".") throw e;
                     this.tabdata.macro_progress = login_start_progress;
                     // alert("reset stuff");
                     await sleep(4 * 1000);
@@ -513,7 +514,7 @@ namespace MJS {
         }
 
         protected exclude_from(course_list: {course_id: number, fullname?: string, shortname?: string}[]) {
-            const exclude_list: string = this.params!.exclude_list;
+            const exclude_list: number[] = this.params!.exclude_list;
             const exclude_set: Set<number> = new Set(exclude_list);
             for (let course_count = 0; course_count < course_list.length; ) {
                 if (exclude_set.has(course_list[course_count].course_id)) {
@@ -577,7 +578,7 @@ namespace MJS {
                 let course_list_query_id: number|null = null;
                 for (const query_cat of this.page_details.query_cats) {
                     for (const query of query_cat.mdl_report_customsql_queries) {
-                        if (query.displayname == "Course list") { course_list_query_id = query.id; }
+                        if (query.displayname.toUpperCase() == "COURSE LIST") { course_list_query_id = query.id; }
                     }
                 }
                 if (course_list_query_id === null) { throw new Error("Course list query not found"); }
@@ -589,10 +590,10 @@ namespace MJS {
                 let course_name_col: number|null = null;
                 let col:            number = 0;
                 for (const col_name of this.page_details.query_results!.headers) {
-                    switch (col_name.toLocaleLowerCase()) {
-                        case "cat path":        cat_path_col = col; break;
-                        case "course id":       course_id_col = col; break;
-                        case "course short name": course_name_col = col; break;
+                    switch (col_name.toUpperCase()) {
+                        case "CAT PATH":        cat_path_col = col; break;
+                        case "COURSE ID":       course_id_col = col; break;
+                        case "COURSE SHORT NAME": course_name_col = col; break;
                     }
                     col++;
                 }
@@ -813,9 +814,9 @@ namespace MJS {
                             this.tabdata.macro_state = 3;
                             this.tabdata.macro_input = null;
                             this.tabdata.update_ui();
-                            const unattended_action = (e.message == "error/error_zip_packing"
-                                                        || e.message == "final_step_cont_dom is null"
-                                                        || e.message == "Download error: NETWORK_FAILED"
+                            const unattended_action =  (   backup_step == "creating" && e.message == "error/error_zip_packing"
+                                                        || backup_step == "creating" && e.message == "final_step_cont_dom is null"
+                                                        || backup_step == "downloading" && e.message == "Download error: NETWORK_FAILED"
                                                         || backup_step == "creating" && e.message == "Unexpected tab update"
                                                         || backup_step == "creating" && e.message == "error/directory_not_exists");
                             let unattended_skip = false;
@@ -897,7 +898,7 @@ namespace MJS {
                                 course_skip = true;
                                 // course_skip = true;
                                 this.tabdata.macro_progress = delete_start_progress + 5;
-                            } else*/ if (e.message == "Backup file not found: " + backup_filename && (backup_try_error || delete_try_error)) {
+                            } else*/ if (backup_step == "deleting" && e.message == "Backup file not found: " + backup_filename && (backup_try_error || delete_try_error)) {
                                 this.tabdata.macro_progress = delete_start_progress + 5;
                             } else {
                                 delete_try_error = true;
