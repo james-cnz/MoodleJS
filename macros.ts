@@ -912,7 +912,8 @@ namespace MJS {
                                 this.tabdata.macro_state = 3;
                                 this.tabdata.macro_input = null;
                                 this.tabdata.update_ui();
-                                const unattended_retry = (backup_step == "deleting" && e.message == "Unexpected tab update")
+                                const unattended_retry = (backup_step == "deleting" && e.message == "Unexpected tab update"
+                                                       || backup_step == "deleting" && e.message == "Timed out")
                                                         && (delete_tries < 3);
                                 let waited = 0;
                                 while (!this.tabdata.macro_input && !(unattended_retry && waited >= unattended_delay * 10)) {
