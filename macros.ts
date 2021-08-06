@@ -210,7 +210,7 @@ namespace MJS {
                 if (this.page_is_loaded && !page_loaded_time) {
                     page_loaded_time = page_load_wait;
                 }
-                if (page_loaded_time && (page_load_wait - page_loaded_time > 60 * 10)) { throw new Error("Timed out"); }
+                if (page_loaded_time && (page_load_wait - page_loaded_time > 6 * 60 * 10)) { throw new Error("Timed out"); }
                 if (page_load_wait <= count * 10) {  // Assume a step takes 1 second
                     this.page_load_count(1 / 10);
                 }
@@ -643,7 +643,7 @@ namespace MJS {
             this.login_check_needed = true;
 
             // const unattended_errors_max = 50;
-            const unattended_delay = 3.25 * 60 * 60;
+            const unattended_delay = 1.2 * 60 * 60;
             // let unattended_errors = 0;
 
             this.tabdata.macro_allow_interrupt = true;
@@ -818,7 +818,14 @@ namespace MJS {
                                                         || backup_step == "creating" && e.message == "final_step_cont_dom is null"
                                                         || backup_step == "downloading" && e.message == "Download error: NETWORK_FAILED"
                                                         || backup_step == "creating" && e.message == "Unexpected tab update"
-                                                        || backup_step == "creating" && e.message == "error/directory_not_exists");
+                                                        || backup_step == "creating" && e.message == "error/directory_not_exists"
+                                                        || backup_step == "creating" && e.message.startsWith("Exception - Server error")
+                                                        || backup_step == "creating" && e.message.startsWith("Exception - cURL error 23: Failed writing body")
+                                                        || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions
+                                                        || backup_step == "creating" && e.message.startsWith("Exception - HTTP Error") // didn't work on retry. skip?
+                                                        // downloading "Download error: FILE_FAILED" -- when rclone was disconnected. stop?
+                                                       );
+
                             let unattended_skip = false;
                             let waited = 0;
                             while (!this.tabdata.macro_input) {
@@ -913,7 +920,9 @@ namespace MJS {
                                 this.tabdata.macro_input = null;
                                 this.tabdata.update_ui();
                                 const unattended_retry = (backup_step == "deleting" && e.message == "Unexpected tab update"
-                                                       || backup_step == "deleting" && e.message == "Timed out")
+                                                    // || backup_step == "deleting" && e.message == "Timed out"     // Don't need?
+                                                       || backup_step == "deleting" && e.message == "backup_filemanager_dom is null"
+                                                       || backup_step == "deleting" && e.message.startsWith('Mismatch on property: "page".')) // Bad gateway
                                                         && (delete_tries < 3);
                                 let waited = 0;
                                 while (!this.tabdata.macro_input && !(unattended_retry && waited >= unattended_delay * 10)) {
