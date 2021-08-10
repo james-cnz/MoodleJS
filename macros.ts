@@ -706,18 +706,28 @@ namespace MJS {
                         backup_filename = this.page_details.backup.filename;
 
                         this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
-                        this.page_details = await this.tabdata.page_loaded({page: "backup-backup"}, 5);
-                        // TODO: Check for continue button?
-
-                        this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
-                        this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
+                        this.page_details = await this.tabdata.page_loaded<page_backup_backup_last_data>({page: "backup-backup"}, 5);
+                        // Check for continue button.  If not present, wait.
+                        if (!this.page_details.cont_button) {
+                            this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
+                            this.tabdata.macro_log += "Continue button not found\n\n";
+                            for (let waited: number = 0; waited < 15 * 60 * 10; waited++) {
+                                await sleep(100);
+                                if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
+                                if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
+                            }
+                        }
 
                         /*
-                        this.page_details = await this.tabdata.page_load(
-                            {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}},
-                            page: "backup-restorefile", mdl_course: {id: course_id}},
-                        );
+                        this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "continue"});
+                        this.page_details = await this.tabdata.page_loaded<page_backup_restorefile_data>({page: "backup-restorefile"});
                         */
+
+                        this.page_details = await this.tabdata.page_load<page_backup_restorefile_data>(
+                            {location: {pathname: "/backup/restorefile.php", search: {contextid: course_context}}, // Need session key?
+                            page: "backup-restorefile"},
+                        );
+
                     // backup_finished = true;
 
                     /*} catch (e) {
@@ -822,7 +832,7 @@ namespace MJS {
                                                         || backup_step == "creating" && e.message.startsWith("Exception - Server error")
                                                         || backup_step == "creating" && e.message.startsWith("Exception - cURL error 23: Failed writing body")
                                                         || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions
-                                                        || backup_step == "creating" && e.message.startsWith("Exception - HTTP Error") // didn't work on retry. skip?
+                                                        // || backup_step == "creating" && e.message.startsWith("Exception - HTTP Error") // didn't work on retry. skip? Don't need?
                                                         // downloading "Download error: FILE_FAILED" -- when rclone was disconnected. stop?
                                                        );
 
@@ -868,7 +878,7 @@ namespace MJS {
                             backup_step = "deleting";
 
                             this.page_details = await this.tabdata.page_call({});
-                            if (backup_try_error || delete_try_error || this.page_details.page != "backup-restorefile") {
+                            if (backup_try_error || (delete_tries > 1) || this.page_details.page != "backup-restorefile") {
                                 this.page_details = await this.tabdata.page_load<page_backup_restorefile_data>({location: {pathname: "/backup/restorefile.php", search: {contextid: course_context!}}, page: "backup-restorefile"});
                                 if (this.page_details.mdl_course.backups.length == 0) {
                                     throw new Error("Backup file not found: " + backup_filename);
@@ -905,7 +915,7 @@ namespace MJS {
                                 course_skip = true;
                                 // course_skip = true;
                                 this.tabdata.macro_progress = delete_start_progress + 5;
-                            } else*/ if (backup_step == "deleting" && e.message == "Backup file not found: " + backup_filename && (backup_try_error || delete_try_error)) {
+                            } else*/ if (backup_step == "deleting" && e.message == "Backup file not found: " + backup_filename && (backup_try_error || (delete_tries > 1))) {
                                 this.tabdata.macro_progress = delete_start_progress + 5;
                             } else {
                                 delete_try_error = true;

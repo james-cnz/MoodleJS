@@ -184,7 +184,7 @@ namespace MJS {
     };
 
     export type page_backup_backup_gen_data = page_backup_backup_base_data & {
-        stage:      1|2|null
+        stage:      1|2
     };
 
     export type page_backup_backup_4_data = page_backup_backup_base_data & {
@@ -192,7 +192,12 @@ namespace MJS {
         backup:    { filename: string },
     };
 
-    export type page_backup_backup_data = page_backup_backup_gen_data | page_backup_backup_4_data;
+    export type page_backup_backup_last_data = page_backup_backup_base_data & {
+        stage:      null,
+        cont_button: boolean
+    };
+
+    export type page_backup_backup_data = page_backup_backup_gen_data | page_backup_backup_4_data | page_backup_backup_last_data;
 
     async function page_backup_backup(message: DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main form input[name='stage']");
@@ -237,7 +242,7 @@ namespace MJS {
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-backup", stage: null};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: null, cont_button: final_step_cont_dom ? true : false};
                 break;
 
             default:
