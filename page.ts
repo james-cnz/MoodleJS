@@ -41,7 +41,7 @@ namespace MJS {
 
 
     function moodle_page(): Moodle_Page_Data {
-        const logout_dom = document.querySelector<HTMLAnchorElement>("a.menu-action[data-title='logout,moodle']");
+        const logout_dom = document.querySelector<HTMLAnchorElement>("a.dropdown-item[href*='logout.php'][role='menuitem']");
         return {
             wwwroot:    window.location.origin,
             body_class: window.document.body.className!,
@@ -67,7 +67,7 @@ namespace MJS {
         const blocks: block_data[] = [];
         for (const block_dom of Object.values(blocks_dom)) {
             const block_type    = block_dom.getAttribute("data-block")!;
-            if (block_type == "adminblock" && !block_dom.getAttribute("id")) { continue; }
+            if (block_type == "adminblock" && (!block_dom.getAttribute("id") || !block_dom.getAttribute("id")!.match(/^inst([0-9]+)$/))) { continue; }
             const block_id      = parseInt(block_dom.getAttribute("id")!.match(/^inst([0-9]+)$/)![1]);
             const block_title_dom = block_dom.querySelector<HTMLHeadingElement>(":scope > div > .card-title, :scope > div.header > div.title > h2");
             const block_text_dom = block_dom.querySelector<HTMLDivElement>(":scope > div > div.card-text.content > div.no-overflow, :scope > div.content > div.no-overflow");
@@ -180,20 +180,24 @@ namespace MJS {
         page:       "backup-backup",
         location?:  { pathname: "/backup/backup.php", search: { id: number } },
         stage:      1|2|4|null,
+        stage_user: 1|2|3|4|5,
         dom_submit?: "final step"|"next"|"perform backup"|"continue"
     };
 
     export type page_backup_backup_gen_data = page_backup_backup_base_data & {
-        stage:      1|2
+        stage:      1|2,
+        stage_user: 1|2
     };
 
     export type page_backup_backup_4_data = page_backup_backup_base_data & {
         stage:      4,
+        stage_user: 3,
         backup:    { filename: string },
     };
 
     export type page_backup_backup_last_data = page_backup_backup_base_data & {
         stage:      null,
+        stage_user: 4|5,
         cont_button: boolean
     };
 
@@ -202,6 +206,10 @@ namespace MJS {
     async function page_backup_backup(message: DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main form input[name='stage']");
         const stage: number|null = stage_dom ? parseInt(stage_dom.value) : null;
+        const stage_user_dom = document.querySelector<HTMLElement>(
+            "#region-main div[role='main'] div#executionprogress:not([style*='display: none;']) div.backup_progress .backup_stage_current,"
+            + " #region-main div[role='main'] > div.backup_progress .backup_stage_current")!;
+        const stage_user = parseInt(stage_user_dom.textContent!);
 
         if (message.stage && message.stage !== stage) {
             throw new Error("Page backup backup: Stage mismatch");
@@ -209,7 +217,8 @@ namespace MJS {
 
         switch (stage) {
 
-            case 1:
+            case 1: // Stage 1 for user.
+                if (stage_user != 1) { throw new Error("Page backup backup: Stage vs stage user mismatch"); }
                 const step1_to_final_step_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_oneclickbackup[type='submit']")!;
                 const step1_next_dom            = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "final step") {
@@ -217,32 +226,36 @@ namespace MJS {
                 } else if (message.dom_submit && message.dom_submit == "next") {
                     step1_next_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, stage_user: stage_user};
                 break;
 
-            case 2:
+            case 2: // Stage 2 for user.
+                if (stage_user != 2) { throw new Error("Page backup backup: Stage vs stage user mismatch"); }
                 const step2_next_dom = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "next") {
                     step2_next_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, stage_user: stage_user};
                 break;
 
-            case 4:
+            case 4: // Stage 3 for user.
+                if (stage_user != 3) { throw new Error("Page backup backup: Stage vs stage user mismatch"); }
                 const step4_filename = document.querySelector<HTMLInputElement>("#region-main form input#id_setting_root_filename[type='text']")!.value;
                 const step4_next_dom = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "perform backup") {
                     step4_next_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, backup: {filename: step4_filename}};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, stage_user: stage_user, backup: {filename: step4_filename}};
                 break;
 
-            case null:
-                const final_step_cont_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form [type='submit']")!;
+            case null:  // Stages 4 & 5 for user.
+                if (stage_user != 4 && stage_user != 5) { throw new Error("Page backup backup: Stage vs stage user mismatch"); }
+                const final_step_cont_dom = document.querySelector<HTMLElement>(
+                    "#region-main div.continuebutton form [type='submit'], #region-main div.progressbar_container a.btn-primary[href*='restorefile.php']")!;
                 if (message.dom_submit && message.dom_submit == "continue") {
                     final_step_cont_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-backup", stage: null, cont_button: final_step_cont_dom ? true : false};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: null, stage_user: stage_user, cont_button: final_step_cont_dom ? true : false};
                 break;
 
             default:
@@ -328,19 +341,22 @@ namespace MJS {
         page:       "backup-restore",
         location?:  { pathname: "/backup/restore.php" }
         stage:      number|null,
+        stage_user: number;
         // mdl_course?: { template_id?: number }
     };
 
-    export type page_backup_restore_data_2  = page_backup_restore_data_base & { stage: 2, dom_submit?: "stage 2 submit" };
-    export type page_backup_restore_data_4d = page_backup_restore_data_base & { stage: 4, displayed_stage: "Destination", mdl_course_category?: { course_category_id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" };
-    export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" };
-    export type page_backup_restore_data_8  = page_backup_restore_data_base & { stage: 8, mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" };
-    export type page_backup_restore_data_16 = page_backup_restore_data_base & { stage: 16, dom_submit?: "stage 16 submit" };
-    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, mdl_course: { course_id: number } };
+    export type page_backup_restore_data_2  = page_backup_restore_data_base & { stage: 2, stage_user: 1; dom_submit?: "stage 2 submit" };
+    export type page_backup_restore_data_4d = page_backup_restore_data_base & { stage: 4, stage_user: 2; displayed_stage: "Destination", mdl_course_category?: { course_category_id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" };
+    export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, stage_user: 3; displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" };
+    export type page_backup_restore_data_8  = page_backup_restore_data_base & { stage: 8, stage_user: 4; mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" };
+    export type page_backup_restore_data_16 = page_backup_restore_data_base & { stage: 16, stage_user: 5; dom_submit?: "stage 16 submit" };
+    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, stage_user: 6|7; mdl_course: { course_id: number } };
 
     async function page_backup_restore(message: DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
         const stage: number|null = stage_dom ? parseInt(stage_dom.value) : null;
+        const stage_user_dom = document.querySelector<HTMLElement>("#region-main div[role='main'] > div.backup_progress .backup_stage_current")!;
+        const stage_user = parseInt(stage_user_dom.textContent!);
 
         if (message.stage && message.stage !== stage) {
             throw new Error("Page backup restore: Stage mismatch");
@@ -348,19 +364,22 @@ namespace MJS {
 
         switch (stage) {
 
-            case 2:
+            case 2: // Stage 1 for user.
+                if (stage_user != 1) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
                 const stage_2_submit_dom = document.querySelector<HTMLButtonElement>("#region-main div.backup-restore form [type='submit']")!;
                 if (message.dom_submit && message.dom_submit == "stage 2 submit") {
                     stage_2_submit_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage, stage_user: stage_user};
                 break;
 
-            case 4:
+            case 4: // Stages 2 & 3 for user.
+                if (stage_user != 2 && stage_user != 3) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
 
                 const displayed_stage: "Destination"|"Settings" = document.querySelector<HTMLSpanElement>("#region-main div.backup_progress span.backup_stage_current")!.textContent!.match(/Destination|Settings/)![0] as "Destination"|"Settings";
 
                 if (displayed_stage == "Destination") {
+                    if (stage_user != 2) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
 
                     // Destination
 
@@ -385,9 +404,10 @@ namespace MJS {
                         stage_4_new_continue_dom.click();
                     }
 
-                    return { moodle_page: moodle_page(), page: "backup-restore", stage: stage, displayed_stage: displayed_stage };
+                    return { moodle_page: moodle_page(), page: "backup-restore", stage: stage, stage_user: stage_user, displayed_stage: displayed_stage };
 
                 } else {
+                    if (stage_user != 3) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
 
                     // Settings
 
@@ -409,14 +429,15 @@ namespace MJS {
                         stage_4_settings_submit_dom.click();
                     }
 
-                    return { moodle_page: moodle_page(), page: "backup-restore", stage: stage, displayed_stage: displayed_stage, restore_settings: message_out_restore_settings };
+                    return { moodle_page: moodle_page(), page: "backup-restore", stage: stage, stage_user: stage_user, displayed_stage: displayed_stage, restore_settings: message_out_restore_settings };
 
                 }
 
 
                 break;
 
-            case 8:
+            case 8: // Stage 4 for user.
+                if (stage_user != 4) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
                 message = message as DeepPartial<page_backup_restore_data_8>;
                 const course_name_dom           = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_coursesettings input[name^='setting_course_course_fullname'][type='text']")!;
                 const course_shortname_dom      = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_coursesettings input[name^='setting_course_course_shortname'][type='text']")!;
@@ -455,27 +476,33 @@ namespace MJS {
                     submit_dom.click();
                 }
 
-                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage, mdl_course: message_out_mdl_course};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage, stage_user: stage_user, mdl_course: message_out_mdl_course};
                 break;
 
-            case 16:
+            case 16: // Stage 5 for user.
+                if (stage_user != 5) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
                 const submit16_dom = document.querySelector<HTMLInputElement>("#region-main form.mform input[name='submitbutton'][type='submit']")!;
 
                 if (message.dom_submit && message.dom_submit == "stage 16 submit") {
                     submit16_dom.click();
                 }
 
-                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: stage, stage_user: stage_user};
                 break;
 
             case null:
-                const course_id_dom = document.querySelector<HTMLInputElement>("#region-main div.continuebutton form input[name='id'][type='hidden']")!;
-                const course_id = parseInt(course_id_dom.value);
-                const submitcomplete_dom = document.querySelector<HTMLButtonElement>("#region-main div.continuebutton form [type='submit']")!;
+                if (stage_user != 6 && stage_user != 7) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
+                const course_id_1_dom = document.querySelector<HTMLInputElement>("#region-main div.continuebutton form input[name='id'][type='hidden']");
+                const course_id_2_dom = document.querySelector<HTMLAnchorElement>("#region-main div.progressbar_container a.btn-primary[href*='view.php']");
+                const course_id = course_id_1_dom ? parseInt(course_id_1_dom.value)
+                                 : (course_id_2_dom ? parseInt(course_id_2_dom.href.match(/view.php\?id=([0-9]+)/)![1])
+                                    : throwf(new Error("Page backup restore: Neither course_id_?_dom found.")));
+                const submitcomplete_dom = document.querySelector<HTMLElement>("#region-main div.continuebutton form [type='submit'], "
+                    + "#region-main div.progressbar_container a.btn-primary[href*='view.php']")!;
                 if (message.dom_submit && message.dom_submit == "stage complete submit") {
                     submitcomplete_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-restore", stage: null, mdl_course: {course_id: course_id}};
+                return {moodle_page: moodle_page(), page: "backup-restore", stage: null, stage_user: stage_user, mdl_course: {course_id: course_id}};
                 break;
             default:
                 throw new Error("Page backup restore: stage not recognised.");
@@ -493,7 +520,7 @@ namespace MJS {
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
         const course_backups_dom = document.querySelector<HTMLTableElement>("#region-main table.backup-files-table tbody")!;
-        const restore_link = course_backups_dom.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4.lastcol a[href*='&component=backup&filearea=course&']")!;
+        const restore_link = course_backups_dom.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']")!;
         const manage_button_dom = document.querySelector<HTMLButtonElement>("#region-main div.singlebutton form [type='submit']")!;
 
         const backups: {filename: string, download_url: string}[] = [];
@@ -645,7 +672,7 @@ namespace MJS {
                 if (category_out_id) { // Check properties individually?
 
                     // Category Name
-                    const category_out_name = document.querySelector("div#page-navbar .breadcrumb li:last-of-type a")!.textContent!;
+                    const category_out_name = document.querySelector("div#page-navbar .breadcrumb li:last-of-type")!.textContent!;
 
                     // Category Description
                     const category_out_description = (document.querySelector("#region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
@@ -802,7 +829,7 @@ namespace MJS {
     };
     type page_course_view_course = {
         course_id:  number; // Needs editing on.
-        fullname:   string;
+        // fullname:   string;
         format:     string
         mdl_course_sections: page_course_view_course_section[]
     };
@@ -830,7 +857,7 @@ namespace MJS {
 
         const course_out_id =    parseInt((window.document.body.className!.match(/\bcourse-(\d+)\b/)!
                                  )[1]);
-        const course_out_fullname =  document.querySelector<HTMLAnchorElement>(".breadcrumb a[title]")!.title || "";
+        // const course_out_fullname =  document.querySelector<HTMLAnchorElement>(".breadcrumb a[title]")!.title || "";
         const course_out_format =     (window.document.body.className!.match(/\bformat-([a-z]+)\b/)!
                         )[1];
 
@@ -868,7 +895,7 @@ namespace MJS {
             const section_out_section   = parseInt(section_num_str);  // Note: can be 0
 
             // Section Name
-            const section_out_name      = (section_dom.querySelector(":scope .content > .sectionname, :scope .content > .section-title")!
+            const section_out_name      = (section_dom.querySelector(":scope .sectionname, :scope .content > .section-title")!
                                           ).textContent!;
                                           // TODO: Remove spurious whitespace.  Note: There may be hidden and visible section names?
 
@@ -1077,7 +1104,7 @@ namespace MJS {
 
         const course_out: page_course_view_course = {
             course_id:  course_out_id,
-            fullname:   course_out_fullname,
+            // fullname:   course_out_fullname,
             format:     course_out_format,
             mdl_course_sections: course_out_sections
         };
@@ -1374,7 +1401,7 @@ namespace MJS {
 
     async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data> {
 
-        const error_message_dom = document.querySelector("div.errorbox p.errormessage");
+        const error_message_dom = document.querySelector("div.errorbox p.errormessage, div.alert.alert-danger");
         if (error_message_dom) {
             throw new Error(error_message_dom.textContent!);
         }

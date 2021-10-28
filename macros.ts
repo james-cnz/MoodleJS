@@ -414,7 +414,7 @@ namespace MJS {
         }
 
 
-        protected abstract async content(): Promise<void>;
+        protected abstract content(): Promise<void>;
 
 
     }
@@ -707,7 +707,14 @@ namespace MJS {
 
                         this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
                         this.page_details = await this.tabdata.page_loaded<page_backup_backup_last_data>({page: "backup-backup"}, 5);
-                        // Check for continue button.  If not present, wait.
+                        // Wait for final stage.  TODO: Short timeout and continue if syncronous, long timeout and error if asyncronous?
+                        while (this.page_details.stage_user != 5) {
+                            await sleep(100);
+                            if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
+                            if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
+                            this.page_details = await this.tabdata.page_call<page_backup_backup_last_data>({page: "backup-backup"});
+                        }
+                        // Check for continue button.  If not present, wait.  TODO Remove old code?
                         if (!this.page_details.cont_button) {
                             this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
                             this.tabdata.macro_log += "Continue button not found\n\n";
@@ -1038,7 +1045,7 @@ namespace MJS {
 
             let template_id: number;
             if (this.page_details.moodle_page.wwwroot == "https://otagopoly-moodle.testing.catlearn.nz" ) {
-                template_id = 6548;
+                template_id = this.params!.mdl_course.format == "onetopic" ? 8310 : 8705;
             } else if (this.page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 template_id = this.params!.mdl_course.format == "onetopic" ? 8310 : 8705;
             } else if (this.page_details.moodle_page.wwwroot == "http://localhost" || this.page_details.moodle_page.wwwroot == "https://localhost") {
@@ -1093,6 +1100,13 @@ namespace MJS {
             // (this.page_details.stage == 16)                                     || throwf(new Error("New course macro, review & process:\nStage unexpected"));
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_16>({page: "backup-restore", stage: 16, dom_submit: "stage 16 submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_final>({page: "backup-restore", stage: null /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/}, 5);
+
+            // Wait for final stage.
+            while (this.page_details.stage_user != 7) {
+                await sleep(100);
+                if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
+                this.page_details = await this.tabdata.page_call<page_backup_restore_data_final>({page: "backup-restore", stage: null});
+            }
 
             // Complete--Go to new course (1 load)
             // (this.page_details.stage == null)                                   || throwf(new Error("New course macro, complete:\nStage unexpected."));
