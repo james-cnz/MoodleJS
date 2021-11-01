@@ -672,7 +672,7 @@ namespace MJS {
                 if (category_out_id) { // Check properties individually?
 
                     // Category Name
-                    const category_out_name = document.querySelector("div#page-navbar .breadcrumb li:last-of-type")!.textContent!;
+                    const category_out_name = document.querySelector("div#page-navbar .breadcrumb li:last-of-type")!.textContent!.trim();
 
                     // Category Description
                     const category_out_description = (document.querySelector("#region-main div.box.generalbox.info .no-overflow") || { innerHTML: "" }).innerHTML;
