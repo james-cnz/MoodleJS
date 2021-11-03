@@ -77,7 +77,7 @@ Otherwise image links will likely be broken.
 * VS Code
 * nodejs (for installing other packages)
   * typescript
-  * tslint
+  * typescript-eslint
   * web-ext
   * web-ext-types (possible alternatives: https://github.com/mozilla/webextension-polyfill/issues/78 )
   * webextension-polyfill
