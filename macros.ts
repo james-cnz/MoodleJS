@@ -715,14 +715,18 @@ namespace MJS {
                             this.page_details = await this.tabdata.page_call<page_backup_backup_last_data>({page: "backup-backup"});
                         }
                         // Check for continue button.  If not present, wait.  TODO Remove old code?
-                        if (!this.page_details.cont_button) {
-                            this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
-                            this.tabdata.macro_log += "Continue button not found\n\n";
-                            for (let waited: number = 0; waited < 15 * 60 * 10; waited++) {
-                                await sleep(100);
-                                if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
-                                if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
+                        let reported_missing_cont: boolean = false;
+                        for (let waited: number = 0; waited < 15 * 60 * 10 && !this.page_details.cont_button; waited++) {
+                            if (waited > 4 * 10 && !reported_missing_cont) {
+                                this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
+                                this.tabdata.macro_log += "Continue button not found\n\n";
+                                this.tabdata.update_ui();
+                                reported_missing_cont = true;
                             }
+                            await sleep(100);
+                            if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
+                            if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
+                            this.page_details = await this.tabdata.page_call<page_backup_backup_last_data>({page: "backup-backup"});
                         }
 
                         /*
