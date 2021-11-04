@@ -13,15 +13,14 @@ namespace MJS {
         private tabData: { [index: number]: TabData } = { };
 
         public constructor() {
-            const this_bg = this;
             browser.runtime.onMessage.addListener(
-                function(message: object, sender: browser.runtime.MessageSender) {
-                    this_bg.onMessage(message as Page_Data, sender);
+                (message: object, sender: browser.runtime.MessageSender) => {
+                    this.onMessage(message as Page_Data, sender);
                 }
             );
             browser.tabs.onUpdated.addListener(
-                function(tab_id: number, update_info: Partial<browser.tabs.Tab>, tab: browser.tabs.Tab) {
-                    this_bg.onTabUpdated(tab_id, update_info, tab);
+                (tab_id: number, update_info: Partial<browser.tabs.Tab>, tab: browser.tabs.Tab) => {
+                    this.onTabUpdated(tab_id, update_info, tab);
                 }
             );
         }
@@ -50,5 +49,5 @@ namespace MJS {
 
 }
 
-// tslint:disable-next-line: no-var-keyword
+// eslint-disable-next-line no-var, @typescript-eslint/no-unused-vars
 var mjs_background: MJS.Background = new MJS.Background();

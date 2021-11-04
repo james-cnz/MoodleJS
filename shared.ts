@@ -4,6 +4,7 @@
  */
 
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 namespace MJS {
 
     export type DeepPartial<T> = {
@@ -15,7 +16,7 @@ namespace MJS {
       };
 
     // tslint:disable-next-line: promise-function-async
-    export function sleep(time: number): Promise<{}> {
+    export function sleep(time: number): Promise<unknown> {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
 
@@ -30,7 +31,7 @@ namespace MJS {
         lineNumber?:    number;
     };
 
-    export function is_Errorlike(possible_Errorlike: any): possible_Errorlike is Errorlike {
+    export function is_Errorlike(possible_Errorlike: unknown): possible_Errorlike is Errorlike {
         return (typeof possible_Errorlike == "object")
             && (possible_Errorlike != null)
             && (typeof ((possible_Errorlike as Errorlike).name) == "string")

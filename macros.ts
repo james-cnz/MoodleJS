@@ -4,6 +4,7 @@
  */
 
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 namespace MJS {
 
 
@@ -26,11 +27,12 @@ namespace MJS {
             return search_obj.toString();
         }
 
-        private static check_with_skel(data: any, skel: any, exclude?: any): boolean {
-            if (skel == undefined) { return true; }
+        private static check_with_skel(data: unknown, skel: unknown, exclude?: Record<string, boolean>): boolean {
+            if (skel === undefined) { return true; }
             else if (typeof(skel) == "function")  {
                 throw new Error("Can't compare functions");
-            } else if (typeof(skel) == "object") {
+            } else if (typeof(skel) == "object" && skel !== null) {
+                if (typeof(data) != "object" || data === null) { return false; }
                 for (const prop in skel) if (skel.hasOwnProperty(prop) && skel[prop] != undefined) {
                     if (exclude && exclude.hasOwnProperty(prop)) continue;
                     if (!data.hasOwnProperty(prop) || !this.check_with_skel(data[prop], skel[prop])) {
@@ -346,11 +348,11 @@ namespace MJS {
 
         public prereq:      boolean     = false;
 
-        public params:      {}|null     = null;
+        public params:      Record<string, unknown>|null     = null;
 
         protected tabdata:  TabData;
 
-        protected data:     {}|null     = null;
+        protected data:     Record<string, unknown>|null     = null;
 
         protected progress_max: number  = 1;
 

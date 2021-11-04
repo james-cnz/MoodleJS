@@ -3,6 +3,7 @@
  * UI scripts.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 namespace MJS {
 
 
@@ -99,12 +100,11 @@ namespace MJS {
             const bg_page   = await browser.runtime.getBackgroundPage() as unknown as BackgroundWindow;
             this.tabData    = bg_page.mjs_background.getTabData(tab.id as number);
             this.tabData.popup = this;
-            const this_popup: Popup = this;
-            this.cancel_button_dom.addEventListener("click", function() { this_popup.onCancel(); });
-            this.interrupt_button_dom.addEventListener("click", function() { this_popup.onInterrupt(); });
-            this.retry_button_dom.addEventListener("click", function() { this_popup.onRetry(); });
-            this.skip_button_dom.addEventListener("click", function() { this_popup.onSkip(); });
-            this.reset_button_dom.addEventListener("click", function() { this_popup.onReset(); });
+            this.cancel_button_dom.addEventListener("click", () => { this.onCancel(); });
+            this.interrupt_button_dom.addEventListener("click", () => { this.onInterrupt(); });
+            this.retry_button_dom.addEventListener("click", () => { this.onRetry(); });
+            this.skip_button_dom.addEventListener("click", () => { this.onSkip(); });
+            this.reset_button_dom.addEventListener("click", () => { this.onReset(); });
             this.update();
         }
 
@@ -168,12 +168,11 @@ namespace MJS {
             this.new_course_start_dom       = document.querySelector<HTMLInputElement>("input#new_course_start")!;
             this.new_course_format_dom      = document.querySelectorAll<HTMLInputElement>("input[name='new_course_format']");
             this.new_course_button_dom      = document.querySelector<HTMLButtonElement>("button#new_course_button")!;
-            const this_ui = this;
-            this.new_course_name_dom.addEventListener("input", function() { this_ui.onInput(); });
-            this.new_course_shortname_dom.addEventListener("input", function() { this_ui.onInput(); });
-            this.new_course_format_dom[0].addEventListener("click", function() { this_ui.onInput(); });
-            this.new_course_format_dom[1].addEventListener("click", function() { this_ui.onInput(); });
-            this.new_course_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+            this.new_course_name_dom.addEventListener("input", () => { this.onInput(); });
+            this.new_course_shortname_dom.addEventListener("input", () => { this.onInput(); });
+            this.new_course_format_dom[0].addEventListener("click", () => { this.onInput(); });
+            this.new_course_format_dom[1].addEventListener("click", () => { this.onInput(); });
+            this.new_course_button_dom.addEventListener("click", () => { this.onClick(); });
         }
 
         public update() {
@@ -210,8 +209,7 @@ namespace MJS {
             super(new_popup);
             this.index_rebuild_dom          = document.querySelector<HTMLFieldSetElement>("fieldset#index_rebuild")!;
             this.index_rebuild_button_dom   = document.querySelector<HTMLButtonElement>("button#index_rebuild_button")!;
-            const this_ui = this;
-            this.index_rebuild_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+            this.index_rebuild_button_dom.addEventListener("click", () => { this.onClick(); });
         }
 
         public update() {
@@ -235,8 +233,7 @@ namespace MJS {
             super(new_popup);
             this.index_rebuild_mt_dom       = document.querySelector<HTMLFieldSetElement>("fieldset#index_rebuild_mt")!;
             this.index_rebuild_mt_button_dom = document.querySelector<HTMLButtonElement>("button#index_rebuild_mt_button")!;
-            const this_ui = this;
-            this.index_rebuild_mt_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+            this.index_rebuild_mt_button_dom.addEventListener("click", () => { this.onClick(); });
         }
 
         public update() {
@@ -264,10 +261,9 @@ namespace MJS {
             this.new_section_name_dom       = document.querySelector<HTMLInputElement>("input#new_section_name")!;
             this.new_section_shortname_dom  = document.querySelector<HTMLInputElement>("input#new_section_shortname")!;
             this.new_section_button_dom     = document.querySelector<HTMLButtonElement>("button#new_section_button")!;
-            const this_ui = this;
-            this.new_section_name_dom.addEventListener("input", function() { this_ui.onInput(); });
-            this.new_section_shortname_dom.addEventListener("input", function() { this_ui.onInput(); });
-            this.new_section_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+            this.new_section_name_dom.addEventListener("input", () => { this.onInput(); });
+            this.new_section_shortname_dom.addEventListener("input", () => { this.onInput(); });
+            this.new_section_button_dom.addEventListener("click", () => { this.onClick(); });
         }
 
         public update() {
@@ -301,9 +297,8 @@ namespace MJS {
             this.new_topic_dom          = document.querySelector<HTMLFieldSetElement>("fieldset#new_topic")!;
             this.new_topic_name_dom     = document.querySelector<HTMLInputElement>("input#new_topic_name")!;
             this.new_topic_button_dom   = document.querySelector<HTMLButtonElement>("button#new_topic_button")!;
-            const this_ui = this;
-            this.new_topic_name_dom.addEventListener("input", function() { this_ui.onInput(); });
-            this.new_topic_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+            this.new_topic_name_dom.addEventListener("input", () => { this.onInput(); });
+            this.new_topic_button_dom.addEventListener("click", () => { this.onClick(); });
         }
 
         public update() {
@@ -334,9 +329,8 @@ namespace MJS {
             this.backup_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#backup")!;
             // this.backup_list_dom    = document.querySelector<HTMLTextAreaElement>("textarea#backup_list")!;
             this.backup_button_dom  = document.querySelector<HTMLButtonElement>("button#backup_button")!;
-            const this_ui = this;
-            this.backup_button_dom.addEventListener("click", function() { this_ui.onClick(); });
-            // this.backup_list_dom.addEventListener("input", function() { this_ui.onInput(); });
+            this.backup_button_dom.addEventListener("click", () => { this.onClick(); });
+            // this.backup_list_dom.addEventListener("input", () => { this.onInput(); });
         }
 
         public update() {
@@ -419,8 +413,7 @@ namespace MJS {
             super(new_popup);
             this.copy_grades_dom          = document.querySelector<HTMLFieldSetElement>("fieldset#copy_grades")!;
             this.copy_grades_button_dom   = document.querySelector<HTMLButtonElement>("button#copy_grades_button")!;
-            const this_ui = this;
-            this.copy_grades_button_dom.addEventListener("click", function() { this_ui.onClick(); });
+            this.copy_grades_button_dom.addEventListener("click", () => { this.onClick(); });
         }
 
         public update() {
@@ -436,7 +429,7 @@ namespace MJS {
 
 
 
-    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const mjs_popup: Popup = new Popup();
 
 

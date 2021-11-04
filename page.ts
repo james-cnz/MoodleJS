@@ -1149,7 +1149,7 @@ namespace MJS {
 
     export type page_local_otago_login_data = Page_Data_Base & {
         page:       "local-otago-login",
-        location?:  { pathname: "/local/otago/login.php", search: {} },
+        location?:  { pathname: "/local/otago/login.php", search: Record<string, string> },
         dom_submit?: "staff_students"|"other_users"
     };
 
@@ -1169,7 +1169,7 @@ namespace MJS {
 
     export type page_login_index_data = Page_Data_Base & {
         page:       "login-index",
-        location?:  { pathname: "/login/index.php", search: {} },
+        location?:  { pathname: "/login/index.php", search: Record<string, string> },
         mdl_user?:   page_login_index_user,
         dom_submit?: "log_in"
     };
@@ -1384,7 +1384,7 @@ namespace MJS {
 
     export type page_my_index_data = Page_Data_Base & {
         page:       "my-index",
-        location?:  { pathname: "/my/index.php", search: {} },
+        location?:  { pathname: "/my/index.php", search: Record<string, string> },
     };
 
     async function page_my_index(_message: DeepPartial<page_my_index_data>): Promise<page_my_index_data> {
