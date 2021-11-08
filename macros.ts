@@ -943,7 +943,7 @@ namespace MJS {
                                 this.tabdata.macro_input = null;
                                 this.tabdata.update_ui();
                                 const unattended_retry = (backup_step == "deleting" && e.message == "Unexpected tab update"
-                                                    // || backup_step == "deleting" && e.message == "Timed out"     // Don't need?
+                                                       || backup_step == "deleting" && e.message == "Timed out"
                                                        || backup_step == "deleting" && e.message == "backup_filemanager_dom is null"
                                                        || backup_step == "deleting" && e.message.startsWith('Mismatch on property: "page".')) // Bad gateway
                                                         && (delete_tries < 3);
