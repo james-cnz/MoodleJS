@@ -34,8 +34,8 @@ namespace MJS {
     export function is_Errorlike(possible_Errorlike: unknown): possible_Errorlike is Errorlike {
         return (typeof possible_Errorlike == "object")
             && (possible_Errorlike != null)
-            && (typeof ((possible_Errorlike as Errorlike).name) == "string")
-            && (typeof ((possible_Errorlike as Errorlike).message) == "string");
+            && "name" in possible_Errorlike && (typeof ((possible_Errorlike as Errorlike).name) == "string")
+            && "message" in possible_Errorlike && (typeof ((possible_Errorlike as Errorlike).message) == "string");
     }
 
 

@@ -148,7 +148,7 @@ namespace MJS {
                 this.page_message = null;
             }
             const result = await browser.tabs.sendMessage(this.page_tab_id, message) as T|Errorlike;
-            if (is_Errorlike(result))                                            { throw (new Error((result as Errorlike).message)); }
+            if (is_Errorlike(result))                                            { throw (new Error(result.message)); }
             this.page_last_wwwroot = result.moodle_page.wwwroot;
 
             // console.debug("page_call end");
@@ -699,9 +699,11 @@ namespace MJS {
                         const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                        || throwf(new Error("Backup macro, create backup:\nContext not found."));
                         course_context = parseInt(course_context_match[1]);
+                        await sleep(100);
 
                         this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
                         this.page_details = await this.tabdata.page_loaded({page: "backup-backup"});
+                        await sleep(100);
 
                         this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
                         this.page_details = await this.tabdata.page_loaded<page_backup_backup_4_data>({page: "backup-backup"});
@@ -709,6 +711,7 @@ namespace MJS {
 
                         this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "perform backup"});
                         this.page_details = await this.tabdata.page_loaded<page_backup_backup_last_data>({page: "backup-backup"}, 5);
+
                         // Wait for final stage.  TODO: Short timeout and continue if syncronous, long timeout and error if asyncronous?
                         while (this.page_details.stage_user != 5) {
                             await sleep(100);
@@ -716,7 +719,8 @@ namespace MJS {
                             if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
                             this.page_details = await this.tabdata.page_call<page_backup_backup_last_data>({page: "backup-backup"});
                         }
-                        // Check for continue button.  If not present, wait.  TODO Remove old code?
+
+                        // Check for continue button.  If not present, wait.
                         let reported_missing_cont: boolean = false;
                         for (let waited: number = 0; waited < 15 * 60 * 10 && !this.page_details.cont_button; waited++) {
                             if (waited > 4 * 10 && !reported_missing_cont) {
@@ -773,8 +777,6 @@ namespace MJS {
                                 // this_try_error = false;
 
 
-                                this.page_details = this.page_details as page_backup_restorefile_data;
-
                                 // Download backup file (1 load?)
                                 const backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
                                 const backup_url: string = this.page_details.mdl_course.backups[backup_index].download_url;
@@ -822,7 +824,7 @@ namespace MJS {
 
                         await sleep(4 * 1000);
 
-                        if (e.message.match(/^(?:Can not|Can't) find data record in database table course.$/)) {
+                        if (e.message.match(/^(?:Can not|Can't) find data record in database table course./)) {
                             course_skip = 2;
                             // course_skip = true;
                             this.tabdata.macro_progress = course_start_progress + 12;
@@ -1077,33 +1079,30 @@ namespace MJS {
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_2>({page: "backup-restore", stage: 2 /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
 
             // Confirm (1 load)
-            // (this.page_details.stage == 2)                                      || throwf(new Error("New course macro, confirm:\nStage unexpected."));
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_2>({page: "backup-restore", stage: 2, dom_submit: "stage 2 submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_4d>({page: "backup-restore", stage: 4, displayed_stage: "Destination" /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
 
             // Destination: Search for category (1 load)
-            // (this.page_details.stage == 4)                                      || throwf(new Error("New course macro, destination:\nStage unexpected."));
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_4d>({page: "backup-restore", stage: 4, displayed_stage: "Destination", mdl_course_category: {name: this.data.mdl_course_category.name}, dom_submit: "stage 4 new cat search"});
-            this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_4d>({page: "backup-restore", stage: 4});  // TODO: Add details
+            this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_4d>({page: "backup-restore", stage: 4, displayed_stage: "Destination"});
 
             // Destination: Select category (1 load)
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_4d>({page: "backup-restore", stage: 4, displayed_stage: "Destination", mdl_course_category: {course_category_id: this.data.mdl_course_category.course_category_id}, dom_submit: "stage 4 new continue"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, displayed_stage: "Settings" /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
+            await sleep(100);
 
             // Restore settings (1 load)
-            // if (this.page_details.stage != 4)                                    { throw new Error("New course macro, restore settings:\nStage unexpected."); }
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, displayed_stage: "Settings", restore_settings: {users: false}});
-            this.page_details = await this.tabdata.page_call<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, dom_submit: "stage 4 settings submit"});
+            this.page_details = await this.tabdata.page_call<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, displayed_stage: "Settings", dom_submit: "stage 4 settings submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_8>({page: "backup-restore", stage: 8 /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
+            await sleep(100);
 
             // Course settings (1 load)
-            // (this.page_details.stage == 8)                                      || throwf(new Error("New course macro, course settings:\nStage unexpected."));
             const course = {fullname: this.params.mdl_course.fullname, shortname: this.params.mdl_course.shortname, startdate: this.params.mdl_course.startdate};
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_8>({page: "backup-restore", stage: 8, mdl_course: course, dom_submit: "stage 8 submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_16>({page: "backup-restore", stage: 16 /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
 
             // Review & Process (~5 loads)
-            // (this.page_details.stage == 16)                                     || throwf(new Error("New course macro, review & process:\nStage unexpected"));
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_16>({page: "backup-restore", stage: 16, dom_submit: "stage 16 submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_final>({page: "backup-restore", stage: null /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/}, 5);
 
@@ -1114,9 +1113,15 @@ namespace MJS {
                 this.page_details = await this.tabdata.page_call<page_backup_restore_data_final>({page: "backup-restore", stage: null});
             }
 
+            // Wait for continue button.
+            let course_id: number|undefined;
+            do {
+                await sleep(100);
+                this.page_details = await this.tabdata.page_call<page_backup_restore_data_final>({page: "backup-restore", stage: null});
+                course_id = this.page_details.mdl_course.course_id;
+            } while (!course_id);
+
             // Complete--Go to new course (1 load)
-            // (this.page_details.stage == null)                                   || throwf(new Error("New course macro, complete:\nStage unexpected."));
-            const course_id = (this.page_details as page_backup_restore_data_final).mdl_course.course_id as number;
             this.page_details = await this.tabdata.page_call({page: "backup-restore", stage: null, dom_submit: "stage complete submit"});
             this.page_details = await this.tabdata.page_loaded<page_course_view_data>({page: "course-view-[a-z]+", mdl_course: {course_id: course_id}});
 
@@ -1176,7 +1181,7 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if ((section.options!.level! <= 0) && (section.section as number <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
+                if ((section.options!.level! <= 0) && (section.section <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
                 } else if (last_module_tab_num && section.options!.level! > 0) { // TODO: Need to scrape level property.
@@ -1286,7 +1291,7 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if (section.options && (section.options!.level! <= 0) && (section.section as number <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
+                if (section.options && (section.options!.level! <= 0) && (section.section <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
                     modules_tab_num = section.section;
                     sections = [];
                     sections.push({id: section.course_section_id!});
@@ -1606,7 +1611,7 @@ namespace MJS {
             let modules_tab_num: number|undefined|null = null;
             let last_module_tab_num: number|undefined|null = null;
             for (const section of course_contents) {
-                if ((section.options!.level! <= 0) && (section.section as number <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
+                if ((section.options!.level! <= 0) && (section.section <= this.page_details.mdl_course_section!.section) && (section.name.toUpperCase().includes("MODULES"))) {
                     modules_tab_num = section.section;
                     last_module_tab_num = modules_tab_num;
                 } else if (last_module_tab_num && section.options!.level! > 0) { // TODO: Need to scrape level property.

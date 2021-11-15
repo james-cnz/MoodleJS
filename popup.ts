@@ -98,7 +98,7 @@ namespace MJS {
         private async init() {
             const tab       = (await browser.tabs.query({active: true, currentWindow: true}))[0];
             const bg_page   = await browser.runtime.getBackgroundPage() as unknown as BackgroundWindow;
-            this.tabData    = bg_page.mjs_background.getTabData(tab.id as number);
+            this.tabData    = bg_page.mjs_background.getTabData(tab.id!);
             this.tabData.popup = this;
             this.cancel_button_dom.addEventListener("click", () => { this.onCancel(); });
             this.interrupt_button_dom.addEventListener("click", () => { this.onInterrupt(); });
@@ -189,7 +189,7 @@ namespace MJS {
             (this.popup.tabData.macros.new_course as New_Course_Macro).params = {mdl_course: {
                 fullname:   this.new_course_name_dom.value,
                 shortname:  this.new_course_shortname_dom.value,
-                startdate:  (this.new_course_start_dom.valueAsDate as Date).getTime() / 1000,
+                startdate:  (this.new_course_start_dom.valueAsDate!).getTime() / 1000,
                 format:     this.new_course_format_dom[0].checked ? "onetopic" : "multitopic"
             }};
             void this.popup.tabData.macros.new_course.run();
@@ -421,7 +421,7 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.copy_grades as Index_Rebuild_Macro).params = {};
+            (this.popup.tabData.macros.copy_grades as Copy_Grades_Macro).params = {};
             void this.popup.tabData.macros.copy_grades.run();
         }
 

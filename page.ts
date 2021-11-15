@@ -41,7 +41,7 @@ namespace MJS {
 
 
     function moodle_page(): Moodle_Page_Data {
-        const logout_dom = document.querySelector<HTMLAnchorElement>("a.dropdown-item[href*='logout.php'][role='menuitem']");
+        const logout_dom = document.querySelector<HTMLAnchorElement>("a[href*='logout.php'][role='menuitem']");
         return {
             wwwroot:    window.location.origin,
             body_class: window.document.body.className!,
@@ -350,7 +350,7 @@ namespace MJS {
     export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, stage_user: 3; displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" };
     export type page_backup_restore_data_8  = page_backup_restore_data_base & { stage: 8, stage_user: 4; mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" };
     export type page_backup_restore_data_16 = page_backup_restore_data_base & { stage: 16, stage_user: 5; dom_submit?: "stage 16 submit" };
-    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, stage_user: 6|7; mdl_course: { course_id: number } };
+    export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, stage_user: 6|7; mdl_course: { course_id?: number } };
 
     async function page_backup_restore(message: DeepPartial<page_backup_restore_data>): Promise<page_backup_restore_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main div form input[name='stage']");
@@ -493,14 +493,14 @@ namespace MJS {
             case null:
                 if (stage_user != 6 && stage_user != 7) { throw new Error("Page backup restore: Stage vs stage user mismatch"); }
                 const course_id_1_dom = document.querySelector<HTMLInputElement>("#region-main div.continuebutton form input[name='id'][type='hidden']");
-                const course_id_2_dom = document.querySelector<HTMLAnchorElement>("#region-main div.progressbar_container a.btn-primary[href*='view.php']");
+                const course_id_2_dom = document.querySelector<HTMLAnchorElement>("#region-main div.progressbar_container p a[href*='view.php']");
                 const course_id = course_id_1_dom ? parseInt(course_id_1_dom.value)
                                  : (course_id_2_dom ? parseInt(course_id_2_dom.href.match(/view.php\?id=([0-9]+)/)![1])
-                                    : throwf(new Error("Page backup restore: Neither course_id_?_dom found.")));
+                                    : undefined);
                 const submitcomplete_dom = document.querySelector<HTMLElement>("#region-main div.continuebutton form [type='submit'], "
-                    + "#region-main div.progressbar_container a.btn-primary[href*='view.php']")!;
+                    + "#region-main div.progressbar_container p a[href*='view.php']");
                 if (message.dom_submit && message.dom_submit == "stage complete submit") {
-                    submitcomplete_dom.click();
+                    submitcomplete_dom!.click();
                 }
                 return {moodle_page: moodle_page(), page: "backup-restore", stage: null, stage_user: stage_user, mdl_course: {course_id: course_id}};
                 break;
@@ -1122,7 +1122,7 @@ namespace MJS {
 
     async function page_grade_report_grader_index(_message: DeepPartial<page_grade_report_grader_index_data>): Promise<page_grade_report_grader_index_data> {
         // alert("starting page_local_otago_login");
-        const grades_table_dom = document.querySelector("table#user-grades.gradereport-grader-table") as HTMLTableElement;
+        const grades_table_dom = document.querySelector<HTMLTableElement>("table#user-grades.gradereport-grader-table")!;
         let found_heading: boolean = false;
         let table_as_text: string = "";
         for (const row_dom of Object.values(grades_table_dom.rows)) {
@@ -1155,8 +1155,8 @@ namespace MJS {
 
     async function page_local_otago_login(message: DeepPartial<page_local_otago_login_data>): Promise<page_local_otago_login_data> {
         // alert("starting page_local_otago_login");
-        const staff_students_dom    = document.querySelector("div.loginactions a[href*='/auth/saml2']") as HTMLAnchorElement;
-        const other_users_dom       = document.querySelector("div.loginactions a[href*='/login/index']") as HTMLAnchorElement;
+        const staff_students_dom    = document.querySelector<HTMLAnchorElement>("div.loginactions a[href*='/auth/saml2']")!;
+        const other_users_dom       = document.querySelector<HTMLAnchorElement>("div.loginactions a[href*='/login/index']")!;
         if (message.dom_submit == "staff_students") {
             staff_students_dom.click();
         } else if (message.dom_submit == "other_users") {
@@ -1180,8 +1180,8 @@ namespace MJS {
     };
 
     async function page_login_index(message: DeepPartial<page_login_index_data>): Promise<page_login_index_data> {
-        const username_dom  = document.querySelector("input#username") as HTMLInputElement;
-        const password_dom  = document.querySelector("input#password") as HTMLInputElement;
+        const username_dom  = document.querySelector<HTMLInputElement>("input#username")!;
+        const password_dom  = document.querySelector<HTMLInputElement>("input#password")!;
         const log_in_dom    = document.querySelector("#loginbtn") as HTMLAnchorElement;
         if (message.mdl_user) {
             username_dom.value = message.mdl_user.username!;
@@ -1401,7 +1401,7 @@ namespace MJS {
 
     async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data> {
 
-        const error_message_dom = document.querySelector("div.errorbox p.errormessage, div.alert.alert-danger");
+        const error_message_dom = document.querySelector("div.errorbox p.errormessage") ?? document.querySelector("div.alert.alert-danger");
         if (error_message_dom) {
             throw new Error(error_message_dom.textContent!);
         }
