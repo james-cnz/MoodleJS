@@ -1092,7 +1092,9 @@ namespace MJS {
             await sleep(100);
 
             // Restore settings (1 load)
-            this.page_details = await this.tabdata.page_call<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, displayed_stage: "Settings", restore_settings: {users: false}});
+            if (this.page_details.restore_settings.users != undefined) {
+                this.page_details = await this.tabdata.page_call<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, displayed_stage: "Settings", restore_settings: {users: false}});
+            }
             this.page_details = await this.tabdata.page_call<page_backup_restore_data_4s>({page: "backup-restore", stage: 4, displayed_stage: "Settings", dom_submit: "stage 4 settings submit"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_8>({page: "backup-restore", stage: 8 /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
             await sleep(100);

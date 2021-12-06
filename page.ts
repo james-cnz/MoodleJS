@@ -347,7 +347,7 @@ namespace MJS {
 
     export type page_backup_restore_data_2  = page_backup_restore_data_base & { stage: 2, stage_user: 1; dom_submit?: "stage 2 submit" };
     export type page_backup_restore_data_4d = page_backup_restore_data_base & { stage: 4, stage_user: 2; displayed_stage: "Destination", mdl_course_category?: { course_category_id: number, name: string }, dom_submit?: "stage 4 new cat search"|"stage 4 new continue" };
-    export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, stage_user: 3; displayed_stage: "Settings", restore_settings: { users: boolean }, dom_submit?: "stage 4 settings submit" };
+    export type page_backup_restore_data_4s = page_backup_restore_data_base & { stage: 4, stage_user: 3; displayed_stage: "Settings", restore_settings: { users?: boolean }, dom_submit?: "stage 4 settings submit" };
     export type page_backup_restore_data_8  = page_backup_restore_data_base & { stage: 8, stage_user: 4; mdl_course: { fullname: string, shortname: string, startdate: number }, dom_submit?: "stage 8 submit" };
     export type page_backup_restore_data_16 = page_backup_restore_data_base & { stage: 16, stage_user: 5; dom_submit?: "stage 16 submit" };
     export type page_backup_restore_data_final = page_backup_restore_data_base & { stage: null, stage_user: 6|7; mdl_course: { course_id?: number } };
@@ -413,17 +413,17 @@ namespace MJS {
 
                     message = message as DeepPartial<page_backup_restore_data_4s>;
 
-                    const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']")!;
+                    const stage_4_settings_users_dom = document.querySelector<HTMLInputElement>("#region-main form.mform fieldset#id_rootsettings input[name='setting_root_users'][type='checkbox']");
                     const stage_4_settings_submit_dom = document.querySelector<HTMLInputElement>("#region-main form.mform input[name='submitbutton'][type='submit']")!;
 
                     if (message.stage == 4 && message.displayed_stage == "Settings" && message.restore_settings) {
                         if (/*message.restore_settings.hasOwnProperty("users") &&*/ message.restore_settings.users != undefined) {
-                            stage_4_settings_users_dom.checked = message.restore_settings.users;  // TODO: Check
-                            stage_4_settings_users_dom.dispatchEvent(new Event("change"));
+                            stage_4_settings_users_dom!.checked = message.restore_settings.users;   // TODO: Check
+                            stage_4_settings_users_dom!.dispatchEvent(new Event("change"));
                             await sleep(100);
                         }
                     }
-                    const message_out_restore_settings = { users: stage_4_settings_users_dom.checked };
+                    const message_out_restore_settings = { users: stage_4_settings_users_dom?.checked };
 
                     if (message.dom_submit && message.dom_submit == "stage 4 settings submit") {
                         stage_4_settings_submit_dom.click();
@@ -1400,6 +1400,8 @@ namespace MJS {
     }
 
     async function page_get_set(message: DeepPartial<Page_Data>): Promise<Page_Data> {
+
+        await sleep(100);
 
         const error_message_dom = document.querySelector("div.errorbox p.errormessage") ?? document.querySelector("div.alert.alert-danger");
         if (error_message_dom) {
