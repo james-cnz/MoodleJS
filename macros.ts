@@ -847,6 +847,7 @@ namespace MJS {
                                                         || backup_step == "creating" && e.message.startsWith("Exception - Server error")
                                                         || backup_step == "creating" && e.message.startsWith("Exception - cURL error 23: Failed writing body")
                                                         || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions
+                                                        || backup_step == "downloading" && e.message == "this.page_details.mdl_course.backups[backup_index] is undefined"
                                                         // || backup_step == "creating" && e.message.startsWith("Exception - HTTP Error") // didn't work on retry. skip? Don't need?
                                                         // downloading "Download error: FILE_FAILED" -- when rclone was disconnected. stop?
                                                        );
