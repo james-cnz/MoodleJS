@@ -78,6 +78,8 @@ Otherwise image links will likely be broken.
 * nodejs (for installing other packages)
   * typescript
   * typescript-eslint
+  * eslint
+  * @typescript-eslint/eslint-plugin
   * web-ext
   * web-ext-types (possible alternatives: https://github.com/mozilla/webextension-polyfill/issues/78 )
   * webextension-polyfill

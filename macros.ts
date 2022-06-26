@@ -848,6 +848,7 @@ namespace MJS {
                                                         || backup_step == "creating" && e.message.startsWith("Exception - cURL error 23: Failed writing body")
                                                         || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions
                                                         || backup_step == "downloading" && e.message == "this.page_details.mdl_course.backups[backup_index] is undefined"
+                                                        || backup_step == "downloading" && e.message == "Download error: CRASH"
                                                         // || backup_step == "creating" && e.message.startsWith("Exception - HTTP Error") // didn't work on retry. skip? Don't need?
                                                         // downloading "Download error: FILE_FAILED" -- when rclone was disconnected. stop?
                                                        );
@@ -1769,9 +1770,7 @@ namespace MJS {
 
 
 
-    export type Copy_Grades_Params = {
-
-    };
+    export type Copy_Grades_Params = Record<string, never>;
 
     type Copy_Grades_Data = {
         grades_table_as_text: string;
