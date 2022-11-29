@@ -83,7 +83,7 @@ Otherwise image links will likely be broken.
   * web-ext
   * web-ext-types (possible alternatives: https://github.com/mozilla/webextension-polyfill/issues/78 )
   * webextension-polyfill
-* validator.w3.org (for checking panel.htm)
+* validator.w3.org (for checking popup.htm)
 
 
 ## To Do
