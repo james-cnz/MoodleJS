@@ -851,6 +851,7 @@ namespace MJS {
                                                         || backup_step == "downloading" && e.message == "Download error: CRASH"
                                                         || backup_step == "creating" && e.message == "stage_user_dom is null"
                                                         || backup_step == "creating" && e.message == "backup_dom.querySelector(...) is null"
+                                                        || backup_step == "creating" && e.message == "Timed out"
                                                         // || backup_step == "creating" && e.message.startsWith("Exception - HTTP Error") // didn't work on retry. skip? Don't need?
                                                         // downloading "Download error: FILE_FAILED" -- when rclone was disconnected. stop?
                                                        );
