@@ -107,7 +107,7 @@ namespace MJS {
         const cats: page_admin_report_customsql_category[] = [];
         for (const cat_dom of Object.values(cats_dom)) {
             const cat_header_dom = cat_dom.querySelector<HTMLAnchorElement>(":scope > h2 > a.categoryname")!;
-            const cat_id = parseInt(cat_header_dom.search.match(/\?hidecat=([0-9]+)/)![1]);
+            const cat_id = parseInt(cat_header_dom.search.match(/\?(?:hide|show)cat=([0-9]+)/)![1]);
             const cat_name = cat_header_dom.textContent!;
             const queries_dom = cat_dom.querySelectorAll<HTMLParagraphElement>(":scope > div.csql_category_reports > p");
             const queries: page_admin_report_customsql_query[] = [];
