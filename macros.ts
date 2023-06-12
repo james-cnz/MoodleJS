@@ -212,7 +212,7 @@ namespace MJS {
                 if (this.page_is_loaded && !page_loaded_time) {
                     page_loaded_time = page_load_wait;
                 }
-                if (page_loaded_time && (page_load_wait - page_loaded_time > 6 * 60 * 10)) { throw new Error("Timed out"); }
+                if (page_loaded_time && (page_load_wait - page_loaded_time > 15 * 60 * 10)) { throw new Error("Timed out"); }
                 if (page_load_wait <= count * 10) {  // Assume a step takes 1 second
                     this.page_load_count(1 / 10);
                 }
@@ -846,7 +846,7 @@ namespace MJS {
                                                         || backup_step == "creating" && e.message == "error/directory_not_exists"
                                                         || backup_step == "creating" && e.message.startsWith("Exception - Server error")
                                                         || backup_step == "creating" && e.message.startsWith("Exception - cURL error 23: Failed writing body")
-                                                        || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions
+                                                        || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions or missing course
                                                         || backup_step == "downloading" && e.message == "this.page_details.mdl_course.backups[backup_index] is undefined"
                                                         || backup_step == "downloading" && e.message == "Download error: CRASH"
                                                         || backup_step == "creating" && e.message == "stage_user_dom is null"
