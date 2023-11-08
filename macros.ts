@@ -212,7 +212,7 @@ namespace MJS {
                 if (this.page_is_loaded && !page_loaded_time) {
                     page_loaded_time = page_load_wait;
                 }
-                if (page_loaded_time && (page_load_wait - page_loaded_time > 15 * 60 * 10)) { throw new Error("Timed out"); }
+                if (page_loaded_time && (page_load_wait - page_loaded_time > 30 * 60 * 10)) { throw new Error("Timed out"); }
                 if (page_load_wait <= count * 10) {  // Assume a step takes 1 second
                     this.page_load_count(1 / 10);
                 }
