@@ -391,11 +391,12 @@ namespace MJS {
             for (const exclude_string of exclude_strings) {
                 const exclude_match_1 = exclude_string.match(/^(\d+)$/);
                 if (exclude_match_1) { exclude_list.push(parseInt(exclude_match_1[1])); }
-                const exclude_match_2 = exclude_string.match(/^backup-moodle2-course-(\d+)-\S+-\d{8}-\d{4}.mbz$/);
+                const exclude_match_2 = exclude_string.match(/^backup-moodle2-course-(\d+)-\S+-\d{8}-\d{4}(?:-nu)?.mbz$/);
                 if (exclude_match_2) { exclude_list.push(parseInt(exclude_match_2[1])); }
             }
             (this.popup.tabData.macros.backup as Backup_Macro).params = {mdl_user: {username: document.querySelector<HTMLInputElement>("input#backup_username")!.value,
                                                                                     password_plaintext: document.querySelector<HTMLInputElement>("input#backup_password")!.value},
+                                                                        include_users: document.querySelector<HTMLInputElement>("input#backup_include_users")!.checked,
                                                                         exclude_list: exclude_list};
             void this.popup.tabData.macros.backup.run();
         }

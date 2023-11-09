@@ -455,7 +455,7 @@ namespace MJS {
             return result;
         }
 
-        public params: {mdl_user: {username: string, password_plaintext: string}, exclude_list: number[]}|null = null; // mdl_course_categories: { mdl_course: {id: number}[]} };
+        public params: {mdl_user: {username: string, password_plaintext: string}, include_users: boolean, exclude_list: number[]}|null = null; // mdl_course_categories: { mdl_course: {id: number}[]} };
 
         protected login_check_needed: boolean = false;
 
@@ -666,6 +666,7 @@ namespace MJS {
                     // let course_deleted = false;
                     let course_context:     number|null = null;
                     let backup_filename:    string|null = null;
+                    let backup_area:        "course"|"user"|null = null;
 
                     try {
 
@@ -699,6 +700,7 @@ namespace MJS {
                         const course_context_match = this.page_details.moodle_page.body_class.match(/(?:^|\s)context-(\d+)(?:\s|$)/)
                                                                                        || throwf(new Error("Backup macro, create backup:\nContext not found."));
                         course_context = parseInt(course_context_match[1]);
+                        this.page_details = await this.tabdata.page_call({page: "backup-backup", include_users: this.params!.include_users});
                         await sleep(100);
 
                         this.page_details = await this.tabdata.page_call({page: "backup-backup", dom_submit: "next"});
@@ -778,8 +780,16 @@ namespace MJS {
 
 
                                 // Download backup file (1 load?)
-                                const backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
-                                const backup_url: string = this.page_details.mdl_course.backups[backup_index].download_url;
+                                const course_backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                                const user_backup_index: number = this.page_details.mdl_user.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                                let backup_url: string;
+                                if (course_backup_index >= 0) {
+                                    backup_area = "course";
+                                    backup_url = this.page_details.mdl_course.backups[course_backup_index].download_url;
+                                } else {
+                                    backup_area = "user";
+                                    backup_url = this.page_details.mdl_user.backups[user_backup_index].download_url;
+                                }
                                 const backup_download_id = await browser.downloads.download({url: backup_url, saveAs: false});
                                 let backup_download_status: browser.downloads.DownloadItem;
                                 do {
@@ -847,7 +857,8 @@ namespace MJS {
                                                         || backup_step == "creating" && e.message.startsWith("Exception - Server error")
                                                         || backup_step == "creating" && e.message.startsWith("Exception - cURL error 23: Failed writing body")
                                                         || backup_step == "creating" && e.message.startsWith('Mismatch on property: "page".')  // course page with weird permissions or missing course
-                                                        || backup_step == "downloading" && e.message == "this.page_details.mdl_course.backups[backup_index] is undefined"
+                                                        || backup_step == "downloading" && e.message == "this.page_details.mdl_course.backups[course_backup_index] is undefined"
+                                                        || backup_step == "downloading" && e.message == "this.page_details.mdl_user.backups[user_backup_index] is undefined"
                                                         || backup_step == "downloading" && e.message == "Download error: CRASH"
                                                         || backup_step == "creating" && e.message == "stage_user_dom is null"
                                                         || backup_step == "creating" && e.message == "backup_dom.querySelector(...) is null"
@@ -908,10 +919,10 @@ namespace MJS {
                             }
 
                             // Delete backup file (2 loads?)
-                            this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: "manage"});
+                            this.page_details = await this.tabdata.page_call({page: "backup-restorefile", dom_submit: backup_area + "_manage"});
                             this.page_details = await this.tabdata.page_loaded({page: "backup-backupfilesedit"});   // *** LOCKS UP HERE IF FILE LIST EMPTY?
 
-                            this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", mdl_course: { backups: [{filename: backup_filename, click: true}]}});
+                            this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backups: [{filename: backup_filename, click: true}]});
 
                             this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete"}});
                             this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", backup: {click: "delete_ok"}});
@@ -1080,7 +1091,7 @@ namespace MJS {
             );
 
             // Click restore backup file (1 load)
-            this.page_details = await this.tabdata.page_call<page_backup_restorefile_data>({page: "backup-restorefile", dom_submit: "restore"});
+            this.page_details = await this.tabdata.page_call<page_backup_restorefile_data>({page: "backup-restorefile", dom_submit: "course_restore"});
             this.page_details = await this.tabdata.page_loaded<page_backup_restore_data_2>({page: "backup-restore", stage: 2 /*, mdl_course: {template_id: this.data.mdl_course.template_id}*/});
 
             // Confirm (1 load)

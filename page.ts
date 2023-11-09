@@ -184,9 +184,15 @@ namespace MJS {
         dom_submit?: "final step"|"next"|"perform backup"|"continue"
     };
 
-    export type page_backup_backup_gen_data = page_backup_backup_base_data & {
-        stage:      1|2,
-        stage_user: 1|2
+    export type page_backup_backup_1_data = page_backup_backup_base_data & {
+        stage:      1,
+        stage_user: 1,
+        include_users: boolean
+    };
+
+    export type page_backup_backup_2_data = page_backup_backup_base_data & {
+        stage:      2,
+        stage_user: 2
     };
 
     export type page_backup_backup_4_data = page_backup_backup_base_data & {
@@ -201,7 +207,7 @@ namespace MJS {
         cont_button: boolean
     };
 
-    export type page_backup_backup_data = page_backup_backup_gen_data | page_backup_backup_4_data | page_backup_backup_last_data;
+    export type page_backup_backup_data = page_backup_backup_1_data | page_backup_backup_2_data | page_backup_backup_4_data | page_backup_backup_last_data;
 
     async function page_backup_backup(message: DeepPartial<page_backup_backup_data>): Promise<page_backup_backup_data> {
         const stage_dom = document.querySelector<HTMLInputElement>("#region-main form input[name='stage']");
@@ -219,14 +225,19 @@ namespace MJS {
 
             case 1: // Stage 1 for user.
                 if (stage_user != 1) { throw new Error("Page backup backup: Stage vs stage user mismatch"); }
+                const step1_include_users_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_setting_root_users[type='checkbox']")!;
                 const step1_to_final_step_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_oneclickbackup[type='submit']")!;
                 const step1_next_dom            = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
+                if ("include_users" in message && step1_include_users_dom.checked != message.include_users) {
+                    step1_include_users_dom.click();
+                }
+                const include_users = step1_include_users_dom.checked;
                 if (message.dom_submit && message.dom_submit == "final step") {
                     step1_to_final_step_dom.click();
                 } else if (message.dom_submit && message.dom_submit == "next") {
                     step1_next_dom.click();
                 }
-                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, stage_user: stage_user};
+                return {moodle_page: moodle_page(), page: "backup-backup", stage: stage, stage_user: stage_user, include_users: include_users};
                 break;
 
             case 2: // Stage 2 for user.
@@ -269,7 +280,7 @@ namespace MJS {
     export type page_backup_backupfilesedit_data = Page_Data_Base & {
         page:       "backup-backupfilesedit",
         location?:  { pathname: "/backup/backupfilesedit.php" },
-        mdl_course: { backups: { filename: string, click?: boolean }[] },
+        backups: { filename: string, click?: boolean }[],
         backup?:    { click?: "delete"|"delete_ok" },
         dom_submit?: "save"|"cancel"
     };
@@ -288,26 +299,26 @@ namespace MJS {
         const save_button_dom   = document.querySelector<HTMLInputElement>("#region-main form.mform input#id_submitbutton[type='submit']")!;
         const delete_button_dom = document.querySelector<HTMLButtonElement>("div.moodle-dialogue div.filemanager form button.fp-file-delete")!;
 
-        const message_out: page_backup_backupfilesedit_data = {moodle_page: moodle_page(), page: "backup-backupfilesedit", mdl_course: { backups: []}};
+        const message_out: page_backup_backupfilesedit_data = {moodle_page: moodle_page(), page: "backup-backupfilesedit", backups: []};
 
         for (const backup_dom of Object.values(backups_dom)) {
             const backup_file_link = backup_dom.querySelector<HTMLAnchorElement>(":scope > a:first-child")!;
             const backup_filename = backup_file_link.querySelector(":scope .fp-filename")!.textContent!;
-            if (message_in && message_in.mdl_course && message_in.mdl_course.backups) {
-                const backup_file_in_index = message_in.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
+            if (message_in && message_in.backups) {
+                const backup_file_in_index = message_in.backups.findIndex(function(value) { return value.filename == backup_filename; });
                 if (backup_file_in_index > -1) {
-                    if (message_in.mdl_course.backups[backup_file_in_index].click) {
+                    if (message_in.backups[backup_file_in_index].click) {
                         backup_file_link.click();
                         await sleep(100);
                     }
-                    message_in.mdl_course.backups.splice(backup_file_in_index, 1);
+                    message_in.backups.splice(backup_file_in_index, 1);
                 }
             }
-            message_out.mdl_course.backups.push({filename: backup_filename});
+            message_out.backups.push({filename: backup_filename});
 
         }
-        if (message_in.mdl_course && message_in.mdl_course.backups && message_in.mdl_course.backups.length > 0) {
-            throw new Error("Backup file not found: " + message_in.mdl_course.backups[0].filename);
+        if (message_in.backups && message_in.backups.length > 0) {
+            throw new Error("Backup file not found: " + message_in.backups[0].filename);
         }
 
 
@@ -515,27 +526,41 @@ namespace MJS {
     export type page_backup_restorefile_data = Page_Data_Base & {
         page: "backup-restorefile",
         location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
-        mdl_course: {course_id?: number, backups: {filename: string, download_url: string}[]}
+        mdl_course: {course_id?: number, backups: {filename: string, download_url: string}[]},
+        mdl_user: {backups: {filename: string, download_url: string}[]}
     };
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
-        const course_backups_dom = document.querySelector<HTMLTableElement>("#region-main table.backup-files-table tbody")!;
-        const restore_link = course_backups_dom.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']")!;
-        const manage_button_dom = document.querySelector<HTMLButtonElement>("#region-main div.singlebutton form [type='submit']")!;
+        const backups_doms = document.querySelectorAll<HTMLTableElement>("#region-main table.backup-files-table tbody");
+        const course_backups_dom = backups_doms[0];
+        const user_backups_dom = backups_doms[1];
+        const course_restore_link = course_backups_dom.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']")!;
+        const manage_button_doms = document.querySelectorAll<HTMLButtonElement>("#region-main div.singlebutton form [type='submit']");
+        const course_manage_button_dom = manage_button_doms[0];
+        const user_manage_button_dom = manage_button_doms[1];
 
-        const backups: {filename: string, download_url: string}[] = [];
+        const course_backups: {filename: string, download_url: string}[] = [];
         if (!course_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
-                backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
+                course_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
             }
         }
 
-        if (message.dom_submit && message.dom_submit == "restore") {
-            restore_link.click();
-        } else if (message.dom_submit && message.dom_submit == "manage") {
-            manage_button_dom.click();
+        const user_backups: {filename: string, download_url: string}[] = [];
+        if (!user_backups_dom.classList.contains("empty")) {
+            for (const backup_dom of Object.values(user_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
+                user_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
+            }
         }
-        return {moodle_page: moodle_page(), page: "backup-restorefile", mdl_course: {backups: backups}};
+
+        if (message.dom_submit && message.dom_submit == "course_restore") {
+            course_restore_link.click();
+        } else if (message.dom_submit && message.dom_submit == "course_manage") {
+            course_manage_button_dom.click();
+        } else if (message.dom_submit && message.dom_submit == "user_manage") {
+            user_manage_button_dom.click();
+        }
+        return {moodle_page: moodle_page(), page: "backup-restorefile", mdl_course: {backups: course_backups}, mdl_user: {backups: user_backups}};
     }
 
 
