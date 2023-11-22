@@ -16,7 +16,7 @@
         <table style="width: 100%;">
             <tr> <th>Name: </th> <td><input id="new_course_name"                                     style="width: 100%;" /></td> </tr>
             <tr> <th>Short:</th> <td><input id="new_course_shortname"                                style="width: 100%;" /></td> </tr>
-            <tr> <th>Start:</th> <td><input id="new_course_start"     type="date" value="2022-01-03" style="width: 100%;" /></td> </tr>
+            <tr> <th>Start:</th> <td><input id="new_course_start"     type="date" value="2023-01-02" style="width: 100%;" /></td> </tr>
             <tr> <th>Format:</th>
                 <td>
                     <input type="radio" id="new_course_format_onetopic" name="new_course_format" value="onetopic" />
@@ -58,15 +58,15 @@
 
     <fieldset id="backup" style="display: none;">
         <b>Backup</b><br />
-        <textarea id="backup_list" style="width: 100%; display: none;"></textarea>
+        <textarea id="backup_list" rows="" cols="" style="width: 100%; display: none;"></textarea>
         Account to use (manual authentication type):<br />
         <table style="width: 100%;">
             <tr> <th>Username:</th> <td><input id="backup_username"                 style="width: 100%;" /></td> </tr>
             <tr> <th>Password:</th> <td><input id="backup_password" type="password" style="width: 100%;" /></td> </tr>
         </table>
-        <input id="backup_include_users" type="checkbox" checked /> Include enrolled users<br />
+        <input id="backup_include_users" type="checkbox" checked="checked" /> Include enrolled users<br />
         Exclude list (file name or course ID per line):<br />
-        <textarea id="backup_exclude_list" style="width: 100%;"></textarea>
+        <textarea id="backup_exclude_list" rows="" cols="" style="width: 100%;"></textarea>
         <button id="backup_button" type="button" style="width: 100%;" >Backup selected categories</button>
     </fieldset>
 
@@ -88,7 +88,7 @@
             <button id="cancel_button" type="button" style="width: 100%;">Cancel</button>
         </div>
         <div id="status_error">
-            <textarea id="error_message" style="width: 100%;" readonly="readonly"></textarea>
+            <textarea id="error_message" rows="" cols="" style="width: 100%;" readonly="readonly"></textarea>
             <button id="reset_button" type="button" style="width: 100%;">Reset</button>
         </div>
     </fieldset>

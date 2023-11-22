@@ -27,16 +27,22 @@ namespace MJS {
             return search_obj.toString();
         }
 
-        private static check_with_skel(data: unknown, skel: unknown, exclude?: Record<string, boolean>): boolean {
+        private static check_with_skel(data: JSONValue, skel: JSONValue, exclude?: Record<string, boolean>): boolean {
             if (skel === undefined) { return true; }
-            else if (typeof(skel) == "function")  {
-                throw new Error("Can't compare functions");
-            } else if (typeof(skel) == "object" && skel !== null) {
-                if (typeof(data) != "object" || data === null) { return false; }
+            else if (typeof(skel) == "object" && skel !== null && !Array.isArray(skel)) {
+                if (typeof(data) != "object" || data === null || Array.isArray(data)) { return false; }
                 for (const prop in skel) if (skel.hasOwnProperty(prop) && skel[prop] != undefined) {
                     if (exclude && exclude.hasOwnProperty(prop)) continue;
                     if (!data.hasOwnProperty(prop) || !this.check_with_skel(data[prop], skel[prop])) {
                         throw new Error("Mismatch on property: \"" + prop + "\".  Expected: \"" + skel[prop] + "\", found: \"" + data[prop] + "\".");
+                    }
+                }
+                return true;
+            } else if (typeof(skel) == "object" && skel !== null && Array.isArray(skel)) {
+                if (typeof(data) != "object" || data === null || !Array.isArray(data) || data.length < skel.length) { return false; }
+                for (let count = 0; count < skel.length; count++) if (skel[count] != undefined) {
+                    if (!this.check_with_skel(data[count], skel[count])) {
+                        throw new Error("Mismatch on index: \"" + count + "\".  Expected: \"" + skel[count] + "\", found: \"" + data[count] + "\".");
                     }
                 }
                 return true;
@@ -68,7 +74,7 @@ namespace MJS {
 
         public popup:           Popup|null = null;
 
-        private page_last_wwwroot: string;
+        private page_last_wwwroot: string = "";
         // private page_details:   Page_Data|null = null;
         private page_tab_id:    number;
 
@@ -241,6 +247,7 @@ namespace MJS {
         }
 
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         public onMessage(message: Page_Data|Errorlike, _sender: browser.runtime.MessageSender) {
             // console.group("onMessage");
             // console.debug("onMessage start");
@@ -271,6 +278,7 @@ namespace MJS {
         }
 
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         public onTabUpdated(_tab_id: number, update_info: Partial<browser.tabs.Tab>, _tab: browser.tabs.Tab): void {
             // console.group("onTabUpdated");
             // console.debug("onTabUpdated start");
@@ -382,7 +390,7 @@ namespace MJS {
 
             try {
                 await this.content();
-            } catch (e) {
+            } catch (e: Error) {
                 // if (e.message != "Cancelled") {
                     this.tabdata.macro_state = -1;
                     // this.tabdata.macro_error = e;
@@ -476,7 +484,7 @@ namespace MJS {
                     this.page_details = await this.tabdata.page_load({location: {pathname: "/my/index.php", search: {}}, page: "my-index"});
                     // alert("after try");
                     this.tabdata.page_load_count(1);
-                } catch (e) {
+                } catch (e: Error) {
                     // alert("starting catch");
                     // alert(e.message);
                     // alert(e.message != "Unexpected tab update");
@@ -531,6 +539,7 @@ namespace MJS {
 
             let course_list: {course_id: number, fullname?: string, shortname?: string}[] = [];
 
+            // eslint-disable-next-line no-constant-condition
             if (false) {
 
                 let tick_change: boolean;
@@ -632,7 +641,7 @@ namespace MJS {
             try {
                 this.page_details = await this.tabdata.page_load2({location: {pathname: "/login/logout.php", search: {sesskey: this.page_details.moodle_page.sesskey}}},
                                                                     {location: {pathname: "/local/otago/login.php"}});  // TODO: Page load 3?
-            } catch (e) {
+            } catch (e: Error) {
                 if (e.message != "Unexpected tab update") throw e;
                 this.tabdata.macro_progress = logout_start_progress + 1;
                 await sleep(4 * 1000);
@@ -823,7 +832,7 @@ namespace MJS {
                     // }
 
 
-                    } catch (e) {
+                    } catch (e: Error) {
                         this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
                         if (e.message == "Cancelled") { throw e; }
                         // error_list.push({course_id: course.id, err: e});
@@ -929,7 +938,7 @@ namespace MJS {
                             this.page_details = await this.tabdata.page_call({page: "backup-backupfilesedit", dom_submit: "save"});
                             this.page_details = await this.tabdata.page_loaded({page: "backup-restorefile"});
 
-                        } catch (e) {
+                        } catch (e: Error) {
                             this.tabdata.macro_log += "In course: " + course.course_id + " " + backup_step + " backup: " + backup_filename + "\n";
                             if (e.message == "Cancelled") { throw e; }
                             // delete_errors++;

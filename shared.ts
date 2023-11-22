@@ -7,13 +7,18 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 namespace MJS {
 
-    export type DeepPartial<T> = {
-        [P in keyof T]?: T[P] extends Array<infer U> // tslint:disable-line:array-type
-          ? Array<DeepPartial<U>> // tslint:disable-line:array-type
-          : T[P] extends ReadonlyArray<infer U> // tslint:disable-line:no-shadowed-variable
-            ? ReadonlyArray<DeepPartial<U>>
-            : DeepPartial<T[P]>
-      };
+    export type JSONValue =
+        | string
+        | number
+        | boolean
+        | { [x: string]: JSONValue }
+        | Array<JSONValue>
+        | undefined;  // Added.
+
+    export type DeepPartial<T> =
+        T extends Array<infer U> ? Array<DeepPartial<U>>
+        : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> }
+        : T | undefined;
 
     // tslint:disable-next-line: promise-function-async
     export function sleep(time: number): Promise<unknown> {

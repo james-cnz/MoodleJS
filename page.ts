@@ -102,6 +102,7 @@ namespace MJS {
     };
 
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async function page_admin_report_customsql_index(_message: DeepPartial<page_admin_report_customsql_index_data>): Promise<page_admin_report_customsql_index_data> {
         const cats_dom = document.querySelectorAll<HTMLDivElement>("#region-main div.csql_category");
         const cats: page_admin_report_customsql_category[] = [];
@@ -874,6 +875,7 @@ namespace MJS {
         intro?:     string;
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async function page_course_view(_message: DeepPartial<page_course_view_data>): Promise<page_course_view_data> {
 
         // Course Start
@@ -889,7 +891,7 @@ namespace MJS {
         // Sections
         // const section_container_dom: Element = main_dom.querySelector(":scope .course-content")
 
-        const sections_dom:    NodeListOf<Element> = main_dom.querySelectorAll(":scope ul.topics li.section.main, :scope ul.weeks li.section.main, :scope ul.sections li.section.main, :scope ul.gtopics li.section.main");
+        const sections_dom:    NodeListOf<HTMLLIElement> = main_dom.querySelectorAll(":scope ul.topics li.section.main, :scope ul.weeks li.section.main, :scope ul.onetopic li.section.main, :scope ul.sections li.section.main, :scope ul.gtopics li.section.main");
         const single_section_dom = main_dom.querySelector(":scope .single-section li.section.main") ;
         let single_section_out: page_course_view_course_section|undefined;
         let course_out_sections: page_course_view_course_section[] = [];
@@ -920,22 +922,22 @@ namespace MJS {
             const section_out_section   = parseInt(section_num_str);  // Note: can be 0
 
             // Section Name
-            const section_out_name      = (section_dom.querySelector(":scope .sectionname, :scope .content > .section-title")!
-                                          ).textContent!;
+            const section_out_name_dom  = section_dom.querySelector(":scope .sectionname, :scope .content > .section-title");
+            const section_out_name      = section_out_name_dom ? section_out_name_dom.textContent! : "";
                                           // TODO: Remove spurious whitespace.  Note: There may be hidden and visible section names?
 
             // Section Visible
             const section_out_visible = section_dom.classList.contains("hidden") ? 0 : 1;
 
             // Section Summary
-            const section_summary_container_dom = section_dom.querySelector(":scope .content > .summary, :scope .content > .summarytext")!;
-            const section_summary_dom  = section_summary_container_dom.querySelector(":scope .no-overflow");
+            const section_summary_container_dom = section_dom.querySelector(":scope > .content > .summary, :scope > .content > .summarytext, :scope > .content > div > .summarytext")!;
+            const section_summary_dom  = section_summary_container_dom?.querySelector(":scope .no-overflow");
             const section_out_summary =    section_summary_dom ? section_summary_dom.innerHTML : "";
 
 
             // Modules
             let modules_out:      page_course_view_course_module[]|undefined;
-            if (section_dom.querySelector(":scope .content > .section")) {
+            if (section_dom.querySelector(":scope .content > .section") && section_dom.style.display != "none" && section_dom.parentElement?.style.display != "none") {
 
                 const modules_dom: NodeListOf<Element> = (section_dom.querySelector(":scope .content > .section")!  // Note: flexsections can have nested sections.
                                                         ).querySelectorAll(":scope > .activity");
@@ -956,7 +958,7 @@ namespace MJS {
 
                     // Module Name
                     const module_out_instance_name =       (module_modname == "label")
-                            ? (module_dom.querySelector(":scope .contentwithoutlink")!
+                            ? (module_dom.querySelector(":scope .contentwithoutlink") || {}
                             ).textContent || ""
                             : (module_dom.querySelector(":scope .instancename") || module_dom.querySelector(":scope .fp-filename")
                             )!.textContent || "";  // TODO: Use innerText to avoid unwanted hidden text with Assignments?
@@ -965,7 +967,7 @@ namespace MJS {
 
                     // Module Intro
                     const module_out_instance_intro: string|undefined = (module_modname == "label")  // TODO: Test
-                                        ? (module_dom.querySelector(":scope .contentwithoutlink")!
+                                        ? (module_dom.querySelector(":scope .contentwithoutlink") || { innerHTML: ""}
                                         ).innerHTML
                                         : (module_dom.querySelector(":scope .contentafterlink") || { innerHTML: undefined }
                                         ).innerHTML;
@@ -1016,11 +1018,13 @@ namespace MJS {
             // If top-level section, include lower-level section headings?  // TODO: Check
             // TODO: should be if ((include_nested_x || sectionnumber == undefined) ... ?
             let subsections_out: page_course_view_course_section[] = [];
+            const tab_bars_dom = document.querySelectorAll<HTMLUListElement>("#region-main ul.nav.nav-tabs");
             // if (document.querySelector("#region-main ul.nav.nav-tabs:nth-child(2) li a.active div.tab_initial")) {
-                const subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:nth-of-type(2) li a");
+                const subsections_dom = tab_bars_dom[1] ? tab_bars_dom[1].querySelectorAll<HTMLAnchorElement>(":scope li a") : [];
                 let is_index = true;
                 for (const subsection_dom of Object.values(subsections_dom)) {
-                    if (subsection_dom.href) {
+                    if (subsection_dom.href && subsection_dom.href.match(/changenumsections.php/)) {
+                    } else if (subsection_dom.href && !subsection_dom.classList.contains("active")) {
                         const section_match = subsection_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + subsection_dom.href));
                         const section_num = parseInt(section_match[3]);
@@ -1030,6 +1034,7 @@ namespace MJS {
                             options: {level:    is_index ? 0 : 1},
                         });
                     } else {
+                        single_section_out!.name = subsection_dom.title;
                         single_section_out!.options = single_section_out!.options || {};
                         single_section_out!.options.level = is_index ? 0 : 1;
                         subsections_out.push(single_section_out!);
@@ -1040,11 +1045,11 @@ namespace MJS {
 
 
             // if (sectionnumber == undefined) {
-                const other_sections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-of-type li a");
+                const other_sections_dom = tab_bars_dom[0].querySelectorAll<HTMLAnchorElement>(":scope li a");
                 for (const other_section_dom of Object.values(other_sections_dom)) {
 
                     if ((other_section_dom).href && other_section_dom.href.match(/changenumsections.php/)) {
-                    } else if (other_section_dom.href) {
+                    } else if (other_section_dom.href && !other_section_dom.classList.contains("active")) {
                         const section_match = other_section_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + other_section_dom.href));
                         const section_num = parseInt(section_match[3]);
@@ -1059,12 +1064,14 @@ namespace MJS {
                         });
                     } else if (subsections_out.length > 0) {
 
+                        subsections_out[0].name = other_section_dom.title || other_section_dom.text;
                         for (const subsection_out of subsections_out) {
                             course_out_sections.push(subsection_out);
                         }
                         subsections_out = [];
 
                     } else {
+                        single_section_out!.name = other_section_dom.title || other_section_dom.text;
                         single_section_out!.options = single_section_out!.options || {};
                         single_section_out!.options.level = 0;
                         course_out_sections.push(single_section_out!);
@@ -1145,6 +1152,7 @@ namespace MJS {
         grades_table_as_text: string
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async function page_grade_report_grader_index(_message: DeepPartial<page_grade_report_grader_index_data>): Promise<page_grade_report_grader_index_data> {
         // alert("starting page_local_otago_login");
         const grades_table_dom = document.querySelector<HTMLTableElement>("table#user-grades.gradereport-grader-table")!;
@@ -1412,6 +1420,7 @@ namespace MJS {
         location?:  { pathname: "/my/index.php", search: Record<string, string> },
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async function page_my_index(_message: DeepPartial<page_my_index_data>): Promise<page_my_index_data> {
         return {moodle_page: moodle_page(), page: "my-index"};
     }
@@ -1540,7 +1549,7 @@ namespace MJS {
         let message: Page_Data|Errorlike;
         try {
             message = await page_onMessage({});
-        } catch (e) {
+        } catch (e: Error) {
             message = {name: "Error", message: e.message, fileName: e.fileName, lineNumber: e.lineNumber};
         }
         void browser.runtime.sendMessage(message);

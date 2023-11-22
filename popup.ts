@@ -405,6 +405,8 @@ namespace MJS {
 
 
 
+    // @ts-expect-error: Declared but not used
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     class Copy_Grades_UI extends Macro_UI {
 
         private copy_grades_dom:          HTMLFieldSetElement;
@@ -430,6 +432,7 @@ namespace MJS {
 
 
 
+    // @ts-expect-error: Declared but value not read
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const mjs_popup: Popup = new Popup();
 
