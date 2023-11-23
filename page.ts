@@ -226,7 +226,7 @@ namespace MJS {
 
             case 1: // Stage 1 for user.
                 if (stage_user != 1) { throw new Error("Page backup backup: Stage vs stage user mismatch"); }
-                const step1_include_users_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_setting_root_users[type='checkbox']")!;
+                const step1_include_users_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_setting_root_users[type='checkbox']")!;  // TODO: Not present without appropriate permissions.
                 const step1_to_final_step_dom   = document.querySelector<HTMLInputElement>("#region-main form input#id_oneclickbackup[type='submit']")!;
                 const step1_next_dom            = document.querySelector<HTMLInputElement>("#region-main form input#id_submitbutton[type='submit']")!;
                 if ("include_users" in message && step1_include_users_dom.checked != message.include_users) {
@@ -1288,7 +1288,7 @@ namespace MJS {
         // Module Start
         const module_in = message.mdl_course_module;
         // const cmid = message.cmid;
-        const module_dom: HTMLFormElement = document.querySelector<HTMLFormElement>("form.mform")!;
+        const module_dom: HTMLFormElement = document.querySelector<HTMLFormElement>("form.mform[action='modedit.php']")!;
 
         // Module ID
         const module_id_dom         = module_dom.querySelector<HTMLInputElement>("input[name='coursemodule']")!;
