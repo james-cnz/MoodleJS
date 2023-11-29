@@ -60,7 +60,8 @@ namespace MJS {
         public macro_log:           string = "";
         public macro_progress:      number = 1;
         public macro_progress_max:  number = 1;
-        public macro_input:         "cancel"|"interrupt"|"retry"|"skip"|null = null;
+        public macro_input:         "init"|"run"|"cancel"|"interrupt"|"retry"|"skip"|null = null;
+
 
         public macros: {[index: string] : Macro} = {
             new_course:     new New_Course_Macro(this),
@@ -72,7 +73,8 @@ namespace MJS {
             // copy_grades:    new Copy_Grades_Macro(this)
         };
 
-        public popup:           Popup|null = null;
+        public popupPort:       browser.runtime.Port|null = null;
+        public popup_input:     popup_input = null;
 
         private page_last_wwwroot: string = "";
         // private page_details:   Page_Data|null = null;
@@ -91,11 +93,7 @@ namespace MJS {
 
         public async init() {
             let page_details: Page_Data|null = null;
-            try {
-                if (this.popup) {
-                    this.popup.close();
-                }
-            } catch (e) { }
+            this.postPopupMessage("close");
             // this.page_load_wait = 0;
             this.page_message = null;
             this.page_is_loaded = true;
@@ -118,6 +116,11 @@ namespace MJS {
         }
 
 
+        public popup_init2(): void {
+            this.postPopupMessage("init2");
+        }
+
+
         public update_ui(): void {
 
             if (this.macro_state == 0) {
@@ -134,11 +137,7 @@ namespace MJS {
                 browser.browserAction.setBadgeText({text: "X", tabId: this.page_tab_id});
             }
 
-            try {
-                if (this.popup) {
-                    this.popup.update();
-                }
-            } catch (e) { }
+            this.postPopupMessage("update");
         }
 
 
@@ -206,6 +205,7 @@ namespace MJS {
             let page_loaded_time: number|null = null;
             do {
                 await sleep(100);   // May lock up here
+                browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                 page_load_wait += 1;
                 if (is_Errorlike(this.page_message))                            {
                     const new_error: Error&{fileName?: string; lineNumber?: number} = new Error(this.page_message.message); // , this.page_message.fileName, this.page_message.lineNumber);
@@ -239,11 +239,7 @@ namespace MJS {
 
         public page_load_count(count: number = 1): void {
             this.macro_progress += count;
-            try {
-                if (this.popup) {
-                    this.popup.update_progress();
-                }
-            } catch (e) { }
+            this.postPopupMessage("update_progress");
         }
 
 
@@ -317,6 +313,49 @@ namespace MJS {
 
             // console.debug("onTabUpdated end");
             // console.groupEnd();
+        }
+
+
+        public async onPopupMessage(message: DeepPartial<TabData>) {
+            if (message.macro_input) switch (message.macro_input) {
+                case "init":
+                    await this.init();
+                    break;
+                case "run":
+                    const macros = Object.entries(message.macros!);
+                    if (macros.length == 1) {
+                        this.macros[macros[0][0]].params = macros[0][1]!.params!;
+                        await this.macros[macros[0][0]].run();
+                    }
+                    break;
+                default:
+                    this.macro_input = message.macro_input!;
+                    break;
+            }
+        }
+
+
+        public async postPopupMessage(popup_input: popup_input) {
+            this.popup_input = popup_input;
+            if (this.popupPort) try {
+                const message: DeepPartial<TabData> = {
+                    macro_state:            this.macro_state,
+                    macro_allow_interrupt:  this.macro_allow_interrupt,
+                    macro_log:              this.macro_log,
+                    macro_progress:         this.macro_progress,
+                    macro_progress_max:     this.macro_progress_max,
+                    macros: {
+                        new_course:         {prereq: this.macros.new_course.prereq},
+                        index_rebuild:      {prereq: this.macros.index_rebuild.prereq},
+                        index_rebuild_mt:   {prereq: this.macros.index_rebuild_mt.prereq},
+                        new_section:        {prereq: this.macros.new_section.prereq},
+                        new_topic:          {prereq: this.macros.new_topic.prereq},
+                        backup:             {prereq: this.macros.backup.prereq},
+                    },
+                    popup_input:            this.popup_input
+                };
+                this.popupPort.postMessage(message);
+            } catch (e) { }
         }
 
 
@@ -1033,9 +1072,6 @@ namespace MJS {
 
 
 
-    export type New_Course_Params = {
-        mdl_course: { fullname: string, shortname: string, startdate: number, format: "onetopic"|"multitopic"};
-    };
 
     type New_Course_Data = {
         // mdl_course: { template_id: number };
@@ -1045,7 +1081,9 @@ namespace MJS {
     export class New_Course_Macro extends Macro {
 
 
-        public params: New_Course_Params|null = null;
+        public params: {
+            mdl_course: { fullname: string, shortname: string, startdate: number, format: "onetopic"|"multitopic" }
+        } | null = null;
         protected data: New_Course_Data|null = null;
 
 
@@ -1793,7 +1831,6 @@ namespace MJS {
 
 
 
-    export type Copy_Grades_Params = Record<string, never>;
 
     type Copy_Grades_Data = {
         grades_table_as_text: string;
@@ -1802,7 +1839,7 @@ namespace MJS {
     export class Copy_Grades_Macro extends Macro {
 
 
-        public params: Copy_Grades_Params|null = null;
+        public params: Record<string, never> | null = null;
         protected data: Copy_Grades_Data|null = null;
 
 

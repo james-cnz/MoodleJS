@@ -7,11 +7,13 @@
 namespace MJS {
 
 
+    export type popup_input = "init2"|"update"|"update_progress"|"close"|null;
 
 
     export class Popup {
 
 
+        public tabPort:             browser.runtime.Port;
         public tabData:             TabData;
 
         private macro_uis:          Macro_UI[];
@@ -97,9 +99,12 @@ namespace MJS {
 
         private async init() {
             const tab       = (await browser.tabs.query({active: true, currentWindow: true}))[0];
-            const bg_page   = await browser.runtime.getBackgroundPage() as unknown as BackgroundWindow;
-            this.tabData    = bg_page.mjs_background.getTabData(tab.id!);
-            this.tabData.popup = this;
+            this.tabPort = browser.runtime.connect({ name: "popup " + tab.id!.toString() });
+            this.tabPort.onMessage.addListener((message) => { this.onBGMessage(message as TabData); });
+        }
+
+
+        public init2() {
             this.cancel_button_dom.addEventListener("click", () => { this.onCancel(); });
             this.interrupt_button_dom.addEventListener("click", () => { this.onInterrupt(); });
             this.retry_button_dom.addEventListener("click", () => { this.onRetry(); });
@@ -109,24 +114,40 @@ namespace MJS {
         }
 
 
+        private onBGMessage(message: TabData) {
+            this.tabData = message;
+            switch (message.popup_input) {
+                case "init2": this.init2(); break;
+                case "update": this.update(); break;
+                case "update_progress": this.update_progress(); break;
+                case "close": this.close(); break;
+            }
+        }
+
+
+        public postBGMessage(message: DeepPartial<TabData>) {
+            this.tabPort.postMessage(message);
+        }
+
+
         private onCancel() {
-            this.tabData.macro_input = "cancel";
+            this.postBGMessage({macro_input: "cancel"});
         }
 
         private onInterrupt() {
-            this.tabData.macro_input = "interrupt";
+            this.postBGMessage({macro_input: "interrupt"});
         }
 
         private onRetry() {
-            this.tabData.macro_input = "retry";
+            this.postBGMessage({macro_input: "retry"});
         }
 
         private onSkip() {
-            this.tabData.macro_input = "skip";
+            this.postBGMessage({macro_input: "skip"});
         }
 
         private onReset() {
-            void this.tabData.init();
+            this.postBGMessage({macro_input: "init"});
             this.close();
         }
 
@@ -185,14 +206,17 @@ namespace MJS {
         }
 
         private onClick() {
-
-            (this.popup.tabData.macros.new_course as New_Course_Macro).params = {mdl_course: {
-                fullname:   this.new_course_name_dom.value,
-                shortname:  this.new_course_shortname_dom.value,
-                startdate:  (this.new_course_start_dom.valueAsDate!).getTime() / 1000,
-                format:     this.new_course_format_dom[0].checked ? "onetopic" : "multitopic"
-            }};
-            void this.popup.tabData.macros.new_course.run();
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { new_course: { params: {
+                    mdl_course: {
+                        fullname:   this.new_course_name_dom.value,
+                        shortname:  this.new_course_shortname_dom.value,
+                        startdate:  (this.new_course_start_dom.valueAsDate!).getTime() / 1000,
+                        format:     this.new_course_format_dom[0].checked ? "onetopic" : "multitopic"
+                    }
+                }}}
+            });
         }
 
     }
@@ -217,8 +241,10 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.index_rebuild as Index_Rebuild_Macro).params = {};
-            void this.popup.tabData.macros.index_rebuild.run();
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { index_rebuild: { params: {} } }
+            });
         }
 
     }
@@ -241,8 +267,10 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.index_rebuild_mt as Index_Rebuild_MT_Macro).params = {};
-            void this.popup.tabData.macros.index_rebuild_mt.run();
+            this.popup.postBGMessage({
+                macro_input:"run",
+                macros: { index_rebuild_mt: { params: {} } }
+            });
         }
 
     }
@@ -275,11 +303,15 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.new_section as New_Section_Macro).params = {mdl_course_sections: {
-                fullname: this.new_section_name_dom.value,
-                name: this.new_section_shortname_dom.value
-            }};
-            void this.popup.tabData.macros.new_section.run();
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { new_section: { params: {
+                    mdl_course_sections: {
+                        fullname: this.new_section_name_dom.value,
+                        name: this.new_section_shortname_dom.value
+                    }
+                }}}
+            });
         }
 
     }
@@ -310,8 +342,12 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.new_topic as New_Topic_Macro).params = { mdl_course_modules: { fullname: this.new_topic_name_dom.value}};
-            void this.popup.tabData.macros.new_topic.run();
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { new_topic: { params: {
+                    mdl_course_modules: { fullname: this.new_topic_name_dom.value}
+                }}}
+            });
         }
 
     }
@@ -394,11 +430,17 @@ namespace MJS {
                 const exclude_match_2 = exclude_string.match(/^backup-moodle2-course-(\d+)-\S+-\d{8}-\d{4}(?:-nu)?.mbz$/);
                 if (exclude_match_2) { exclude_list.push(parseInt(exclude_match_2[1])); }
             }
-            (this.popup.tabData.macros.backup as Backup_Macro).params = {mdl_user: {username: document.querySelector<HTMLInputElement>("input#backup_username")!.value,
-                                                                                    password_plaintext: document.querySelector<HTMLInputElement>("input#backup_password")!.value},
-                                                                        include_users: document.querySelector<HTMLInputElement>("input#backup_include_users")!.checked,
-                                                                        exclude_list: exclude_list};
-            void this.popup.tabData.macros.backup.run();
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { backup: { params: {
+                    mdl_user: {
+                        username: document.querySelector<HTMLInputElement>("input#backup_username")!.value,
+                        password_plaintext: document.querySelector<HTMLInputElement>("input#backup_password")!.value
+                    },
+                    include_users: document.querySelector<HTMLInputElement>("input#backup_include_users")!.checked,
+                    exclude_list: exclude_list
+                }}}
+            });
         }
 
     }
@@ -424,8 +466,10 @@ namespace MJS {
         }
 
         private onClick() {
-            (this.popup.tabData.macros.copy_grades as Copy_Grades_Macro).params = {};
-            void this.popup.tabData.macros.copy_grades.run();
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { copy_grades: { params: {} } }
+            });
         }
 
     }

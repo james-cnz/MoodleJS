@@ -3,6 +3,9 @@
  * Links to data for each tab, and passes on messages from content scripts.
  */
 
+// import "browser_polyfill_mv3.ts";
+// import "shared.ts";
+// import "macros.ts";
 
 namespace MJS {
 
@@ -21,6 +24,11 @@ namespace MJS {
             browser.tabs.onUpdated.addListener(
                 (tab_id: number, update_info: Partial<browser.tabs.Tab>, tab: browser.tabs.Tab) => {
                     this.onTabUpdated(tab_id, update_info, tab);
+                }
+            );
+            browser.runtime.onConnect.addListener(
+                (port: browser.runtime.Port) => {
+                    this.connected(port);
                 }
             );
         }
@@ -42,6 +50,15 @@ namespace MJS {
             if (this.tabData[tab_id]) {
                 this.tabData[tab_id].onTabUpdated(tab_id, update_info, tab);
             }
+        }
+
+        public connected(port: browser.runtime.Port) {
+            const index: number = parseInt(port.name.match(/^popup (\d+)$/)![1]);
+            this.getTabData(index).popupPort = port;
+            port.onMessage.addListener((message: DeepPartial<TabData>) => {
+                this.getTabData(index).onPopupMessage(message);
+            });
+            this.getTabData(index).popup_init2();
         }
 
     }
