@@ -958,7 +958,7 @@ namespace MJS {
 
                     // Module Name
                     const module_out_instance_name =       (module_modname == "label")
-                            ? (module_dom.querySelector(":scope .contentwithoutlink") || {}
+                            ? (module_dom.querySelector(":scope .contentwithoutlink") || module_dom.querySelector(":scope .activity-altcontent") || {}
                             ).textContent || ""
                             : (module_dom.querySelector(":scope .instancename") || module_dom.querySelector(":scope .fp-filename")
                             )!.textContent || "";  // TODO: Use innerText to avoid unwanted hidden text with Assignments?
@@ -967,9 +967,9 @@ namespace MJS {
 
                     // Module Intro
                     const module_out_instance_intro: string|undefined = (module_modname == "label")  // TODO: Test
-                                        ? (module_dom.querySelector(":scope .contentwithoutlink") || { innerHTML: ""}
+                                        ? (module_dom.querySelector(":scope .contentwithoutlink") || module_dom.querySelector(":scope .activity-altcontent") || { innerHTML: ""}
                                         ).innerHTML
-                                        : (module_dom.querySelector(":scope .contentafterlink") || { innerHTML: undefined }
+                                        : (module_dom.querySelector(":scope .contentafterlink") || module_dom.querySelector(":scope .activity-altcontent") || { innerHTML: undefined }
                                         ).innerHTML;
 
                     const module_out = {
