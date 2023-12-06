@@ -5,8 +5,17 @@
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-namespace MJS {
 
+import "./browser_polyfill_mv3.js";
+import {JSONValue, Errorlike, DeepPartial, throwf, is_Errorlike, sleep} from "./shared.js";
+import {Page_Data_Base, Page_Data,
+    page_admin_report_customsql_view_data, page_admin_report_customsql_index_data,
+    page_backup_backup_4_data, page_course_management_category, page_course_management_data, page_backup_backup_last_data,
+    page_backup_restore_data_16, page_backup_restore_data_2, page_backup_restore_data_4d, page_backup_restore_data_4s, page_backup_restore_data_8, page_backup_restore_data_final, page_backup_restorefile_data,
+    page_course_editsection_data, page_course_view_course_section, page_course_view_data,
+    page_grade_report_grader_index_data
+} from "./page.js";
+import { popup_input } from "./popup.js";
 
 
 
@@ -124,17 +133,17 @@ namespace MJS {
         public update_ui(): void {
 
             if (this.macro_state == 0) {
-                browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: "", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: "", tabId: this.page_tab_id});
             } else if (this.macro_state > 0 && this.macro_state < 3) {
-                browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: ">", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: ">", tabId: this.page_tab_id});
             } else if (this.macro_state == 3) {
-                browser.browserAction.setBadgeBackgroundColor({color: "yellow", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: "||", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "yellow", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: "||", tabId: this.page_tab_id});
             } else {
-                browser.browserAction.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: "X", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: "X", tabId: this.page_tab_id});
             }
 
             this.postPopupMessage("update");
@@ -1862,4 +1871,4 @@ namespace MJS {
 
 
 
-}
+

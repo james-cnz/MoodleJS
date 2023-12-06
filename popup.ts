@@ -4,8 +4,9 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-namespace MJS {
 
+import "./browser_polyfill_mv3.js";
+import "./shared.js";
 
     export type popup_input = "init2"|"update"|"update_progress"|"close"|null;
 
@@ -483,4 +484,4 @@ namespace MJS {
 
 
 
-}
+
