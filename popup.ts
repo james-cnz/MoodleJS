@@ -6,7 +6,8 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
 import "./browser_polyfill_mv3.js";
-import "./shared.js";
+import {DeepPartial} from "./shared.js";
+import {TabData} from "./macros.js"
 
     export type popup_input = "init2"|"update"|"update_progress"|"close"|null;
 

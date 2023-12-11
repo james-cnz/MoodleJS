@@ -1544,7 +1544,12 @@ import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
 
 
     export async function page_init(): Promise<void>/*{status: boolean}*/ {
-        browser.runtime.onMessage.addListener(page_onMessage);
+        browser.runtime.onMessage.addListener(
+            (message: object, _sender: browser.runtime.MessageSender, sendResponse: (response: object) => void) => {
+                page_onMessage(message).then(sendResponse);
+                return true;
+            }
+        );
         // return {status: true};
         // return c_on_call({});
         let message: Page_Data|Errorlike;

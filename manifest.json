@@ -27,6 +27,8 @@
   "web_accessible_resources": [{
     "matches": ["<all_urls>"],
     "resources": ["browser_polyfill_mv3.js", "shared.js", "page.js"]
-  }]
+  }],
+
+  "host_permissions": ["*://moodle.op.ac.nz/*", "*://otagopoly-moodle.testing.catlearn.nz/*", "*://localhost/*"]
 
 }
