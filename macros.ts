@@ -1279,7 +1279,7 @@ import { popup_input } from "./popup.js";
             if (!this.data /*|| !this.params*/)                                     throw new Error("Index rebuild macro, prereq:\ndata not set.");
             // TODO: Don't include hidden tabs or topic headings?
 
-            const parser = new DOMParser();
+            // const parser = new DOMParser();
 
             // Get list of sections (1 load)
             this.page_details = await this.tabdata.page_load<page_course_view_data>(
@@ -1300,19 +1300,21 @@ import { popup_input } from "./popup.js";
                     {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.course_id, section: section_num}},
                     page: "course-view-[a-z]+", mdl_course: {course_id: this.data.mdl_course.course_id}});
                 const section_full = this.page_details.mdl_course_section!;
-                const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")!
-                                    ).textContent!;
+                // const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")!
+                //                     ).textContent!;
+                const section_name = (await this.tabdata.page_call({page: "-dom-parser", input: {html: section_full.summary, selector: ".header1"}})).outputhtml;
                 index_html = index_html
                             + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.data.mdl_course.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
                 for (const mod of section_full.mdl_course_modules!) {
                     // parse description
-                    const mod_desc = parser.parseFromString(mod.intro || "", "text/html");
-                    const part_name = mod_desc.querySelector(".header2, .header2gradient")!;
+                    // const mod_desc = parser.parseFromString(mod.intro || "", "text/html");
+                    // const part_name = mod_desc.querySelector(".header2, .header2gradient")!;
+                    const part_name = (await this.tabdata.page_call({page: "-dom-parser", input: {html: mod.intro || "", selector: ".header2, .header2gradient"}})).outputhtml;
                     if (part_name) {
                         index_html = index_html
                                     + "<li>"
-                                    + TabData.escapeHTML((part_name.textContent!).trim())
+                                    + TabData.escapeHTML((part_name).trim())
                                     + "</li>\n";
                     }
                 }
