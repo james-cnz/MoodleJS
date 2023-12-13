@@ -3,6 +3,12 @@
  * UI scripts.
  */
 
+
+// import "browser_polyfill_mv3.js";
+// import {DeepPartial} from "shared.js";
+// import {TabData} from "macros.js"
+
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 namespace MJS {
 

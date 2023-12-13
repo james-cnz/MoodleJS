@@ -3,9 +3,10 @@
  * Links to data for each tab, and passes on messages from content scripts.
  */
 
-// import "browser_polyfill_mv3.ts";
-// import "shared.ts";
-// import "macros.ts";
+// import "browser_polyfill_mv3.js";
+// import {DeepPartial} from "shared.js";
+// import {TabData} from "macros.js";
+// import {Page_Data} from "page.js";
 
 namespace MJS {
 
@@ -47,9 +48,7 @@ namespace MJS {
         }
 
         public onTabUpdated(tab_id: number, update_info: Partial<browser.tabs.Tab>, tab: browser.tabs.Tab) {
-            if (this.tabData[tab_id]) {
-                this.tabData[tab_id].onTabUpdated(tab_id, update_info, tab);
-            }
+            this.getTabData(tab_id).onTabUpdated(tab_id, update_info, tab);
         }
 
         public connected(port: browser.runtime.Port) {

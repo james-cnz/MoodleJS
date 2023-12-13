@@ -4,6 +4,10 @@
  */
 
 
+// import "browser_polyfill_mv3.js"
+// import {DeepPartial, sleep, throwf, Errorlike} from "shared.js"
+
+
 namespace MJS {
 
 
