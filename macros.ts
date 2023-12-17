@@ -634,6 +634,7 @@ namespace MJS {
                 // Get ticked categories.
                 this.page_details = await this.tabdata.page_call<page_course_management_data>({page: "course-management"});
                 const category_list = Backup_Macro.ticked_categories(this.page_details.mdl_course_category);
+                const course_sel_list = this.page_details.mdl_courses.filter(function(course) { return course.checked });
 
                 // Find course list query.
                 this.page_details = await this.tabdata.page_load<page_admin_report_customsql_index_data>({location: {pathname: "/report/customsql/index.php", search: {}}, page: "admin-report-customsql-index"});
@@ -669,6 +670,9 @@ namespace MJS {
                     let match: boolean = false;
                     for (const cat of category_list) {
                         if ((query_row[cat_path_col] + "/").search("/" + cat.course_category_id + "/") >= 0) { match = true; }
+                    }
+                    for (const course of course_sel_list) {
+                        if (query_row[course_id_col] == course.course_id.toString()) { match = true; }
                     }
                     if (match) { course_list.push({course_id: parseInt(query_row[course_id_col]), shortname: query_row[course_name_col]}); }
                 }

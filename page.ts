@@ -781,6 +781,7 @@ namespace MJS {
     export type page_course_management_course = {
         course_id:  number;
         fullname:   string;
+        checked:    boolean;
     };
 
     async function page_course_management(message_in: DeepPartial<page_course_management_data>): Promise<page_course_management_data> {
@@ -833,7 +834,8 @@ namespace MJS {
         const course_list_dom = document.querySelectorAll<HTMLLIElement>("#region-main div.course-listing ul li.listitem-course");
         const course_list: page_course_management_course[] = [];
         for (const course_dom of Object.values(course_list_dom)) {
-            course_list.push({ course_id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector(":scope a.coursename")!.textContent! });
+            course_list.push({ course_id: parseInt(course_dom.dataset.id!), fullname: course_dom.querySelector(":scope a.coursename")!.textContent!,
+                checked: course_dom.querySelector<HTMLInputElement>(":scope input.bulk-action-checkbox")!.checked });
         }
 
         return {
