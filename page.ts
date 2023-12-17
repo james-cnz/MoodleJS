@@ -331,7 +331,7 @@ namespace MJS {
             delete_button_dom.click();
             await sleep(100);
         } else if (message_in.backup && message_in.backup.click == "delete_ok") {
-            const delete_ok_button_dom = document.querySelector<HTMLButtonElement>("div.moodle-dialogue div.filemanager button.fp-dlg-butconfirm")!;
+            const delete_ok_button_dom = document.querySelector<HTMLButtonElement>("div.moodle-dialogue div.filemanager button.fp-dlg-butconfirm, div.modal-dialog button.btn-primary[data-action='save']")!;
             delete_ok_button_dom.click();
             await sleep(100);
         }
