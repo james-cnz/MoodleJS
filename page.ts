@@ -46,8 +46,12 @@ namespace MJS {
 
     function moodle_page(): Moodle_Page_Data {
         const logout_dom = document.querySelector<HTMLAnchorElement>("a[href*='logout.php'][role='menuitem']");
+        let wwwroot = window.location.origin;
+        if ((wwwroot == "http://10.110.2.19" || wwwroot == "https://10.110.2.19") && window.location.pathname.startsWith("/moodle")) {
+            wwwroot = wwwroot + "/moodle";
+        }
         return {
-            wwwroot:    window.location.origin,
+            wwwroot:    wwwroot,
             body_class: window.document.body.className!,
             sesskey:    logout_dom ? logout_dom.search.match(/^\?sesskey=(\w+)$/)![1] : "",
             editing:    window.document.body.classList.contains("editing")
@@ -1031,9 +1035,9 @@ namespace MJS {
                 for (const subsection_dom of Object.values(subsections_dom)) {
                     if (subsection_dom.href && subsection_dom.href.match(/changenumsections.php/)) {
                     } else if (subsection_dom.href && !subsection_dom.classList.contains("active")) {
-                        const section_match = subsection_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
+                        const section_match = subsection_dom.href.match(/\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + subsection_dom.href));
-                        const section_num = parseInt(section_match[3]);
+                        const section_num = parseInt(section_match[2]);
                         subsections_out.push({
                             name:       subsection_dom.title,
                             section:    section_num,
@@ -1056,9 +1060,9 @@ namespace MJS {
 
                     if ((other_section_dom).href && other_section_dom.href.match(/changenumsections.php/)) {
                     } else if (other_section_dom.href && !other_section_dom.classList.contains("active")) {
-                        const section_match = other_section_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
+                        const section_match = other_section_dom.href.match(/\/course\/view.php\?id=(\d+)&section=(\d+)(?:#tabs-tree-start)?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + other_section_dom.href));
-                        const section_num = parseInt(section_match[3]);
+                        const section_num = parseInt(section_match[2]);
 
                         course_out_sections.push({
                             // course_section_id: 0,
@@ -1091,10 +1095,10 @@ namespace MJS {
             for (const other_section_dom of Object.values(other_sections_dom)) {
                 if (other_section_dom.href && other_section_dom.href.match(/changenumsections.php/)) { continue; }
                 if (other_section_dom.href) {
-                    const section_match = other_section_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
+                    const section_match = other_section_dom.href.match(/\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
                                                                                 || throwf(new Error("WSC course get content, tab links unrecognised: " + other_section_dom.href));
-                    if (section_match[3]) {
-                        const section_id = parseInt(section_match[3]);
+                    if (section_match[2]) {
+                        const section_id = parseInt(section_match[2]);
                         while (course_out_sections[section_num].course_section_id != section_id) { section_num++; }
                     }
                     course_out_sections[section_num].options = course_out_sections[section_num].options || {};
@@ -1109,10 +1113,10 @@ namespace MJS {
                     for (const subsection_dom of Object.values(subsections_dom)) {
                         if (subsection_dom.href && subsection_dom.href.match(/changenumsections.php/)) { continue; }
                         if (subsection_dom.href) {
-                            const section_match = subsection_dom.href.match(/^(https?:\/\/[a-z\-.]+)\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
+                            const section_match = subsection_dom.href.match(/\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + subsection_dom.href));
-                            if (section_match[3]) {
-                                const section_id = parseInt(section_match[3]);
+                            if (section_match[2]) {
+                                const section_id = parseInt(section_match[2]);
                                 while (course_out_sections[section_num].course_section_id != section_id) { section_num++; }
                             }
                             course_out_sections[section_num].options = course_out_sections[section_num].options || {};

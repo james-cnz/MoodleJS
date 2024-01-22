@@ -1135,6 +1135,8 @@ namespace MJS {
                 template_id = this.params!.mdl_course.format == "onetopic" ? 8310 : 8705;
             } else if (this.page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 template_id = this.params!.mdl_course.format == "onetopic" ? 8310 : 8705;
+            } else if (this.page_details.moodle_page.wwwroot == "http://10.110.2.19/moodle" || this.page_details.moodle_page.wwwroot == "https://10.110.2.19/moodle") {
+                template_id = this.params!.mdl_course.format == "onetopic" ? 2 : 3;
             } else if (this.page_details.moodle_page.wwwroot == "http://localhost" || this.page_details.moodle_page.wwwroot == "https://localhost") {
                 template_id = this.params!.mdl_course.format == "onetopic" ? 2 : 3;
             } else                                                                      { throw new Error("Site not recognised."); }
@@ -1492,6 +1494,8 @@ namespace MJS {
                 feedback_template_id = 59;
             } else if (this.page_details.moodle_page.wwwroot == "https://moodle.op.ac.nz") {
                 feedback_template_id = 59;
+            } else if (this.page_details.moodle_page.wwwroot == "http://10.110.2.19/moodle" || this.page_details.moodle_page.wwwroot == "https://10.110.2.19/moodle") {
+                feedback_template_id = 1;
             } else if (this.page_details.moodle_page.wwwroot == "http://localhost" || this.page_details.moodle_page.wwwroot == "https://localhost") {
                 feedback_template_id = 1;
             } else                                                                      { return; }

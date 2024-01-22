@@ -19,7 +19,7 @@
   },
 
   "content_scripts": [ {
-    "matches":  ["*://moodle.op.ac.nz/*", "*://otagopoly-moodle.testing.catlearn.nz/*", "*://localhost/*"],
+    "matches":  ["*://moodle.op.ac.nz/*", "*://otagopoly-moodle.testing.catlearn.nz/*", "*://10.110.2.19/moodle/*", "*://localhost/*"],
     "js":       ["browser-polyfill.js", "shared.js", "page.js"],
     "run_at":   "document_idle"
   } ]
