@@ -47,8 +47,8 @@ namespace MJS {
     function moodle_page(): Moodle_Page_Data {
         const logout_dom = document.querySelector<HTMLAnchorElement>("a[href*='logout.php'][role='menuitem']");
         let wwwroot = window.location.origin;
-        if ((wwwroot == "http://10.110.2.19" || wwwroot == "https://10.110.2.19") && window.location.pathname.startsWith("/moodle")) {
-            wwwroot = wwwroot + "/moodle";
+        if ((window.location.pathname.split("/")?.[1] || "").match(/^moodle(?:_\d+)?$/)) {
+            wwwroot = wwwroot + '/' + window.location.pathname.split("/")[1];
         }
         return {
             wwwroot:    wwwroot,
