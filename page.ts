@@ -540,34 +540,57 @@ namespace MJS {
     };
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
-        const backups_doms = document.querySelectorAll<HTMLTableElement>("#region-main table.backup-files-table tbody");
-        const course_backups_dom = backups_doms[0];
-        const user_backups_dom = backups_doms[1];
-        const course_restore_link = course_backups_dom.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']")!;
-        const manage_button_doms = document.querySelectorAll<HTMLButtonElement>("#region-main div.singlebutton form [type='submit']");
-        const course_manage_button_dom = manage_button_doms[0];
-        const user_manage_button_dom = manage_button_doms[1];
+        const backup_heading_doms = document.querySelectorAll("#region-main h2, #region-main h3");
+        if (backup_heading_doms.length < 3 || backup_heading_doms.length > 4 || backup_heading_doms[1].parentNode != backup_heading_doms[2].parentNode) {
+            throw new Error("Backup regions not identified");
+        }
+        let course_backups_dom = null;
+        let user_backups_dom = null;
+        let course_manage_button_dom = null;
+        let user_manage_button_dom = null;
+        for (let backup_region = 1; backup_region < 3; backup_region++) {
+            for (let backup_dom = backup_heading_doms[backup_region];
+                    backup_dom && (backup_region >= 2 || backup_dom != backup_heading_doms[backup_region + 1]);
+                    backup_dom = backup_dom.nextElementSibling) {
+                if (backup_dom.classList.contains("backup-files-table") || backup_dom.querySelector(":scope .backup-files-table")) {
+                    if (backup_region == 1) {
+                        course_backups_dom = backup_dom.querySelector(":scope tbody");
+                    } else {
+                        user_backups_dom = backup_dom.querySelector(":scope tbody");
+                    }
+                }
+                if (backup_dom.classList.contains("singlebutton") || backup_dom.querySelector(":scope .singlebutton")) {
+                    if (backup_region == 1) {
+                        course_manage_button_dom = backup_dom.querySelector<HTMLButtonElement>(":scope form [type='submit']");
+                    } else {
+                        user_manage_button_dom = backup_dom.querySelector<HTMLButtonElement>(":scope form [type='submit']");
+                    }
+                }
+            }
+        }
+
+        const course_restore_link = course_backups_dom?.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']");
 
         const course_backups: {filename: string, download_url: string}[] = [];
-        if (!course_backups_dom.classList.contains("empty")) {
+        if (course_backups_dom && !course_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
                 course_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
             }
         }
 
         const user_backups: {filename: string, download_url: string}[] = [];
-        if (!user_backups_dom.classList.contains("empty")) {
+        if (user_backups_dom && !user_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(user_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
                 user_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
             }
         }
 
         if (message.dom_submit && message.dom_submit == "course_restore") {
-            course_restore_link.click();
+            course_restore_link!.click();
         } else if (message.dom_submit && message.dom_submit == "course_manage") {
-            course_manage_button_dom.click();
+            course_manage_button_dom!.click();
         } else if (message.dom_submit && message.dom_submit == "user_manage") {
-            user_manage_button_dom.click();
+            user_manage_button_dom!.click();
         }
         return {moodle_page: moodle_page(), page: "backup-restorefile", mdl_course: {backups: course_backups}, mdl_user: {backups: user_backups}};
     }
