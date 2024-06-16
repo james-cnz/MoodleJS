@@ -627,7 +627,8 @@ namespace MJS {
 
         // Name
         const section_name_dom: HTMLInputElement =    // (section_dom.querySelector<HTMLInputElement>(":scope input[name='name']") ||
-                                                            section_dom.querySelector<HTMLInputElement>(":scope fieldset#id_generalhdr input[name='name[value]']")!;
+                                                        (section_dom.querySelector<HTMLInputElement>(":scope fieldset#id_generalhdr input[name='name[value]']")
+                                                        || section_dom.querySelector<HTMLInputElement>(":scope fieldset#id_generalhdr input[name='name']"))!;
         if (section_in && section_in.name != undefined) { // section_in.hasOwnProperty('name')) {
             // const section_name_usedefault_dom: HTMLInputElement|null = section_dom.querySelector(":scope input[name='usedefaultname']");
             const section_name_customise_dom: HTMLInputElement|null  = section_dom.querySelector(":scope fieldset#id_generalhdr input#id_name_customize");
