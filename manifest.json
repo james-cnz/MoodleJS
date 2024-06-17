@@ -1,18 +1,18 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
 
   "name":         "MoodleJS",
   "author":       "James C",
   "version":      "2.2",
   "description":  "A script for automating some Moodle tasks at Otago Polytechnic (New Zealand).",
 
-  "browser_specific_settings": { "gecko": { "id": "{3eeb542a-cd0b-44f7-8cbb-4f7b6d87450f}", "strict_min_version": "60.0" } },
+  "browser_specific_settings": { "gecko": { "id": "{3eeb542a-cd0b-44f7-8cbb-4f7b6d87450f}", "strict_min_version": "112.0" } },
   "icons":        {"16": "icons/moodlejs-16.png", "48": "icons/moodlejs-48.png", "128": "icons/moodlejs-128.png"},
   "permissions":  ["activeTab", "downloads"],
 
-  "background": { "scripts": ["browser-polyfill.js", "shared.js", "macros.js", "background.js"] },
+  "background": { "scripts": ["background.js"], "service_worker": "background.js", "type": "module" },
   
-  "browser_action": {
+  "action": {
     "default_popup":  "popup.htm",
     "default_icon":   { "19": "icons/moodlejs-19.png", "38": "icons/moodlejs-38.png" },
     "default_title":  "MoodleJS--Automates some Moodle tasks"
@@ -20,8 +20,15 @@
 
   "content_scripts": [ {
     "matches":  ["*://moodle.op.ac.nz/*", "*://otagopoly-moodle.testing.catlearn.nz/*", "*://10.110.2.19/moodle/*", "*://localhost/*"],
-    "js":       ["browser-polyfill.js", "shared.js", "page.js"],
+    "js":       ["page_wrapper.js"],
     "run_at":   "document_idle"
-  } ]
+  } ],
+
+  "web_accessible_resources": [{
+    "matches": ["<all_urls>"],
+    "resources": ["browser_polyfill_mv3.js", "shared.js", "page.js"]
+  }],
+
+  "host_permissions": ["*://moodle.op.ac.nz/*", "*://otagopoly-moodle.testing.catlearn.nz/*", "*://localhost/*"]
 
 }

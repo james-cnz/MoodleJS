@@ -4,20 +4,19 @@
  */
 
 
-// import "browser_polyfill_mv3.js";
-// import {JSONValue, Errorlike, DeepPartial, throwf, is_Errorlike, sleep} from "shared.js";
-// import {Page_Data_Base, Page_Data,
-//     page_admin_report_customsql_view_data, page_admin_report_customsql_index_data,
-//     page_backup_backup_4_data, page_course_management_category, page_course_management_data, page_backup_backup_last_data,
-//     page_backup_restore_data_16, page_backup_restore_data_2, page_backup_restore_data_4d, page_backup_restore_data_4s, page_backup_restore_data_8, page_backup_restore_data_final, page_backup_restorefile_data,
-//     page_course_editsection_data, page_course_view_course_section, page_course_view_data,
-//     page_grade_report_grader_index_data
-// } from "page.js";
-// import { popup_input } from "popup.js";
+import "./browser_polyfill_mv3.js";
+import {JSONValue, Errorlike, DeepPartial, throwf, is_Errorlike, sleep} from "./shared.js";
+import {Page_Data_Base, Page_Data,
+    page_admin_report_customsql_view_data, page_admin_report_customsql_index_data,
+    page_backup_backup_4_data, page_course_management_category, page_course_management_data, page_backup_backup_last_data,
+    page_backup_restore_data_16, page_backup_restore_data_2, page_backup_restore_data_4d, page_backup_restore_data_4s, page_backup_restore_data_8, page_backup_restore_data_final, page_backup_restorefile_data,
+    page_course_editsection_data, page_course_view_course_section, page_course_view_data,
+    page_grade_report_grader_index_data
+} from "./page.js";
+import { popup_input } from "./popup.js";
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-namespace MJS {
 
 
 
@@ -136,17 +135,17 @@ namespace MJS {
         public update_ui(): void {
 
             if (this.macro_state == 0) {
-                browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: "", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: "", tabId: this.page_tab_id});
             } else if (this.macro_state > 0 && this.macro_state < 3) {
-                browser.browserAction.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: ">", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "green", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: ">", tabId: this.page_tab_id});
             } else if (this.macro_state == 3) {
-                browser.browserAction.setBadgeBackgroundColor({color: "yellow", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: "||", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "yellow", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: "||", tabId: this.page_tab_id});
             } else {
-                browser.browserAction.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
-                browser.browserAction.setBadgeText({text: "X", tabId: this.page_tab_id});
+                browser.action.setBadgeBackgroundColor({color: "red", tabId: this.page_tab_id});
+                browser.action.setBadgeText({text: "X", tabId: this.page_tab_id});
             }
 
             this.postPopupMessage("update");
@@ -1288,7 +1287,7 @@ namespace MJS {
             if (!this.data /*|| !this.params*/)                                     throw new Error("Index rebuild macro, prereq:\ndata not set.");
             // TODO: Don't include hidden tabs or topic headings?
 
-            const parser = new DOMParser();
+            // const parser = new DOMParser();
 
             // Get list of sections (1 load)
             this.page_details = await this.tabdata.page_load<page_course_view_data>(
@@ -1309,19 +1308,21 @@ namespace MJS {
                     {location: {pathname: "/course/view.php", search: {id: this.data.mdl_course.course_id, section: section_num}},
                     page: "course-view-[a-z]+", mdl_course: {course_id: this.data.mdl_course.course_id}});
                 const section_full = this.page_details.mdl_course_section!;
-                const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")!
-                                    ).textContent!;
+                // const section_name = (parser.parseFromString(section_full.summary as string, "text/html").querySelector(".header1")!
+                //                     ).textContent!;
+                const section_name = (await this.tabdata.page_call({page: "-dom-parser", input: {html: section_full.summary, selector: ".header1"}})).outputhtml;
                 index_html = index_html
                             + '<a href="' + this.page_details.moodle_page.wwwroot + "/course/view.php?id=" + this.data.mdl_course.course_id + "&section=" + section_num + '"><b>' + TabData.escapeHTML(section_name.trim()) + "</b></a>\n"
                             + "<ul>\n";
                 for (const mod of section_full.mdl_course_modules!) {
                     // parse description
-                    const mod_desc = parser.parseFromString(mod.intro || "", "text/html");
-                    const part_name = mod_desc.querySelector(".header2, .header2gradient")!;
+                    // const mod_desc = parser.parseFromString(mod.intro || "", "text/html");
+                    // const part_name = mod_desc.querySelector(".header2, .header2gradient")!;
+                    const part_name = (await this.tabdata.page_call({page: "-dom-parser", input: {html: mod.intro || "", selector: ".header2, .header2gradient"}})).outputhtml;
                     if (part_name) {
                         index_html = index_html
                                     + "<li>"
-                                    + TabData.escapeHTML((part_name.textContent!).trim())
+                                    + TabData.escapeHTML((part_name).trim())
                                     + "</li>\n";
                     }
                 }
@@ -1882,4 +1883,3 @@ namespace MJS {
 
 
 
-}

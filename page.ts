@@ -4,11 +4,10 @@
  */
 
 
-// import "browser_polyfill_mv3.js"
-// import {DeepPartial, sleep, throwf, Errorlike} from "shared.js"
+import "./browser_polyfill_mv3.js"
+import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
 
 
-namespace MJS {
 
 
 
@@ -40,7 +39,8 @@ namespace MJS {
         | page_mod_feedback_use_templ_data
         | page_module_edit_data
         | page_my_index_data
-        | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; };  // some other page
+        | Page_Data_Base & { page: ".*"; dom_submit?: boolean|string; }  // some other page
+        | utility_domparser_data;
 
 
 
@@ -1460,6 +1460,18 @@ namespace MJS {
     }
 
 
+    export type utility_domparser_data = Page_Data_Base & {
+        page:   "-dom-parser",
+        input?: { html: string, selector: string },
+        outputhtml: string
+    }
+
+    async function utility_domparser(message: DeepPartial<utility_domparser_data>): Promise<utility_domparser_data> {
+        const parser = new DOMParser();
+        const dom = parser.parseFromString(message.input!.html!, "text/html");
+        const outputhtml = dom.querySelector(message.input!.selector!)?.textContent || "";
+        return {moodle_page: moodle_page(), page: "-dom-parser", outputhtml: outputhtml}
+    }
 
 
     async function page_onMessage(message: DeepPartial<Page_Data>, sender?: browser.runtime.MessageSender): Promise<Page_Data> {
@@ -1479,95 +1491,99 @@ namespace MJS {
         // const message = message_in;
 
         const body_id = window.document.body.id;
-        if (message.page && !body_id.match(RegExp("^page-" + message.page + "$"))) { throw new Error("Unexpected page"); }
+        if (message.page && !message.page.startsWith("-") && !body_id.match(RegExp("^page-" + message.page + "$"))) { throw new Error("Unexpected page"); }
 
         let result: Page_Data;
 
-        switch (body_id) {
-            case "page-admin-report-customsql-index":
-                result = await page_admin_report_customsql_index(message as DeepPartial<page_admin_report_customsql_index_data>);
-                break;
-            case "page-admin-report-customsql-view":
-                result = await page_admin_report_customsql_view(message as DeepPartial<page_admin_report_customsql_view_data>);
-                break;
-            case "page-backup-backup":
-                result = await page_backup_backup(message as DeepPartial<page_backup_backup_data>);
-                break;
-            case "page-backup-backupfilesedit":
-                result = await page_backup_backupfilesedit(message as DeepPartial<page_backup_backupfilesedit_data>);
-                break;
-            case "page-backup-restore":
-                result = await page_backup_restore(message as DeepPartial<page_backup_restore_data>);
-                break;
-            case "page-backup-restorefile":
-                result = await page_backup_restorefile(message as DeepPartial<page_backup_restorefile_data>);
-                break;
-            case "page-course-editsection":
-                result = await page_course_editsection(message as DeepPartial<page_course_editsection_data>);
-                break;
-            case "page-course-index":
-            case "page-course-index-category":
-                result = await page_course_index(message as DeepPartial<page_course_index_data>);
-                break;
-            case "page-course-management":
-                result = await page_course_management(message as DeepPartial<page_course_management_data>);
-                break;
-            case "page-course-view-onetopic":
-            case "page-course-view-multitopic":
-            case "page-course-view-topics":
-            case "page-course-view-grid":
-            case "page-course-view-singleactivity":
-            case "page-course-view-social":
-            case "page-course-view-weeks":
-                result = await page_course_view(message as DeepPartial<page_course_view_data>);
-                break;
-            case "page-grade-report-grader-index":
-                result = await page_grade_report_grader_index(message as DeepPartial<page_grade_report_grader_index_data>);
-                break;
-            case "page-local-otago-login":
-                result = await page_local_otago_login(message as DeepPartial<page_local_otago_login_data>);
-                break;
-            case "page-login-index":
-                result = await page_login_index(message as DeepPartial<page_login_index_data>);
-                break;
-            case "page-mod-feedback-edit":
-                result = await page_mod_feedback_edit(message as DeepPartial<page_mod_feedback_edit_data>);
-                break;
-            case "page-mod-feedback-use_templ":
-                result = await page_mod_feedback_use_templ(message as DeepPartial<page_mod_feedback_use_templ_data>);
-                break;
-            case "page-mod-assign-mod":
-            case "page-mod-assignment-mod":
-            case "page-mod-book-mod":
-            case "page-mod-chat-mod":
-            case "page-mod-choice-mod":
-            case "page-mod-data-mod":
-            case "page-mod-feedback-mod":
-            case "page-mod-folder-mod":
-            case "page-mod-forum-mod":
-            case "page-mod-glossary-mod":
-            // case "page-mod-imscp-mod":
-            case "page-mod-journal-mod":
-            case "page-mod-label-mod":
-            case "page-mod-lesson-mod":
-            // case "page-mod-lti-mod":
-            case "page-mod-page-mod":
-            // case "page-mod-questionnaire-mod":
-            case "page-mod-quiz-mod":
-            case "page-mod-resource-mod":
-            // case "page-mod-scorm-mod":
-            // case "page-mod-survey-mod":
-            case "page-mod-url-mod":
-            case "page-mod-wiki-mod":
-            case "page-mod-workshop-mod":
-                result = await page_module_edit(message as DeepPartial<page_module_edit_data>);
-                break;
-            case "page-my-index":
-                result = await page_my_index(message as DeepPartial<page_my_index_data>);
-                break;
-            default:
-                result = {moodle_page: moodle_page(), page: ".*"};
-                break;
+        if (!message.page || !message.page.startsWith("-")) {
+            switch (body_id) {
+                case "page-admin-report-customsql-index":
+                    result = await page_admin_report_customsql_index(message as DeepPartial<page_admin_report_customsql_index_data>);
+                    break;
+                case "page-admin-report-customsql-view":
+                    result = await page_admin_report_customsql_view(message as DeepPartial<page_admin_report_customsql_view_data>);
+                    break;
+                case "page-backup-backup":
+                    result = await page_backup_backup(message as DeepPartial<page_backup_backup_data>);
+                    break;
+                case "page-backup-backupfilesedit":
+                    result = await page_backup_backupfilesedit(message as DeepPartial<page_backup_backupfilesedit_data>);
+                    break;
+                case "page-backup-restore":
+                    result = await page_backup_restore(message as DeepPartial<page_backup_restore_data>);
+                    break;
+                case "page-backup-restorefile":
+                    result = await page_backup_restorefile(message as DeepPartial<page_backup_restorefile_data>);
+                    break;
+                case "page-course-editsection":
+                    result = await page_course_editsection(message as DeepPartial<page_course_editsection_data>);
+                    break;
+                case "page-course-index":
+                case "page-course-index-category":
+                    result = await page_course_index(message as DeepPartial<page_course_index_data>);
+                    break;
+                case "page-course-management":
+                    result = await page_course_management(message as DeepPartial<page_course_management_data>);
+                    break;
+                case "page-course-view-onetopic":
+                case "page-course-view-multitopic":
+                case "page-course-view-topics":
+                case "page-course-view-grid":
+                case "page-course-view-singleactivity":
+                case "page-course-view-social":
+                case "page-course-view-weeks":
+                    result = await page_course_view(message as DeepPartial<page_course_view_data>);
+                    break;
+                case "page-grade-report-grader-index":
+                    result = await page_grade_report_grader_index(message as DeepPartial<page_grade_report_grader_index_data>);
+                    break;
+                case "page-local-otago-login":
+                    result = await page_local_otago_login(message as DeepPartial<page_local_otago_login_data>);
+                    break;
+                case "page-login-index":
+                    result = await page_login_index(message as DeepPartial<page_login_index_data>);
+                    break;
+                case "page-mod-feedback-edit":
+                    result = await page_mod_feedback_edit(message as DeepPartial<page_mod_feedback_edit_data>);
+                    break;
+                case "page-mod-feedback-use_templ":
+                    result = await page_mod_feedback_use_templ(message as DeepPartial<page_mod_feedback_use_templ_data>);
+                    break;
+                case "page-mod-assign-mod":
+                case "page-mod-assignment-mod":
+                case "page-mod-book-mod":
+                case "page-mod-chat-mod":
+                case "page-mod-choice-mod":
+                case "page-mod-data-mod":
+                case "page-mod-feedback-mod":
+                case "page-mod-folder-mod":
+                case "page-mod-forum-mod":
+                case "page-mod-glossary-mod":
+                // case "page-mod-imscp-mod":
+                case "page-mod-journal-mod":
+                case "page-mod-label-mod":
+                case "page-mod-lesson-mod":
+                // case "page-mod-lti-mod":
+                case "page-mod-page-mod":
+                // case "page-mod-questionnaire-mod":
+                case "page-mod-quiz-mod":
+                case "page-mod-resource-mod":
+                // case "page-mod-scorm-mod":
+                // case "page-mod-survey-mod":
+                case "page-mod-url-mod":
+                case "page-mod-wiki-mod":
+                case "page-mod-workshop-mod":
+                    result = await page_module_edit(message as DeepPartial<page_module_edit_data>);
+                    break;
+                case "page-my-index":
+                    result = await page_my_index(message as DeepPartial<page_my_index_data>);
+                    break;
+                default:
+                    result = {moodle_page: moodle_page(), page: ".*"};
+                    break;
+            }
+        } else {
+            result = await utility_domparser(message as DeepPartial<utility_domparser_data>);
         }
 
 
@@ -1577,7 +1593,12 @@ namespace MJS {
 
 
     export async function page_init(): Promise<void>/*{status: boolean}*/ {
-        browser.runtime.onMessage.addListener(page_onMessage);
+        browser.runtime.onMessage.addListener(
+            (message: object, _sender: browser.runtime.MessageSender, sendResponse: (response: object) => void) => {
+                page_onMessage(message).then(sendResponse);
+                return true;
+            }
+        );
         // return {status: true};
         // return c_on_call({});
         let message: Page_Data|Errorlike;
@@ -1591,7 +1612,6 @@ namespace MJS {
 
 
 
-}
 
 
-void MJS.page_init();
+void page_init();

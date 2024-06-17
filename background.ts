@@ -3,12 +3,11 @@
  * Links to data for each tab, and passes on messages from content scripts.
  */
 
-// import "browser_polyfill_mv3.js";
-// import {DeepPartial} from "shared.js";
-// import {TabData} from "macros.js";
-// import {Page_Data} from "page.js";
+import "./browser_polyfill_mv3.js";
+import {DeepPartial} from "./shared.js";
+import {TabData} from "./macros.js";
+import {Page_Data} from "./page.js";
 
-namespace MJS {
 
     export type BackgroundWindow = { mjs_background: Background };
 
@@ -63,7 +62,6 @@ namespace MJS {
     }
 
 
-}
 
 // eslint-disable-next-line no-var, @typescript-eslint/no-unused-vars
-var mjs_background: MJS.Background = new MJS.Background();
+var mjs_background: Background = new Background();

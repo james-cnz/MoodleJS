@@ -4,13 +4,12 @@
  */
 
 
-// import "browser_polyfill_mv3.js";
-// import {DeepPartial} from "shared.js";
-// import {TabData} from "macros.js"
+import "./browser_polyfill_mv3.js";
+import {DeepPartial} from "./shared.js";
+import {TabData} from "./macros.js"
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-namespace MJS {
 
 
     export type popup_input = "init2"|"update"|"update_progress"|"close"|null;
@@ -489,4 +488,3 @@ namespace MJS {
 
 
 
-}

@@ -5,7 +5,6 @@
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-namespace MJS {
 
     export type JSONValue =
         | string
@@ -239,4 +238,3 @@ namespace MJS {
     };
 
 
-}
