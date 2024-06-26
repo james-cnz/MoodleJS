@@ -550,7 +550,7 @@ namespace MJS {
         let user_manage_button_dom = null;
         for (let backup_region = 1; backup_region < 3; backup_region++) {
             for (let backup_dom = backup_heading_doms[backup_region];
-                    backup_dom && (backup_region >= 2 || backup_dom != backup_heading_doms[backup_region + 1]);
+                    backup_dom && (backup_region + 1 >= backup_heading_doms.length || backup_dom != backup_heading_doms[backup_region + 1]);
                     backup_dom = backup_dom.nextElementSibling) {
                 if (backup_dom.classList.contains("backup-files-table") || backup_dom.querySelector(":scope .backup-files-table")) {
                     if (backup_region == 1) {
