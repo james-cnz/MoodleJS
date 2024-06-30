@@ -535,8 +535,8 @@ namespace MJS {
     export type page_backup_restorefile_data = Page_Data_Base & {
         page: "backup-restorefile",
         location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
-        mdl_course: {course_id?: number, backups: {filename: string, download_url: string}[]},
-        mdl_user: {backups: {filename: string, download_url: string}[]}
+        mdl_course: {course_id?: number, backups: {filename: string, download_url?: string}[]},
+        mdl_user: {backups: {filename: string, download_url?: string}[]}
     };
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
@@ -571,17 +571,17 @@ namespace MJS {
 
         const course_restore_link = course_backups_dom?.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']");
 
-        const course_backups: {filename: string, download_url: string}[] = [];
+        const course_backups: {filename: string, download_url?: string}[] = [];
         if (course_backups_dom && !course_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
-                course_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
+                course_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))?.href});
             }
         }
 
-        const user_backups: {filename: string, download_url: string}[] = [];
+        const user_backups: {filename: string, download_url?: string}[] = [];
         if (user_backups_dom && !user_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(user_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
-                user_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
+                user_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))?.href});
             }
         }
 
