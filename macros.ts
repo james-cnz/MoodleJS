@@ -975,7 +975,9 @@ namespace MJS {
                             this.page_details = await this.tabdata.page_call({});
                             if (backup_try_error || (delete_tries > 1) || this.page_details.page != "backup-restorefile") {
                                 this.page_details = await this.tabdata.page_load<page_backup_restorefile_data>({location: {pathname: "/backup/restorefile.php", search: {contextid: course_context!}}, page: "backup-restorefile"});
-                                if (this.page_details.mdl_course.backups.length == 0) {
+                                const course_backup_index: number = this.page_details.mdl_course.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                                const user_backup_index: number = this.page_details.mdl_user.backups.findIndex(function(value) { return value.filename == backup_filename; });
+                                if (course_backup_index < 0 && user_backup_index < 0) {
                                     throw new Error("Backup file not found: " + backup_filename);
                                 }
                             } else {
