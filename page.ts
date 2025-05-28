@@ -535,8 +535,8 @@ import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
     export type page_backup_restorefile_data = Page_Data_Base & {
         page: "backup-restorefile",
         location?: {pathname: "/backup/restorefile.php", search: {contextid: number}},
-        mdl_course: {course_id?: number, backups: {filename: string, download_url: string}[]},
-        mdl_user: {backups: {filename: string, download_url: string}[]}
+        mdl_course: {course_id?: number, backups: {filename: string, download_url?: string}[]},
+        mdl_user: {backups: {filename: string, download_url?: string}[]}
     };
 
     async function page_backup_restorefile(message: DeepPartial<page_backup_restorefile_data>): Promise<page_backup_restorefile_data> {
@@ -550,7 +550,7 @@ import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
         let user_manage_button_dom = null;
         for (let backup_region = 1; backup_region < 3; backup_region++) {
             for (let backup_dom = backup_heading_doms[backup_region];
-                    backup_dom && (backup_region >= 2 || backup_dom != backup_heading_doms[backup_region + 1]);
+                    backup_dom && (backup_region + 1 >= backup_heading_doms.length || backup_dom != backup_heading_doms[backup_region + 1]);
                     backup_dom = backup_dom.nextElementSibling) {
                 if (backup_dom.classList.contains("backup-files-table") || backup_dom.querySelector(":scope .backup-files-table")) {
                     if (backup_region == 1) {
@@ -571,17 +571,17 @@ import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
 
         const course_restore_link = course_backups_dom?.querySelector<HTMLAnchorElement>(":scope tr  td.cell.c4 a[href*='&component=backup&filearea=course&']");
 
-        const course_backups: {filename: string, download_url: string}[] = [];
+        const course_backups: {filename: string, download_url?: string}[] = [];
         if (course_backups_dom && !course_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(course_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
-                course_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
+                course_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))?.href});
             }
         }
 
-        const user_backups: {filename: string, download_url: string}[] = [];
+        const user_backups: {filename: string, download_url?: string}[] = [];
         if (user_backups_dom && !user_backups_dom.classList.contains("empty")) {
             for (const backup_dom of Object.values(user_backups_dom.querySelectorAll<HTMLTableRowElement>(":scope tr"))) {
-                user_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))!.href});
+                user_backups.push({filename: backup_dom.querySelector(":scope td.cell.c0")!.textContent!, download_url: (backup_dom.querySelector<HTMLAnchorElement>(":scope td.cell.c3 a"))?.href});
             }
         }
 
@@ -1118,7 +1118,7 @@ import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
             let section_num = 0;
             for (const other_section_dom of Object.values(other_sections_dom)) {
                 if (other_section_dom.href && other_section_dom.href.match(/changenumsections.php/)) { continue; }
-                if (other_section_dom.href) {
+                if (!other_section_dom.classList.contains("active")) {
                     const section_match = other_section_dom.href.match(/\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
                                                                                 || throwf(new Error("WSC course get content, tab links unrecognised: " + other_section_dom.href));
                     if (section_match[2]) {
@@ -1130,13 +1130,13 @@ import {DeepPartial, sleep, throwf, Errorlike} from "./shared.js"
                 } else {
                     let subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:nth-child(2) li a");
                     if (subsections_dom.length <= 0) {
-                        subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-child li a:not([href])");
+                        subsections_dom = document.querySelectorAll<HTMLAnchorElement>("#region-main ul.nav.nav-tabs:first-child li a.active");
                     }
 
 
                     for (const subsection_dom of Object.values(subsections_dom)) {
                         if (subsection_dom.href && subsection_dom.href.match(/changenumsections.php/)) { continue; }
-                        if (subsection_dom.href) {
+                        if (!subsection_dom.classList.contains("active")) {
                             const section_match = subsection_dom.href.match(/\/course\/view.php\?id=(\d+)(?:&sectionid=(\d+))?$/)
                                                                                         || throwf(new Error("WSC course get content, tab links unrecognised: " + subsection_dom.href));
                             if (section_match[2]) {
