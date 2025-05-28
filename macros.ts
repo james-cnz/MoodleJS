@@ -780,6 +780,7 @@ import { popup_input } from "./popup.js";
                         // Wait for final stage.  TODO: Short timeout and continue if syncronous, long timeout and error if asyncronous?
                         while (this.page_details.stage_user != 5) {
                             await sleep(100);
+                            browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                             if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
                             if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
                             this.page_details = await this.tabdata.page_call<page_backup_backup_last_data>({page: "backup-backup"});
@@ -795,6 +796,7 @@ import { popup_input } from "./popup.js";
                                 reported_missing_cont = true;
                             }
                             await sleep(100);
+                            browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                             if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
                             if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
                             this.page_details = await this.tabdata.page_call<page_backup_backup_last_data>({page: "backup-backup"});
@@ -857,6 +859,7 @@ import { popup_input } from "./popup.js";
                                 let backup_download_status: browser.downloads.DownloadItem;
                                 do {
                                     await sleep(100);
+                                    browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                                     if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
                                     if (this.tabdata.macro_input == "interrupt") { throw new Error("Interrupted"); }
                                     backup_download_status = (await browser.downloads.search({id: backup_download_id}))[0]; // .state;
@@ -938,6 +941,7 @@ import { popup_input } from "./popup.js";
                                     break;
                                 }
                                 await sleep(100);
+                                browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                                 waited++;
                             }
                             if (this.tabdata.macro_input == "cancel")           { throw new Error("Cancelled"); }
@@ -1033,6 +1037,7 @@ import { popup_input } from "./popup.js";
                                 let waited = 0;
                                 while (!this.tabdata.macro_input && !(unattended_retry && waited >= unattended_delay * 10)) {
                                     await sleep(100);
+                                    browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                                     waited++;
                                 }
                                 if (this.tabdata.macro_input == "cancel")       { throw new Error("Cancelled"); }
@@ -1193,6 +1198,7 @@ import { popup_input } from "./popup.js";
             // Wait for final stage.
             while (this.page_details.stage_user != 7) {
                 await sleep(100);
+                browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                 if (this.tabdata.macro_input == "cancel")   { throw new Error("Cancelled"); }
                 this.page_details = await this.tabdata.page_call<page_backup_restore_data_final>({page: "backup-restore", stage: null});
             }
@@ -1201,6 +1207,7 @@ import { popup_input } from "./popup.js";
             let course_id: number|undefined;
             do {
                 await sleep(100);
+                browser.runtime.getPlatformInfo();  // Keep alive.  TODO: Is this enough?
                 this.page_details = await this.tabdata.page_call<page_backup_restore_data_final>({page: "backup-restore", stage: null});
                 course_id = this.page_details.mdl_course.course_id;
             } while (!course_id);
