@@ -540,7 +540,9 @@ namespace MJS {
                     // alert(e.message);
                     // alert(e.message != "Unexpected tab update");
                     if (   e.message != "Unexpected tab update"
-                        && e.message != "Mismatch on property: \"page\".  Expected: \"my-index\", found: \"login-index\".") throw e;
+                        && e.message != "Mismatch on property: \"page\".  Expected: \"my-index\", found: \"login-index\"."
+                        && e.message != "Mismatch on property: \"page\".  Expected: \"my-index\", found: \"local-otago-login\"."
+                    ) throw e;
                     this.tabdata.macro_progress = login_start_progress;
                     // alert("reset stuff");
                     await sleep(4 * 1000);
