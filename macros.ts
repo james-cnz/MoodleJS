@@ -83,6 +83,7 @@ namespace MJS {
             new_topic:      new New_Topic_Macro(this),
             backup:         new Backup_Macro(this),
             // copy_grades:    new Copy_Grades_Macro(this)
+            assign_disable_pdf: new Assign_Disable_PDF_Macro(this),
         };
 
         public popupPort:       browser.runtime.Port|null = null;
@@ -363,6 +364,7 @@ namespace MJS {
                         new_section:        {prereq: this.macros.new_section.prereq},
                         new_topic:          {prereq: this.macros.new_topic.prereq},
                         backup:             {prereq: this.macros.backup.prereq},
+                        assign_disable_pdf: {prereq: this.macros.assign_disable_pdf.prereq}
                     },
                     popup_input:            this.popup_input
                 };
@@ -379,6 +381,7 @@ namespace MJS {
             this.macros.new_topic.init(page_details);
             this.macros.backup.init(page_details);
             // this.macros.copy_grades.init(page_details);
+            this.macros.assign_disable_pdf.init(page_details);
         }
 
 
@@ -1877,6 +1880,40 @@ namespace MJS {
 
         protected async content() {
             await navigator.clipboard.writeText(this.data!.grades_table_as_text);
+        }
+
+    }
+
+
+
+
+    export class Assign_Disable_PDF_Macro extends Macro {
+
+
+        public params: {include_list: number[]} | null = null;
+
+
+        public init(page_details: Page_Data) {
+
+            this.prereq = false;
+            this.page_details = page_details;
+            if (!this.page_details || page_details.page != "course-management") { return; }
+            this.data = null;
+            this.prereq = true;
+
+        }
+
+        protected async content() {
+
+            const include_list: number[] = this.params!.include_list;
+            this.progress_max = include_list.length * 2;
+            this.tabdata.macro_progress_max = this.progress_max;
+            for (let cmid of this.params!.include_list) {
+                this.page_details = await this.tabdata.page_load<page_module_edit_data>({page: "mod-[a-z]+-mod", location: {pathname: "/course/modedit.php", search: {update: cmid, return: 1}}});
+                this.page_details = await this.tabdata.page_call<page_module_edit_data>({page: "mod-[a-z]+-mod", mdl_course_module: {assignfeedback_editpdf_enabled: 0}, dom_submit: "#id_submitbutton"});
+                this.page_details = await this.tabdata.page_loaded<Page_Data>({page: ".*"});
+            }
+
         }
 
     }

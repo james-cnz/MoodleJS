@@ -1315,6 +1315,7 @@ namespace MJS {
         mdl_module_name: string;
         name:   string;
         intro:  string;
+        assignfeedback_editpdf_enabled?: 0|1;
     };
 
     async function page_module_edit(message: DeepPartial<page_module_edit_data>): Promise<page_module_edit_data> {
@@ -1371,6 +1372,7 @@ namespace MJS {
         // For assignments
         const module_assignsubmission_file_enabled_x_dom = module_dom.querySelector<HTMLInputElement>("input[name='assignsubmission_file_enabled']");
         const module_assignsubmission_onlinetext_enabled_x_dom = module_dom.querySelector<HTMLInputElement>("input[name='assignsubmission_onlinetext_enabled']");
+        const module_assignfeedback_editpdf_enabled_dom = module_dom.querySelector<HTMLInputElement>("input[name='assignfeedback_editpdf_enabled']");
 
         // TODO: Add these
         // const module_completionview_x_dom:     Element|RadioNodeList|null = module_dom.elements.namedItem("completionview");
@@ -1414,6 +1416,11 @@ namespace MJS {
         const module_assignsubmission_onlinetext_enabled_x: 0|1|undefined   = module_assignsubmission_onlinetext_enabled_x_dom
                                                                               ? (module_assignsubmission_onlinetext_enabled_x_dom.checked ? 1 : 0) : undefined;
         */
+        if (message.mdl_course_module && 'assignfeedback_editpdf_enabled' in message.mdl_course_module) {
+            module_assignfeedback_editpdf_enabled_dom!.value = message.mdl_course_module.assignfeedback_editpdf_enabled;
+        }
+        const module_assignfeedback_editpdf_enabled: 0|1|undefined   = module_assignfeedback_editpdf_enabled_dom
+                                                                              ? (module_assignfeedback_editpdf_enabled_dom.checked ? 1 : 0) : undefined;
         // TODO: Fix to handle checkboxes appropriately (as above)
         // const module_completionview_x:     number|undefined = module_completionview_x_dom     ? parseInt(module_completionview_x_dom.value)     : undefined;
         // const module_completionusegrade_x: number|undefined = module_completionusegrade_x_dom ? parseInt(module_completionusegrade_x_dom.value) : undefined;
@@ -1431,7 +1438,12 @@ namespace MJS {
 
         if (module_in && message.dom_submit) { // module_in.x_submit) {
             await sleep(100);
-            module_dom.submit();
+            if (typeof message.dom_submit == 'string') {
+                module_dom.requestSubmit(document.querySelector<HTMLButtonElement>(message.dom_submit));
+            } else {
+                module_dom.requestSubmit();
+            }
+
         }
 
         const module_out: page_module_edit_module = {
@@ -1441,7 +1453,8 @@ namespace MJS {
             section:    module_out_section,
             mdl_module_name: module_out_modname,
             name: module_out_instance_name,
-            intro: module_out_instance_intro
+            intro: module_out_instance_intro,
+            assignfeedback_editpdf_enabled: module_assignfeedback_editpdf_enabled,
         };
 
         return {moodle_page: moodle_page(), page: "mod-[a-z]+-mod", mdl_course_module: module_out};

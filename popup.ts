@@ -48,6 +48,7 @@ namespace MJS {
                 new New_Topic_UI(this),
                 new Backup_UI(this),
                 // new Copy_Grades_UI(this)
+                new Assign_Disable_PDF_UI(this),
             ];
 
             this.status_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#status")!;
@@ -475,6 +476,43 @@ namespace MJS {
             this.popup.postBGMessage({
                 macro_input: "run",
                 macros: { copy_grades: { params: {} } }
+            });
+        }
+
+    }
+
+
+
+
+    class Assign_Disable_PDF_UI extends Macro_UI {
+
+        private adpdf_dom: HTMLFieldSetElement;
+        private disable_button_dom: HTMLButtonElement;
+
+        constructor(new_popup: Popup) {
+            super(new_popup);
+            this.adpdf_dom         = document.querySelector<HTMLFieldSetElement>("fieldset#assign_disable_pdf")!;
+            this.disable_button_dom  = document.querySelector<HTMLButtonElement>("button#assign_disable_pdf_button")!;
+            this.disable_button_dom.addEventListener("click", () => { this.onClick(); });
+        }
+
+        public update() {
+            this.adpdf_dom.style.display = (this.popup.tabData.macro_state == 0 && this.popup.tabData.macros.assign_disable_pdf.prereq) ? "block" : "none";
+        }
+
+        private onClick() {
+            const include_input: string = document.querySelector<HTMLTextAreaElement>("textarea#assign_disable_pdf_list")!.value;
+            const include_strings: string[] = include_input.split(/\r?\n/);
+            const include_list: number[] = [];
+            for (const include_string of include_strings) {
+                const include_match = include_string.match(/^(\d+)$/);
+                if (include_match) { include_list.push(parseInt(include_match[1])); }
+            }
+            this.popup.postBGMessage({
+                macro_input: "run",
+                macros: { assign_disable_pdf: { params: {
+                    include_list: include_list
+                }}}
             });
         }
 
